@@ -9,9 +9,13 @@ import Foundation
 import Security
 
 final class ServerPasswordStore {
-    private enum PasswordKind: String {
-        case server
-        case channel
+    private struct Credentials: Codable {
+        var server: String?
+        var channel: String?
+
+        var isEmpty: Bool {
+            (server?.isEmpty ?? true) && (channel?.isEmpty ?? true)
+        }
     }
 
     enum PasswordStoreError: LocalizedError {
@@ -31,49 +35,109 @@ final class ServerPasswordStore {
         }
     }
 
-    private let serviceName: String
-    private let channelServiceName: String
-    private var cachedPasswords: [UUID: String] = [:]
-    private var cachedChannelPasswords: [UUID: String] = [:]
+    private let combinedServiceName: String
+    private let legacyServerServiceName: String
+    private let legacyChannelServiceName: String
+    private var cache: [UUID: Credentials] = [:]
 
     init(serviceName: String = "com.math65.ttaccessible.saved-server-password") {
-        self.serviceName = serviceName
-        self.channelServiceName = serviceName + ".channel"
+        self.combinedServiceName = serviceName + ".combined"
+        self.legacyServerServiceName = serviceName
+        self.legacyChannelServiceName = serviceName + ".channel"
     }
 
     func password(for id: UUID) throws -> String? {
-        try storedPassword(for: id, kind: .server)
+        nonEmpty(try loadCredentials(for: id).server)
     }
 
     func channelPassword(for id: UUID) throws -> String? {
-        try storedPassword(for: id, kind: .channel)
+        nonEmpty(try loadCredentials(for: id).channel)
     }
 
     func setPassword(_ password: String?, for id: UUID) throws {
-        try setStoredPassword(password, for: id, kind: .server)
+        var credentials = try loadCredentials(for: id)
+        credentials.server = nonEmpty(password)
+        try writeCredentials(credentials, for: id)
     }
 
     func setChannelPassword(_ password: String?, for id: UUID) throws {
-        try setStoredPassword(password, for: id, kind: .channel)
+        var credentials = try loadCredentials(for: id)
+        credentials.channel = nonEmpty(password)
+        try writeCredentials(credentials, for: id)
     }
 
     func deletePassword(for id: UUID) throws {
-        try deleteStoredPassword(for: id, kind: .server)
+        var credentials = try loadCredentials(for: id)
+        credentials.server = nil
+        try writeCredentials(credentials, for: id)
     }
 
     func deleteChannelPassword(for id: UUID) throws {
-        try deleteStoredPassword(for: id, kind: .channel)
+        var credentials = try loadCredentials(for: id)
+        credentials.channel = nil
+        try writeCredentials(credentials, for: id)
     }
 
-    private func storedPassword(for id: UUID, kind: PasswordKind) throws -> String? {
-        if let cached = cachedPassword(for: id, kind: kind) {
+    private func loadCredentials(for id: UUID) throws -> Credentials {
+        if let cached = cache[id] {
             return cached
         }
 
+        if let data = try fetchData(service: combinedServiceName, account: id.uuidString) {
+            guard let credentials = try? JSONDecoder().decode(Credentials.self, from: data) else {
+                throw PasswordStoreError.invalidPasswordData
+            }
+            cache[id] = credentials
+            return credentials
+        }
+
+        // Migrate legacy two-item format to the combined format. This still
+        // costs two keychain prompts on the very first launch after the fix,
+        // but every subsequent launch only touches the single combined item.
+        let legacyServer = try fetchString(service: legacyServerServiceName, account: id.uuidString)
+        let legacyChannel = try fetchString(service: legacyChannelServiceName, account: id.uuidString)
+        let migrated = Credentials(server: nonEmpty(legacyServer), channel: nonEmpty(legacyChannel))
+
+        if !migrated.isEmpty {
+            try writeCredentials(migrated, for: id)
+            try? deleteRawItem(service: legacyServerServiceName, account: id.uuidString)
+            try? deleteRawItem(service: legacyChannelServiceName, account: id.uuidString)
+        } else {
+            cache[id] = migrated
+        }
+
+        return migrated
+    }
+
+    private func writeCredentials(_ credentials: Credentials, for id: UUID) throws {
+        try deleteRawItem(service: combinedServiceName, account: id.uuidString)
+
+        guard !credentials.isEmpty else {
+            cache[id] = credentials
+            return
+        }
+
+        let data = try JSONEncoder().encode(credentials)
+        let attributes: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: combinedServiceName,
+            kSecAttrAccount: id.uuidString,
+            kSecValueData: data
+        ]
+
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw PasswordStoreError.unexpectedStatus(status)
+        }
+
+        cache[id] = credentials
+    }
+
+    private func fetchData(service: String, account: String) throws -> Data? {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
-            kSecAttrService: serviceName(for: kind),
-            kSecAttrAccount: id.uuidString,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
             kSecReturnData: true,
             kSecMatchLimit: kSecMatchLimitOne
         ]
@@ -83,89 +147,41 @@ final class ServerPasswordStore {
 
         switch status {
         case errSecSuccess:
-            guard let data = item as? Data,
-                  let password = String(data: data, encoding: .utf8) else {
-                throw PasswordStoreError.invalidPasswordData
-            }
-            cache(password: password, for: id, kind: kind)
-            return password
+            return item as? Data
         case errSecItemNotFound:
-            clearCache(for: id, kind: kind)
             return nil
         default:
             throw PasswordStoreError.unexpectedStatus(status)
         }
     }
 
-    private func setStoredPassword(_ password: String?, for id: UUID, kind: PasswordKind) throws {
-        try deleteStoredPassword(for: id, kind: kind)
-
-        guard let password, password.isEmpty == false else {
-            clearCache(for: id, kind: kind)
-            return
+    private func fetchString(service: String, account: String) throws -> String? {
+        guard let data = try fetchData(service: service, account: account) else {
+            return nil
         }
-
-        let attributes: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: serviceName(for: kind),
-            kSecAttrAccount: id.uuidString,
-            kSecValueData: Data(password.utf8)
-        ]
-
-        let status = SecItemAdd(attributes as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw PasswordStoreError.unexpectedStatus(status)
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw PasswordStoreError.invalidPasswordData
         }
-        cache(password: password, for: id, kind: kind)
+        return string
     }
 
-    private func deleteStoredPassword(for id: UUID, kind: PasswordKind) throws {
+    private func deleteRawItem(service: String, account: String) throws {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
-            kSecAttrService: serviceName(for: kind),
-            kSecAttrAccount: id.uuidString
+            kSecAttrService: service,
+            kSecAttrAccount: account
         ]
 
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw PasswordStoreError.unexpectedStatus(status)
         }
-        clearCache(for: id, kind: kind)
     }
 
-    private func serviceName(for kind: PasswordKind) -> String {
-        switch kind {
-        case .server:
-            return serviceName
-        case .channel:
-            return channelServiceName
+    private func nonEmpty(_ string: String?) -> String? {
+        guard let string, !string.isEmpty else {
+            return nil
         }
-    }
-
-    private func cachedPassword(for id: UUID, kind: PasswordKind) -> String? {
-        switch kind {
-        case .server:
-            return cachedPasswords[id]
-        case .channel:
-            return cachedChannelPasswords[id]
-        }
-    }
-
-    private func cache(password: String, for id: UUID, kind: PasswordKind) {
-        switch kind {
-        case .server:
-            cachedPasswords[id] = password
-        case .channel:
-            cachedChannelPasswords[id] = password
-        }
-    }
-
-    private func clearCache(for id: UUID, kind: PasswordKind) {
-        switch kind {
-        case .server:
-            cachedPasswords.removeValue(forKey: id)
-        case .channel:
-            cachedChannelPasswords.removeValue(forKey: id)
-        }
+        return string
     }
 }
