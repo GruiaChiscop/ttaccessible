@@ -310,7 +310,9 @@ extension TeamTalkConnectionController {
             audioStatusText: makeAudioStatusText(),
             inputGainDB: preferences.inputGainDB,
             outputGainDB: preferences.outputGainDB,
-            recordingActive: recordingMuxedActive || recordingSeparateActive
+            recordingActive: recordingMuxedActive || recordingSeparateActive,
+            mediaStreamingActive: mediaStreamingActive,
+            mediaStreamingFileName: mediaStreamingFileName
         )
     }
 

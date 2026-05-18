@@ -402,6 +402,7 @@
 "preferences.historyEvents.group.status" = "Status";
 "preferences.historyEvents.group.subscriptions" = "Subscriptions";
 "preferences.historyEvents.group.files" = "Files";
+"preferences.historyEvents.group.media" = "Media streaming";
 "preferences.historyEvent.connected" = "Connected to server";
 "preferences.historyEvent.disconnected" = "Disconnected from server";
 "preferences.historyEvent.connectionLost" = "Connection lost";
@@ -420,6 +421,8 @@
 "preferences.historyEvent.fileAdded" = "File added";
 "preferences.historyEvent.fileRemoved" = "File removed";
 "preferences.historyEvent.transmissionBlocked" = "Transmission blocked";
+"preferences.historyEvent.mediaStreamingStarted" = "Media streaming started";
+"preferences.historyEvent.mediaStreamingFinished" = "Media streaming finished";
 "preferences.accessibility.help" = "These settings only affect announcements, not the displayed content.";
 "shortcuts.menu.title" = "Shortcuts";
 "shortcuts.focus.primary" = "Main area";
@@ -515,6 +518,17 @@
 "recording.announced.startedSeparate" = "Per-user recording started";
 "preferences.recording.autoRestart" = "Automatically restart recording when joining a channel";
 "preferences.recording.help" = "Press Cmd+R while connected to start or stop recording. Files are saved to the chosen folder.";
+"shortcuts.mediaStream.start" = "Stream Audio File…";
+"shortcuts.mediaStream.stop" = "Stop Streaming Audio File";
+"mediaStream.panel.title" = "Stream Audio File";
+"mediaStream.panel.message" = "Choose an audio file to stream into the channel.";
+"mediaStream.panel.choose" = "Stream";
+"mediaStream.announced.started" = "Streaming started: %@";
+"mediaStream.announced.finished" = "Streaming finished";
+"mediaStream.announced.error" = "Streaming failed";
+"mediaStream.error.startFailed" = "Failed to start streaming the audio file.";
+"history.mediaStreamingStarted" = "Streaming media: %@";
+"history.mediaStreamingFinished" = "Streaming finished";
 "privateMessages.window.title" = "Private Messages";
 "privateMessages.menu.open" = "Private Messages";
 "privateMessages.subtitle" = "All private conversations from the active session are grouped here.";

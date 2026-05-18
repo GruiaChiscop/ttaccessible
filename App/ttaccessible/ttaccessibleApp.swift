@@ -337,6 +337,14 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("r", modifiers: [.command])
                 .disabled(menuState.mode != .connectedServer || (!menuState.isRecordingActive && menuState.isInChannel == false))
 
+                Button(menuState.isMediaStreamingActive
+                       ? L10n.text("shortcuts.mediaStream.stop")
+                       : L10n.text("shortcuts.mediaStream.start")) {
+                    appDelegate.toggleMediaStreaming()
+                }
+                .keyboardShortcut("s", modifiers: [.command, .option])
+                .disabled(menuState.mode != .connectedServer || (!menuState.isMediaStreamingActive && menuState.isInChannel == false))
+
                 Button(L10n.text("shortcuts.hearMyself")) {
                     appDelegate.toggleHearMyself()
                 }

@@ -1152,6 +1152,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func toggleMediaStreaming() {
+        guard menuState.mode == .connectedServer else { return }
+        if menuState.isMediaStreamingActive {
+            connectionController.stopStreamingMediaFile()
+            announceWithVoiceOver(L10n.text("mediaStream.announced.finished"))
+            return
+        }
+        promptMediaStreamFile()
+    }
+
+    private func promptMediaStreamFile() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.title = L10n.text("mediaStream.panel.title")
+        panel.message = L10n.text("mediaStream.panel.message")
+        panel.prompt = L10n.text("mediaStream.panel.choose")
+        panel.allowedContentTypes = [.audio, .mp3, .mpeg4Audio, .wav, .aiff]
+        guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
+        panel.beginSheetModal(for: parentWindow) { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            self.connectionController.startStreamingMediaFile(at: url) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self?.announceWithVoiceOver(L10n.format("mediaStream.announced.started", url.lastPathComponent))
+                    case .failure(let error):
+                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
+                        let alert = NSAlert(error: error)
+                        alert.runModal()
+                    }
+                }
+            }
+        }
+    }
+
     func toggleMasterMute() {
         guard menuState.mode == .connectedServer else { return }
         connectionController.toggleMasterMute { [weak self] muted in

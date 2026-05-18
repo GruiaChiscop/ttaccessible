@@ -561,6 +561,23 @@ extension TeamTalkConnectionController {
                         publishInvalidation = .all
                     }
                 }
+            case CLIENTEVENT_STREAM_MEDIAFILE:
+                if connectedRecord != nil {
+                    let status = message.mediafileinfo.nStatus
+                    switch status {
+                    case MFS_STARTED:
+                        if let fileName = mediaStreamingFileName {
+                            appendMediaStreamingStartedHistoryLocked(fileName: fileName)
+                            publishInvalidation.insert(.history)
+                        }
+                    case MFS_FINISHED, MFS_ABORTED, MFS_CLOSED:
+                        finalizeMediaStreamingLocked(instance: instance, reason: .finished)
+                    case MFS_ERROR:
+                        finalizeMediaStreamingLocked(instance: instance, reason: .error)
+                    default:
+                        break
+                    }
+                }
             case CLIENTEVENT_CMD_USERACCOUNT:
                 pendingUserAccounts.append(makeUserAccountProperties(from: message.useraccount))
             case CLIENTEVENT_CMD_BANNEDUSER:
@@ -728,6 +745,9 @@ extension TeamTalkConnectionController {
         stopPollingLocked()
 
         if let instance {
+            if mediaStreamingActive {
+                _ = TT_StopStreamingMediaFileToChannel(instance)
+            }
             if isAnyMicrophoneEngineRunning || inputAudioReady {
                 stopAdvancedMicrophoneInputLocked(instance: instance, reason: "destroyLocked")
             }
@@ -745,6 +765,10 @@ extension TeamTalkConnectionController {
             TT_CloseTeamTalk(instance)
         }
 
+        mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()
+        mediaStreamingSecurityScopedURL = nil
+        mediaStreamingActive = false
+        mediaStreamingFileName = nil
         recordingMuxedActive = false
         recordingSeparateActive = false
         recordingFolder = nil

@@ -109,6 +109,9 @@ final class TeamTalkConnectionController {
     var recordingSeparateActive = false
     var recordingFolder: URL?
     var recordingFormat: AudioFileFormat = AFF_WAVE_FORMAT
+    var mediaStreamingActive = false
+    var mediaStreamingFileName: String?
+    var mediaStreamingSecurityScopedURL: URL?
     var teamTalkVirtualInputReady = false
     var advancedMicrophoneTargetFormat: AdvancedMicrophoneAudioTargetFormat?
     var reconnectTimer: DispatchSourceTimer?

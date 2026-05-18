@@ -402,6 +402,7 @@
 "preferences.historyEvents.group.status" = "Statut";
 "preferences.historyEvents.group.subscriptions" = "Abonnements";
 "preferences.historyEvents.group.files" = "Fichiers";
+"preferences.historyEvents.group.media" = "Diffusion média";
 "preferences.historyEvent.connected" = "Connecté au serveur";
 "preferences.historyEvent.disconnected" = "Déconnecté du serveur";
 "preferences.historyEvent.connectionLost" = "Connexion perdue";
@@ -420,6 +421,8 @@
 "preferences.historyEvent.fileAdded" = "Fichier ajouté";
 "preferences.historyEvent.fileRemoved" = "Fichier supprimé";
 "preferences.historyEvent.transmissionBlocked" = "Transmission bloquée";
+"preferences.historyEvent.mediaStreamingStarted" = "Diffusion média démarrée";
+"preferences.historyEvent.mediaStreamingFinished" = "Diffusion média terminée";
 "preferences.accessibility.help" = "Ces réglages modifient uniquement les annonces, pas le contenu affiché.";
 "shortcuts.menu.title" = "Raccourcis";
 "shortcuts.focus.primary" = "Zone principale";
@@ -515,6 +518,17 @@
 "recording.announced.startedSeparate" = "Enregistrement par utilisateur démarré";
 "preferences.recording.autoRestart" = "Redémarrer automatiquement l'enregistrement en rejoignant un canal";
 "preferences.recording.help" = "Appuyez sur Cmd+R en étant connecté pour démarrer ou arrêter l'enregistrement. Les fichiers sont sauvegardés dans le dossier choisi.";
+"shortcuts.mediaStream.start" = "Diffuser un fichier audio…";
+"shortcuts.mediaStream.stop" = "Arrêter la diffusion du fichier audio";
+"mediaStream.panel.title" = "Diffuser un fichier audio";
+"mediaStream.panel.message" = "Choisissez un fichier audio à diffuser dans le canal.";
+"mediaStream.panel.choose" = "Diffuser";
+"mediaStream.announced.started" = "Diffusion démarrée : %@";
+"mediaStream.announced.finished" = "Diffusion terminée";
+"mediaStream.announced.error" = "Échec de la diffusion";
+"mediaStream.error.startFailed" = "Impossible de démarrer la diffusion du fichier audio.";
+"history.mediaStreamingStarted" = "Diffusion du média : %@";
+"history.mediaStreamingFinished" = "Diffusion du média terminée";
 "privateMessages.window.title" = "Messages privés";
 "privateMessages.menu.open" = "Messages privés";
 "privateMessages.subtitle" = "Toutes les conversations privées de la session active sont regroupées ici.";
