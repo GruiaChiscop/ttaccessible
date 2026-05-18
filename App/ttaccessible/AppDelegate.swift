@@ -95,6 +95,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var deviceChangeObserver: Any?
     private var globalDeviceChangeWorkItem: DispatchWorkItem?
 
+    private var updateAvailableWindowController: UpdateAvailableWindowController?
+    private var updateDownloadWindowController: UpdateDownloadWindowController?
+    private var updateDownloadHandle: UpdateDownloadHandle?
+    private static let lastAutoUpdateCheckDefaultsKey = "lastAutoUpdateCheckAt"
+    private static let autoUpdateCheckInterval: TimeInterval = 24 * 60 * 60
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AudioLogger.clear()
         let sdkVersion = String(cString: TT_GetVersion())
@@ -124,6 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hasFinishedLaunching = true
         handleLaunchTTFilesIfNeeded()
         processPendingTTFileURLsIfPossible()
+        scheduleAutoUpdateCheck()
     }
 
     private func requestNotificationPermission() {
@@ -1294,6 +1301,90 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         preferencesWindowController?.showPreferences()
     }
 
+    // MARK: - Updates
+
+    func checkForUpdates() {
+        runUpdateCheck(silent: false)
+    }
+
+    private func scheduleAutoUpdateCheck() {
+        let last = UserDefaults.standard.double(forKey: Self.lastAutoUpdateCheckDefaultsKey)
+        let now = Date().timeIntervalSince1970
+        if last > 0, now - last < Self.autoUpdateCheckInterval {
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(3)) { [weak self] in
+            self?.runUpdateCheck(silent: true)
+        }
+    }
+
+    private func runUpdateCheck(silent: Bool) {
+        UpdateService.shared.checkForUpdate { [weak self] result in
+            guard let self else { return }
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastAutoUpdateCheckDefaultsKey)
+            switch result {
+            case .success(.upToDate(let version)):
+                if !silent {
+                    let alert = NSAlert()
+                    alert.messageText = L10n.text("update.upToDate.title")
+                    alert.informativeText = L10n.format("update.upToDate.message", version)
+                    alert.addButton(withTitle: L10n.text("common.ok"))
+                    alert.runModal()
+                }
+            case .success(.updateAvailable(let release)):
+                self.presentUpdateAvailable(release)
+            case .failure(let error):
+                if !silent {
+                    let alert = NSAlert()
+                    alert.messageText = L10n.text("update.error.title")
+                    alert.informativeText = error.localizedDescription
+                    alert.addButton(withTitle: L10n.text("common.ok"))
+                    alert.runModal()
+                }
+            }
+        }
+    }
+
+    private func presentUpdateAvailable(_ release: UpdateRelease) {
+        if let existing = updateAvailableWindowController {
+            existing.showAndRun()
+            return
+        }
+        let controller = UpdateAvailableWindowController(
+            release: release,
+            currentVersion: UpdateService.shared.currentVersion
+        )
+        controller.delegate = self
+        updateAvailableWindowController = controller
+        controller.showAndRun()
+    }
+
+    private func beginUpdateDownload(_ release: UpdateRelease) {
+        let controller = UpdateDownloadWindowController(release: release)
+        controller.delegate = self
+        updateDownloadWindowController = controller
+        controller.showWindow(nil)
+        controller.window?.makeKeyAndOrderFront(nil)
+
+        updateDownloadHandle = UpdateService.shared.downloadRelease(release, progress: { [weak self] fraction in
+            self?.updateDownloadWindowController?.setProgress(fraction)
+        }, completion: { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let fileURL):
+                self.updateDownloadWindowController?.markFinished(fileURL: fileURL)
+                NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+            case .failure(let error):
+                if case .cancelled = error {
+                    self.updateDownloadWindowController?.close()
+                } else {
+                    self.updateDownloadWindowController?.markFailed(message: error.localizedDescription)
+                }
+            }
+            self.updateDownloadHandle = nil
+        })
+    }
+
     private func preloadPreferencesWindow() {
         if preferencesWindowController == nil {
             preferencesWindowController = PreferencesWindowController(
@@ -2067,6 +2158,33 @@ private extension AppDelegate {
         mediaStreamingPlayerWindowController?.close()
         mediaStreamingPlayerWindowController = nil
         mediaStreamingPlayerViewController = nil
+    }
+}
+
+extension AppDelegate: UpdateAvailableWindowControllerDelegate {
+    func updateAvailableWindowDidRequestDownload(_ controller: UpdateAvailableWindowController, release: UpdateRelease) {
+        updateAvailableWindowController = nil
+        beginUpdateDownload(release)
+    }
+
+    func updateAvailableWindowDidRequestOpenGitHub(_ controller: UpdateAvailableWindowController, release: UpdateRelease) {
+        updateAvailableWindowController = nil
+        NSWorkspace.shared.open(release.htmlURL)
+    }
+
+    func updateAvailableWindowDidDismiss(_ controller: UpdateAvailableWindowController) {
+        if updateAvailableWindowController === controller {
+            updateAvailableWindowController = nil
+        }
+    }
+}
+
+extension AppDelegate: UpdateDownloadWindowControllerDelegate {
+    func updateDownloadWindowDidRequestCancel(_ controller: UpdateDownloadWindowController) {
+        updateDownloadHandle?.cancel()
+        updateDownloadHandle = nil
+        controller.close()
+        updateDownloadWindowController = nil
     }
 }
 

@@ -25,6 +25,12 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut(",", modifiers: [.command])
             }
 
+            CommandGroup(after: .appInfo) {
+                Button(L10n.text("update.menu.checkForUpdates")) {
+                    appDelegate.checkForUpdates()
+                }
+            }
+
             CommandGroup(replacing: .newItem) {
             }
 
