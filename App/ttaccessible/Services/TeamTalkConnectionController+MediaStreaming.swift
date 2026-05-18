@@ -8,10 +8,35 @@ import Foundation
 extension TeamTalkConnectionController {
 
     func startStreamingMediaFile(at url: URL, completion: @escaping (Result<Void, Error>) -> Void) {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        startStreamingMedia(
+            path: url.path,
+            displayName: url.lastPathComponent,
+            securityScopedURL: didAccess ? url : nil,
+            completion: completion
+        )
+    }
+
+    func startStreamingMediaURL(_ url: URL, completion: @escaping (Result<Void, Error>) -> Void) {
+        startStreamingMedia(
+            path: url.absoluteString,
+            displayName: url.host ?? url.absoluteString,
+            securityScopedURL: nil,
+            completion: completion
+        )
+    }
+
+    private func startStreamingMedia(
+        path: String,
+        displayName: String,
+        securityScopedURL: URL?,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
         queue.async { [weak self] in
             guard let self,
                   let instance = self.instance,
                   let record = self.connectedRecord else {
+                securityScopedURL?.stopAccessingSecurityScopedResource()
                 DispatchQueue.main.async {
                     completion(.failure(TeamTalkConnectionError.connectionFailed))
                 }
@@ -21,9 +46,6 @@ extension TeamTalkConnectionController {
             if self.mediaStreamingActive {
                 self.stopStreamingMediaFileLocked(instance: instance)
             }
-
-            let didAccess = url.startAccessingSecurityScopedResource()
-            let path = url.path
 
             self.mediaStreamingPaused = false
             self.mediaStreamingBroadcastGainLevel = INT32(SOUND_GAIN_DEFAULT.rawValue)
@@ -37,7 +59,7 @@ extension TeamTalkConnectionController {
             }
 
             guard started else {
-                if didAccess { url.stopAccessingSecurityScopedResource() }
+                securityScopedURL?.stopAccessingSecurityScopedResource()
                 DispatchQueue.main.async {
                     completion(.failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.error.startFailed"))))
                 }
@@ -45,8 +67,8 @@ extension TeamTalkConnectionController {
             }
 
             self.mediaStreamingActive = true
-            self.mediaStreamingFileName = url.lastPathComponent
-            self.mediaStreamingSecurityScopedURL = didAccess ? url : nil
+            self.mediaStreamingFileName = displayName
+            self.mediaStreamingSecurityScopedURL = securityScopedURL
             self.mediaStreamingDurationMSec = 0
             self.mediaStreamingElapsedMSec = 0
             self.mediaStreamingElapsedSampleAt = nil

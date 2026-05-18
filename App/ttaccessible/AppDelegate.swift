@@ -1154,14 +1154,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func toggleMediaStreaming() {
-        guard menuState.mode == .connectedServer else { return }
-        if menuState.isMediaStreamingActive {
-            connectionController.stopStreamingMediaFile()
-            announceWithVoiceOver(L10n.text("mediaStream.announced.finished"))
-            return
-        }
+    func startStreamingMediaFromFile() {
+        guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
         promptMediaStreamFile()
+    }
+
+    func startStreamingMediaFromURL() {
+        guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
+        promptMediaStreamURL()
+    }
+
+    func stopMediaStreaming() {
+        guard menuState.mode == .connectedServer, menuState.isMediaStreamingActive else { return }
+        connectionController.stopStreamingMediaFile()
+        announceWithVoiceOver(L10n.text("mediaStream.announced.finished"))
     }
 
     private func promptMediaStreamFile() {
@@ -1182,6 +1188,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     switch result {
                     case .success:
                         self?.announceWithVoiceOver(L10n.format("mediaStream.announced.started", url.lastPathComponent))
+                    case .failure(let error):
+                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
+                        let alert = NSAlert(error: error)
+                        alert.runModal()
+                    }
+                }
+            }
+        }
+    }
+
+    private func promptMediaStreamURL() {
+        let alert = NSAlert()
+        alert.messageText = L10n.text("mediaStream.url.prompt.title")
+        alert.informativeText = L10n.text("mediaStream.url.prompt.message")
+        alert.addButton(withTitle: L10n.text("mediaStream.url.prompt.start"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        textField.placeholderString = L10n.text("mediaStream.url.prompt.placeholder")
+        textField.setAccessibilityLabel(L10n.text("mediaStream.url.prompt.accessibilityLabel"))
+        alert.accessoryView = textField
+        alert.window.initialFirstResponder = textField
+
+        guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
+        alert.beginSheetModal(for: parentWindow) { [weak self] response in
+            guard response == .alertFirstButtonReturn, let self else { return }
+            let raw = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let url = URL(string: raw),
+                  let scheme = url.scheme?.lowercased(),
+                  ["http", "https", "rtmp", "rtmps", "rtsp", "mms"].contains(scheme),
+                  url.host?.isEmpty == false else {
+                self.announceWithVoiceOver(L10n.text("mediaStream.url.error.invalid"))
+                let errorAlert = NSAlert()
+                errorAlert.messageText = L10n.text("mediaStream.url.error.invalid.title")
+                errorAlert.informativeText = L10n.text("mediaStream.url.error.invalid")
+                errorAlert.runModal()
+                return
+            }
+            self.connectionController.startStreamingMediaURL(url) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.startedURL"))
                     case .failure(let error):
                         self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
                         let alert = NSAlert(error: error)
