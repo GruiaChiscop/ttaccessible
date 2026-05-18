@@ -18,10 +18,10 @@ final class MediaStreamingPlayerViewController: NSViewController {
 
     private let fileNameLabel = NSTextField(labelWithString: "")
     private let timeLabel = NSTextField(labelWithString: "00:00 / 00:00")
-    private let positionSlider = NSSlider()
+    private let positionSlider = AccessibleSlider()
     private let playPauseButton = NSButton()
     private let stopButton = NSButton()
-    private let broadcastGainSlider = NSSlider()
+    private let broadcastGainSlider = AccessibleSlider()
     private let broadcastGainValueLabel = NSTextField(labelWithString: "")
 
     private var displayTimer: Timer?
@@ -236,6 +236,7 @@ final class MediaStreamingPlayerViewController: NSViewController {
         positionSlider.doubleValue = 0
         positionSlider.isContinuous = true
         positionSlider.isEnabled = false
+        positionSlider.pageStep = 10_000 // 10 seconds per Page Up / Page Down
         positionSlider.setAccessibilityLabel(L10n.text("mediaPlayer.position.label"))
 
         playPauseButton.bezelStyle = .rounded
