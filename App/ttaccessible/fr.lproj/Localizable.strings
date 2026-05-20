@@ -524,10 +524,8 @@
 "recording.announced.startedSeparate" = "Enregistrement par utilisateur démarré";
 "preferences.recording.autoRestart" = "Redémarrer automatiquement l'enregistrement en rejoignant un canal";
 "preferences.recording.help" = "Appuyez sur Cmd+R en étant connecté pour démarrer ou arrêter l'enregistrement. Les fichiers sont sauvegardés dans le dossier choisi.";
-"shortcuts.mediaStream.menu" = "Diffuser";
 "shortcuts.mediaStream.startFile" = "Diffuser un fichier audio…";
 "shortcuts.mediaStream.startURL" = "Diffuser une URL…";
-"shortcuts.mediaStream.start" = "Diffuser un fichier audio…";
 "shortcuts.mediaStream.stop" = "Arrêter la diffusion";
 "mediaStream.panel.title" = "Diffuser un fichier audio";
 "mediaStream.panel.message" = "Choisissez un fichier audio à diffuser dans le canal.";

@@ -343,28 +343,27 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("r", modifiers: [.command])
                 .disabled(menuState.mode != .connectedServer || (!menuState.isRecordingActive && menuState.isInChannel == false))
 
-                Menu(L10n.text("shortcuts.mediaStream.menu")) {
-                    Button(L10n.text("shortcuts.mediaStream.startFile")) {
-                        appDelegate.startStreamingMediaFromFile()
-                    }
-                    .keyboardShortcut("s", modifiers: [.command, .option])
-                    .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
+                Divider()
 
-                    Button(L10n.text("shortcuts.mediaStream.startURL")) {
-                        appDelegate.startStreamingMediaFromURL()
-                    }
-                    .keyboardShortcut("u", modifiers: [.command, .option])
-                    .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
-
-                    Divider()
-
-                    Button(L10n.text("shortcuts.mediaStream.stop")) {
-                        appDelegate.stopMediaStreaming()
-                    }
-                    .keyboardShortcut(".", modifiers: [.command, .option])
-                    .disabled(menuState.mode != .connectedServer || !menuState.isMediaStreamingActive)
+                Button(L10n.text("shortcuts.mediaStream.startFile")) {
+                    appDelegate.startStreamingMediaFromFile()
                 }
-                .disabled(menuState.mode != .connectedServer)
+                .keyboardShortcut("s", modifiers: [.command, .option])
+                .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
+
+                Button(L10n.text("shortcuts.mediaStream.startURL")) {
+                    appDelegate.startStreamingMediaFromURL()
+                }
+                .keyboardShortcut("u", modifiers: [.command, .option])
+                .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
+
+                Button(L10n.text("shortcuts.mediaStream.stop")) {
+                    appDelegate.stopMediaStreaming()
+                }
+                .keyboardShortcut(".", modifiers: [.command, .option])
+                .disabled(menuState.mode != .connectedServer || !menuState.isMediaStreamingActive)
+
+                Divider()
 
                 Button(L10n.text("shortcuts.hearMyself")) {
                     appDelegate.toggleHearMyself()

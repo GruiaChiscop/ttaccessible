@@ -524,10 +524,8 @@
 "recording.announced.startedSeparate" = "Per-user recording started";
 "preferences.recording.autoRestart" = "Automatically restart recording when joining a channel";
 "preferences.recording.help" = "Press Cmd+R while connected to start or stop recording. Files are saved to the chosen folder.";
-"shortcuts.mediaStream.menu" = "Stream";
 "shortcuts.mediaStream.startFile" = "Stream Audio File…";
 "shortcuts.mediaStream.startURL" = "Stream URL…";
-"shortcuts.mediaStream.start" = "Stream Audio File…";
 "shortcuts.mediaStream.stop" = "Stop Streaming";
 "mediaStream.panel.title" = "Stream Audio File";
 "mediaStream.panel.message" = "Choose an audio file to stream into the channel.";
