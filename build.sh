@@ -109,12 +109,16 @@ if [[ $NOTARIZE -eq 1 ]]; then
     DOCS_DIR="$(dirname "$0")/docs"
     mkdir -p "$DOCS_DIR"
 
-    # Release notes sidecar — generate_appcast picks <basename>.md automatically
-    # We also copy to docs/ so GitHub Pages serves it for Sparkle clients.
+    # Release notes sidecar — render RELEASE_NOTES.md to HTML so Sparkle's
+    # WKWebView gets styled content (light + dark mode) instead of raw Markdown.
+    # The .html lives in docs/ (GitHub Pages); the .md stays at repo root for
+    # `gh release create --notes-file` further down.
     ZIP_BASENAME="${ZIP_NAME%.zip}"
     if [[ -f "$(dirname "$0")/RELEASE_NOTES.md" ]]; then
-        cp "$(dirname "$0")/RELEASE_NOTES.md" "$APPCAST_STAGING/${ZIP_BASENAME}.md"
-        cp "$(dirname "$0")/RELEASE_NOTES.md" "$DOCS_DIR/${ZIP_BASENAME}.md"
+        "$(dirname "$0")/scripts/render-release-notes.sh" \
+            "$(dirname "$0")/RELEASE_NOTES.md" \
+            "$DOCS_DIR/${ZIP_BASENAME}.html"
+        cp "$DOCS_DIR/${ZIP_BASENAME}.html" "$APPCAST_STAGING/${ZIP_BASENAME}.html"
     fi
     # Preserve existing entries by copying current appcast into staging
     if [[ -f "$DOCS_DIR/appcast.xml" ]]; then
@@ -169,7 +173,7 @@ if [[ $RELEASE -eq 1 ]]; then
     if [[ "$CURRENT_BRANCH" == "main" ]]; then
         # Catch both tracked-with-changes and untracked-but-new files under docs/
         if [[ -n "$(git status --porcelain -- docs/)" ]]; then
-            git add docs/appcast.xml "docs/${ZIP_BASENAME}.md" 2>/dev/null
+            git add docs/appcast.xml "docs/${ZIP_BASENAME}.html" 2>/dev/null
             git commit -m "Update appcast and release notes for v${VERSION}"
             git push origin main
             echo "✓ Appcast + release notes pushés sur main"

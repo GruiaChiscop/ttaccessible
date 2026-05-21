@@ -9,7 +9,7 @@
             <sparkle:version>20</sparkle:version>
             <sparkle:shortVersionString>1.1.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.1.3-20.md</sparkle:releaseNotesLink>
+            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.1.3-20.html</sparkle:releaseNotesLink>
             <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.1.3/ttaccessible-1.1.3-20.zip" length="40721412" type="application/octet-stream" sparkle:edSignature="Toc5qv3673sp3Rm8uJoJqsJ/g4LGzfNsSKMGI8iiPQ3Ywn+ry6COfn/xthkvwuZ7o953MZic9oDrucKS9u+vDw=="/>
         </item>
         <item>
@@ -19,7 +19,7 @@
             <sparkle:version>19</sparkle:version>
             <sparkle:shortVersionString>1.1.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.1.2-19.md</sparkle:releaseNotesLink>
+            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.1.2-19.html</sparkle:releaseNotesLink>
             <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.1.2/ttaccessible-1.1.2-19.zip" length="40721060" type="application/octet-stream" sparkle:edSignature="3xNJAYtOvZUevllrDuZKxpnkYQXOvVNQkM0u4wzdwFUfFkFly1PrVD3dKN4hHX5PUkm8cxwQeucn6aOPG/JyAg=="/>
         </item>
         <item>
@@ -29,7 +29,7 @@
             <sparkle:version>18</sparkle:version>
             <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.1.1-18.md</sparkle:releaseNotesLink>
+            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.1.1-18.html</sparkle:releaseNotesLink>
             <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.1.1/ttaccessible-1.1.1-18.zip" length="40721099" type="application/octet-stream" sparkle:edSignature="w3AbiIJxHEhJ5hAONriHRdgTkYeyzJ+3uvHqtzlp4um0dA+MJ67QlGAkWnTG6OAABWszyWMncUYDw+kROr0gAg=="/>
         </item>
     </channel>
