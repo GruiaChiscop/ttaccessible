@@ -8,6 +8,12 @@
 import Foundation
 
 struct AppPreferences: Codable, Equatable {
+    static func defaultNicknameFromAccount() -> String {
+        let fullName = NSFullUserName().trimmingCharacters(in: .whitespacesAndNewlines)
+        let firstWord = fullName.components(separatedBy: .whitespacesAndNewlines).first ?? ""
+        return firstWord.isEmpty ? "TTAccessible" : firstWord
+    }
+
     enum ChannelSortMode: String, Codable, CaseIterable {
         case name
         case userCount
@@ -158,7 +164,7 @@ struct AppPreferences: Codable, Equatable {
     var pushToTalkBeepEnabled: Bool
     var videoPanelExpanded: Bool
     init(
-        defaultNickname: String = "TTAccessible",
+        defaultNickname: String = AppPreferences.defaultNicknameFromAccount(),
         defaultStatusMessage: String = "",
         defaultGender: TeamTalkGender = .neutral,
         autoAwayTimeoutMinutes: Int = 3,
@@ -293,7 +299,7 @@ struct AppPreferences: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        defaultNickname = try container.decodeIfPresent(String.self, forKey: .defaultNickname) ?? "TTAccessible"
+        defaultNickname = try container.decodeIfPresent(String.self, forKey: .defaultNickname) ?? AppPreferences.defaultNicknameFromAccount()
         defaultStatusMessage = try container.decodeIfPresent(String.self, forKey: .defaultStatusMessage) ?? ""
         defaultGender = try container.decodeIfPresent(TeamTalkGender.self, forKey: .defaultGender) ?? .neutral
         autoAwayTimeoutMinutes = Self.clampAutoAwayTimeoutMinutes(try container.decodeIfPresent(Int.self, forKey: .autoAwayTimeoutMinutes) ?? 3)
