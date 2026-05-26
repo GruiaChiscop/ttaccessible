@@ -36,7 +36,7 @@ struct ttaccessibleApp: App {
                     NSWorkspace.shared.open(URL(string: "https://github.com/math65/ttaccessible")!)
                 }
                 Button(L10n.text("help.menu.reportIssue")) {
-                    NSWorkspace.shared.open(URL(string: "https://github.com/math65/ttaccessible/issues/new")!)
+                    NSWorkspace.shared.open(URL(string: "https://github.com/math65/ttaccessible/issues/new/choose")!)
                 }
             }
 

@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a problem with ttaccessible.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as much as you can — the more detail, the faster it can be diagnosed.
+
+  - type: input
+    id: app-version
+    attributes:
+      label: ttaccessible version
+      description: Visible in the About window, or in the app menu > About ttaccessible.
+      placeholder: "e.g. 1.3.1 (build 23)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: macos-version
+    attributes:
+      label: macOS version
+      options:
+        - "macOS 14 (Sonoma)"
+        - "macOS 15 (Sequoia)"
+        - "macOS 26 (Tahoe)"
+        - Other (please specify in the description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Be as specific as possible. Numbered steps help.
+      placeholder: |
+        1. Connect to server X
+        2. Join channel Y
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead. Include any error messages or crash details.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional)
+      description: |
+        If the bug is audio-related, please attach `~/Library/Logs/TTAccessible/audio.log` (cleared on each launch, so reproduce first then copy). For crashes, attach the relevant crash report from Console.app.
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context (optional)
+      description: Anything else that might help — server you were on, frequency of the bug, recent changes, etc.
