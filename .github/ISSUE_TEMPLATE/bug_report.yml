@@ -16,15 +16,11 @@ body:
     validations:
       required: true
 
-  - type: dropdown
+  - type: input
     id: macos-version
     attributes:
       label: macOS version
-      options:
-        - "macOS 14 (Sonoma)"
-        - "macOS 15 (Sequoia)"
-        - "macOS 26 (Tahoe)"
-        - Other (please specify in the description)
+      placeholder: "e.g. macOS 15.2 (Sequoia)"
     validations:
       required: true
 
