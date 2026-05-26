@@ -881,6 +881,8 @@
 "user.menu.move" = "Déplacer vers un canal";
 
 "update.menu.checkForUpdates" = "Vérifier les mises à jour…";
+"help.menu.viewOnGitHub" = "Voir le projet sur GitHub";
+"help.menu.reportIssue" = "Signaler un problème…";
 "preferences.updates.section" = "Mises à jour";
 "preferences.updates.autoCheck" = "Vérifier les mises à jour automatiquement";
 "preferences.updates.includeBeta" = "Inclure les versions bêta";

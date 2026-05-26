@@ -31,6 +31,15 @@ struct ttaccessibleApp: App {
                 }
             }
 
+            CommandGroup(after: .help) {
+                Button(L10n.text("help.menu.viewOnGitHub")) {
+                    NSWorkspace.shared.open(URL(string: "https://github.com/math65/ttaccessible")!)
+                }
+                Button(L10n.text("help.menu.reportIssue")) {
+                    NSWorkspace.shared.open(URL(string: "https://github.com/math65/ttaccessible/issues/new")!)
+                }
+            }
+
             CommandGroup(replacing: .newItem) {
             }
 
