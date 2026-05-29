@@ -19,7 +19,7 @@ final class PrivateMessagesViewController: NSViewController {
     var preferencesStore: AppPreferencesStore
     private let connectionController: TeamTalkConnectionController
     private let conversationsTableView = NSTableView(frame: .zero)
-    private let messagesTableView = NSTableView(frame: .zero)
+    private let messagesTableView = ChatTableView(frame: .zero)
     private let conversationsScrollView = NSScrollView(frame: .zero)
     private let messagesScrollView = NSScrollView(frame: .zero)
     private let titleLabel = NSTextField(labelWithString: "")
@@ -192,6 +192,7 @@ final class PrivateMessagesViewController: NSViewController {
         messagesTableView.delegate = self
         messagesTableView.dataSource = self
         messagesTableView.setAccessibilityLabel(L10n.text("privateMessages.messages.accessibilityLabel"))
+        messagesTableView.onCopy = { [weak self] in self?.copySelectedPrivateMessage(nil) }
 
         let pmMenu = NSMenu()
         pmMenu.addItem(NSMenuItem(title: L10n.text("chat.contextMenu.copyMessage"), action: #selector(copySelectedPrivateMessage), keyEquivalent: "c"))

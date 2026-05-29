@@ -143,6 +143,7 @@
 "chat.sender.you" = "You";
 "chat.contextMenu.copyMessage" = "Copy Message";
 "chat.contextMenu.copied" = "Message copied";
+"chat.accessibility.openLink" = "Open link: %@";
 "connectedServer.chat.error.emptyMessage" = "The message is empty.";
 "connectedServer.chat.error.notInChannel" = "You must join a channel to send a message.";
 "connectedServer.chat.error.sendFailed" = "Failed to send the message.";

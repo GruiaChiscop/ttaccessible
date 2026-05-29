@@ -89,6 +89,7 @@ final class ChannelChatTableCellView: NSTableCellView {
     }
 
     private func setMessageText(_ text: String) {
+        var detectedURLs: [URL] = []
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
@@ -106,11 +107,22 @@ final class ChannelChatTableCellView: NSTableCellView {
                         .link: url,
                         .cursor: NSCursor.pointingHand
                     ], range: match.range)
+                    detectedURLs.append(url)
                 }
             }
         }
 
         messageTextView.textStorage?.setAttributedString(attributed)
+        let actions: [NSAccessibilityCustomAction] = detectedURLs.map { url in
+            NSAccessibilityCustomAction(
+                name: L10n.format("chat.accessibility.openLink", url.absoluteString),
+                handler: {
+                    NSWorkspace.shared.open(url)
+                    return true
+                }
+            )
+        }
+        setAccessibilityCustomActions(actions)
     }
 
     private func configureUI() {

@@ -32,7 +32,7 @@ final class ConnectedServerViewController: NSViewController {
     let menuState: SavedServersMenuState
     unowned let appDelegate: AppDelegate
     let outlineView = ConnectedServerOutlineView(frame: .zero)
-    let chatTableView = NSTableView(frame: .zero)
+    let chatTableView = ChatTableView(frame: .zero)
     let historyTableView = NSTableView(frame: .zero)
     let channelsScrollView = NSScrollView(frame: .zero)
     let chatScrollView = NSScrollView(frame: .zero)
@@ -364,6 +364,7 @@ final class ConnectedServerViewController: NSViewController {
         chatTableView.delegate = self
         chatTableView.dataSource = self
         chatTableView.setAccessibilityLabel(L10n.text("connectedServer.chat.history.accessibilityLabel"))
+        chatTableView.onCopy = { [weak self] in self?.copySelectedChatMessage(nil) }
 
         let chatMenu = NSMenu()
         chatMenu.addItem(NSMenuItem(title: L10n.text("chat.contextMenu.copyMessage"), action: #selector(copySelectedChatMessage), keyEquivalent: "c"))
