@@ -27,3 +27,7 @@ CLAUDE.md
 
 # Sparkle appcast generation staging (transient)
 .appcast-staging/
+
+# Claude Code per-machine / transient
+.claude/settings.local.json
+.claude/skills/*-workspace/

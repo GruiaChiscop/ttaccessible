@@ -1,0 +1,5 @@
+{
+  "skillOverrides": {
+    "publish-release": "user-invocable-only"
+  }
+}
