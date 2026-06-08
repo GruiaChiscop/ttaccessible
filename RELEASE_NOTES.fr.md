@@ -1,17 +1,22 @@
-Améliorations d'accessibilité du chat : copie au clavier et liens accessibles à VoiceOver.
+Changement de périphérique audio plus fiable, import de fichiers `.tt` multi-serveurs, et notes de mise à jour qui suivent désormais votre langue.
 
 ## Corrections
 
-- **Cmd+C copie désormais le message sélectionné** — fonctionne aussi bien dans le chat de canal que dans la fenêtre des messages privés. Auparavant, copier un message nécessitait un clic droit → Copier le message ; le raccourci affiché à côté de l'élément de menu ne faisait rien par lui-même.
-- **Les liens dans les messages sont accessibles depuis VoiceOver** — les URL détectées dans un message sont exposées comme actions d'accessibilité sur sa ligne. Placez le curseur VoiceOver sur un message contenant un lien, appuyez sur VO+Cmd+Espace pour ouvrir le rotor des actions, puis choisissez « Ouvrir le lien : … » pour le lancer. Cliquer un lien à la souris dans le texte continue de fonctionner comme avant.
-- **L'aperçu du microphone ne se fige plus sur les interfaces audio duplex** — lorsque le même appareil servait à la fois d'entrée et de sortie système (par exemple Komplete Audio 6 MK2), démarrer l'aperçu dans Préférences > Audio pouvait bloquer l'application. La lecture est maintenant démarrée avant la capture, afin que la sortie n'attende pas un appareil que l'entrée a déjà réservé ; l'aperçu ne détruit plus non plus le moteur micro de la connexion via un redémarrage parasite lié à un changement d'appareil.
+- **Changer le périphérique d'entrée ou de sortie dans les Préférences fonctionne à nouveau** — choisir un nouvel appareil pendant que l'audio était actif était devenu sans effet. Le changement s'applique maintenant immédiatement, même si vous changez d'appareil deux fois de suite.
+- **Moins de redémarrages audio intempestifs** — les changements fréquents dans la liste des périphériques audio (transfert Continuité, appareils virtuels, démarrage de l'annulation d'écho) ne redémarrent plus tout le système audio à chaque fois. Cela met aussi fin à la série de demandes d'autorisation du microphone que certains utilisateurs constataient. Les appareils que vous choisissez vous-même dans les Préférences continuent de s'appliquer sans délai.
+- **Importer un fichier `.tt` contenant plusieurs serveurs les importe désormais tous** — auparavant, seul le premier serveur du fichier était ajouté et les autres étaient ignorés en silence (#15).
+
+## Améliorations
+
+- **Les notes de mise à jour suivent votre langue** — cette fenêtre de mise à jour affiche les notes en français pour les utilisateurs francophones, et en anglais pour les autres.
+- Mise à jour de l'outil de mise à jour Sparkle vers la version 2.9.3.
 
 ## Installation
 
-Si vous êtes en 1.3.0, 1.3.1 ou 1.3.2, ttaccessible installera cette mise à jour pour vous — aucune action requise.
+Si vous êtes en 1.3.x, ttaccessible installera cette mise à jour pour vous — aucune action requise.
 
 Installation manuelle :
 
-1. Téléchargez `ttaccessible-1.3.3-25.zip` ci-dessous.
+1. Téléchargez `ttaccessible-1.3.4-26.zip` ci-dessous.
 2. Décompressez l'archive et glissez `ttaccessible.app` dans votre dossier `/Applications`, en remplaçant la version précédente.
 3. Double-cliquez — aucun avertissement Gatekeeper grâce à la notarisation.

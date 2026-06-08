@@ -53,6 +53,28 @@ If a PR addresses something you're about to claim as fixed, flag it — the cont
 
 Always include the **direct asset URL**, not just the release page link.
 
+### Tone & wording — write for the user, not the commit log
+
+Release notes are read by VoiceOver users deciding whether to update, not by
+engineers. Translate each change into the symptom the user felt and what is
+different now. Keep it natural and plain.
+
+- **Lead with the user-visible effect**, not the mechanism. "Switching audio
+  devices works again" — not "fixed the suppression-window early return".
+- **Cut internal jargon.** No CoreAudio/AUHAL/AEC-tap/snapshot/churn/
+  suppression-window/route-change vocabulary, no class or function names, no
+  file paths. If a term names something the user can't see or act on, drop it
+  or replace it with a plain phrase ("echo cancellation starting up", not
+  "the AEC tap teardown").
+- **Avoid literal translations of code-speak.** "device-list churn" →
+  "routine changes in the audio device list"; "no-op" → "had no effect".
+- **One symptom per bullet**, bolded lead clause, then a plain-language
+  explanation of before → after. Don't merge unrelated fixes into one bullet.
+- **Read it aloud test**: if a sentence sounds like a changelog entry or a
+  PR title, rewrite it as something you'd say to a non-technical friend.
+- The French file follows the same tone (see 4b) — natural French, not a
+  word-for-word calque of the English.
+
 ## 4b. Write the French notes (`RELEASE_NOTES.fr.md`)
 
 Sparkle shows localized release notes during updates: `build.sh` renders
