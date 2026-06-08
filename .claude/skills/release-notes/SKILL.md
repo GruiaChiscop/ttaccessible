@@ -1,6 +1,6 @@
 ---
 name: release-notes
-description: Draft release notes for a new ttaccessible version. Use this skill whenever the user is preparing a release, asks "what changed since v1.X", wants a summary of recent work, mentions RELEASE_NOTES.md, asks for an AppleVis forum post, or is about to tag/publish — even when they don't explicitly say "release notes". Scans `git log <prev-tag>..HEAD`, checks open PRs to avoid duplicating in-flight fixes, writes in English (never French), and includes the direct GitHub asset URL.
+description: Draft release notes for a new ttaccessible version. Use this skill whenever the user is preparing a release, asks "what changed since v1.X", wants a summary of recent work, mentions RELEASE_NOTES.md, asks for an AppleVis forum post, or is about to tag/publish — even when they don't explicitly say "release notes". Scans `git log <prev-tag>..HEAD`, checks open PRs to avoid duplicating in-flight fixes, writes the English RELEASE_NOTES.md (GitHub body + Sparkle fallback) AND the French RELEASE_NOTES.fr.md (localized Sparkle notes), and includes the direct GitHub asset URL.
 ---
 
 # Release notes workflow
@@ -52,6 +52,21 @@ If a PR addresses something you're about to claim as fixed, flag it — the cont
 ```
 
 Always include the **direct asset URL**, not just the release page link.
+
+## 4b. Write the French notes (`RELEASE_NOTES.fr.md`)
+
+Sparkle shows localized release notes during updates: `build.sh` renders
+`RELEASE_NOTES.fr.md` to `docs/<basename>.fr.html`, and `generate_appcast`
+emits a `<sparkle:releaseNotesLink xml:lang="fr">` automatically. French users
+see the French notes; everyone else falls back to the English `.html`.
+
+- Translate `RELEASE_NOTES.md` into `RELEASE_NOTES.fr.md` at the repo root.
+- Use **vouvoiement** ("vous", never "tu") — same rule as app-shipped French strings.
+- Keep the structure and the same `.zip` filename in the Install section.
+- This file is **only** for the in-app Sparkle dialog. The GitHub release body
+  and AppleVis post stay English — do not publish the French version there.
+- If you skip `RELEASE_NOTES.fr.md`, the build still works: Sparkle just shows
+  English to everyone (the unsuffixed `.html` fallback).
 
 ## 5. Commit-issue linkage
 

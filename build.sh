@@ -117,8 +117,20 @@ if [[ $NOTARIZE -eq 1 ]]; then
     if [[ -f "$(dirname "$0")/RELEASE_NOTES.md" ]]; then
         "$(dirname "$0")/scripts/render-release-notes.sh" \
             "$(dirname "$0")/RELEASE_NOTES.md" \
-            "$DOCS_DIR/${ZIP_BASENAME}.html"
+            "$DOCS_DIR/${ZIP_BASENAME}.html" \
+            "en"
         cp "$DOCS_DIR/${ZIP_BASENAME}.html" "$APPCAST_STAGING/${ZIP_BASENAME}.html"
+    fi
+    # Localized (French) release notes. generate_appcast picks up the
+    # <basename>.<lang>.html sidecar and emits a matching
+    # <sparkle:releaseNotesLink xml:lang="fr">; Sparkle then shows it to
+    # French users and falls back to the unsuffixed .html for everyone else.
+    if [[ -f "$(dirname "$0")/RELEASE_NOTES.fr.md" ]]; then
+        "$(dirname "$0")/scripts/render-release-notes.sh" \
+            "$(dirname "$0")/RELEASE_NOTES.fr.md" \
+            "$DOCS_DIR/${ZIP_BASENAME}.fr.html" \
+            "fr"
+        cp "$DOCS_DIR/${ZIP_BASENAME}.fr.html" "$APPCAST_STAGING/${ZIP_BASENAME}.fr.html"
     fi
     # Preserve existing entries by copying current appcast into staging
     if [[ -f "$DOCS_DIR/appcast.xml" ]]; then
@@ -173,7 +185,7 @@ if [[ $RELEASE -eq 1 ]]; then
     if [[ "$CURRENT_BRANCH" == "main" ]]; then
         # Catch both tracked-with-changes and untracked-but-new files under docs/
         if [[ -n "$(git status --porcelain -- docs/)" ]]; then
-            git add docs/appcast.xml "docs/${ZIP_BASENAME}.html" 2>/dev/null
+            git add docs/appcast.xml "docs/${ZIP_BASENAME}.html" "docs/${ZIP_BASENAME}.fr.html" 2>/dev/null
             git commit -m "Update appcast and release notes for v${VERSION}"
             git push origin main
             echo "✓ Appcast + release notes pushés sur main"
