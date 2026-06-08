@@ -71,7 +71,17 @@ final class TTFileService {
 
     private let supportedVersion = "5.0"
 
+    /// Loads the first server defined in a .tt file. Used when opening a file to connect directly.
     func load(from url: URL) throws -> TTFilePayload {
+        guard let payload = try loadAll(from: url).first else {
+            throw TTFileError.missingHostInformation
+        }
+        return payload
+    }
+
+    /// Loads every `<host>` entry defined in a .tt file. A single file can hold multiple servers
+    /// (the Qt TeamTalk client exports them as sibling `<host>` elements under `<teamtalk>`).
+    func loadAll(from url: URL) throws -> [TTFilePayload] {
         guard let data = try? Data(contentsOf: url) else {
             throw TTFileError.unreadableFile
         }
@@ -86,17 +96,27 @@ final class TTFileService {
             throw TTFileError.incompatibleVersion
         }
 
-        guard let hostElement = root.elements(forName: "host").first else {
+        let hostElements = root.elements(forName: "host")
+        guard hostElements.isEmpty == false else {
             throw TTFileError.missingHostInformation
         }
 
+        let payloads = hostElements.compactMap { payload(from: $0, fileURL: url, version: version) }
+        guard payloads.isEmpty == false else {
+            throw TTFileError.missingHostInformation
+        }
+
+        return payloads
+    }
+
+    private func payload(from hostElement: XMLElement, fileURL: URL, version: String) -> TTFilePayload? {
         let name = value(in: hostElement, named: "name")
         let host = value(in: hostElement, named: "address")
         let tcpPort = Int(value(in: hostElement, named: "tcpport")) ?? 10333
         let udpPort = Int(value(in: hostElement, named: "udpport")) ?? tcpPort
 
         guard name.isEmpty == false, host.isEmpty == false else {
-            throw TTFileError.missingHostInformation
+            return nil
         }
 
         let encrypted = Self.parseBool(value(in: hostElement, named: "encrypted"))
@@ -105,7 +125,7 @@ final class TTFileService {
         let clientSetup = parseClientSetup(from: hostElement)
 
         return TTFilePayload(
-            fileURL: url,
+            fileURL: fileURL,
             version: version,
             name: name,
             host: host,

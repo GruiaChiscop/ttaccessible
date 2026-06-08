@@ -214,7 +214,7 @@ final class TeamTalkConfigImporter {
         case "plist":
             return try parsePlist(at: url)
         case "tt":
-            return [importedServer(from: try ttFileService.load(from: url))]
+            return try ttFileService.loadAll(from: url).map(importedServer(from:))
         default:
             throw ImportError.unsupportedFileType
         }
