@@ -47,8 +47,12 @@ private struct FeedbackView: View {
     let preferencesStore: AppPreferencesStore
     let onClose: () -> Void
 
+    // Remembered across sessions, pre-filled on next open; only saved after a
+    // successful send (so we never remember an address the server rejected).
+    private static let savedEmailKey = "appBackendFeedbackEmail"
+
     @State private var contactType: AppBackendClient.ContactType = .bug
-    @State private var email = ""
+    @State private var email = UserDefaults.standard.string(forKey: FeedbackView.savedEmailKey) ?? ""
     @State private var message = ""
     @State private var attachAudioLog = true
     @State private var isSending = false
@@ -150,6 +154,7 @@ private struct FeedbackView: View {
             isSending = false
             switch result {
             case .success:
+                UserDefaults.standard.set(trimmedEmail, forKey: FeedbackView.savedEmailKey)
                 isShowingSuccess = true
             case .failure(let error):
                 sendErrorMessage = error.localizedMessage
