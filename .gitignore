@@ -25,6 +25,9 @@ BuildArtifacts/
 # Internal files
 CLAUDE.md
 
+# App backend Bearer secret (public repo — never commit; see CLAUDE.md)
+App/ttaccessible/AppBackendSecret.plist
+
 # Sparkle appcast generation staging (transient)
 .appcast-staging/
 

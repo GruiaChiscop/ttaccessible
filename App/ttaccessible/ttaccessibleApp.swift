@@ -38,6 +38,11 @@ struct ttaccessibleApp: App {
                 Button(L10n.text("help.menu.reportIssue")) {
                     NSWorkspace.shared.open(URL(string: "https://github.com/math65/ttaccessible/issues/new/choose")!)
                 }
+                if AppBackendClient.isConfigured {
+                    Button(L10n.text("help.menu.contactDeveloper")) {
+                        appDelegate.openFeedback()
+                    }
+                }
             }
 
             CommandGroup(replacing: .newItem) {

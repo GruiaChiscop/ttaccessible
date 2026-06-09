@@ -15,6 +15,11 @@ enum AudioLogger {
 
     private static let queue = DispatchQueue(label: "com.ttaccessible.audiologger")
 
+    /// Location of the diagnostics log (attached to feedback bug reports).
+    static var fileURL: URL {
+        logURL
+    }
+
     static func log(_ message: String) {
         // Capture timestamp as raw values on the calling thread (no DateFormatter,
         // which is not thread-safe). Format the string on the serial queue.

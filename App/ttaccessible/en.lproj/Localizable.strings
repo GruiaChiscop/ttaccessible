@@ -910,3 +910,27 @@
 "preferences.updates.autoCheck" = "Check for updates automatically";
 "preferences.updates.includeBeta" = "Include beta versions";
 "preferences.updates.includeBeta.help" = "Beta versions may contain bugs. Disable to receive only stable releases.";
+
+"help.menu.contactDeveloper" = "Contact the Developer…";
+"feedback.window.title" = "Contact the Developer";
+"feedback.field.type" = "Type";
+"feedback.type.bug" = "Report a problem";
+"feedback.type.suggestion" = "Suggestion";
+"feedback.type.question" = "Question";
+"feedback.type.other" = "Other";
+"feedback.field.email" = "Your email address";
+"feedback.field.message" = "Message";
+"feedback.attachLog.toggle" = "Attach the audio diagnostic log";
+"feedback.diagnostics.note" = "The app version, macOS version and audio settings will be included to help with troubleshooting.";
+"feedback.button.send" = "Send";
+"feedback.button.cancel" = "Cancel";
+"feedback.sending" = "Sending…";
+"feedback.success.title" = "Message sent";
+"feedback.success.message" = "Thank you! Your message has been sent. You will receive a reply at the address you provided.";
+"feedback.success.button" = "OK";
+"feedback.error.title" = "The message could not be sent";
+"feedback.error.notConfigured" = "This build does not include the feedback service configuration. Please report the issue on GitHub instead.";
+"feedback.error.network" = "Network error. Check your Internet connection and try again.";
+"feedback.error.rateLimited" = "Too many messages were sent recently. Please try again in an hour.";
+"feedback.error.validation" = "Check that your email address is valid and the message is not empty.";
+"feedback.error.server" = "The server could not process the message. Please try again later.";

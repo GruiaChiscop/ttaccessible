@@ -74,6 +74,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statsWindowController: NSWindowController?
     private weak var statsViewController: StatsViewController?
     private var preferencesWindowController: PreferencesWindowController?
+    private var feedbackWindowController: FeedbackWindowController?
+    private let announcementService = AnnouncementService()
     private var userAccountsWindowController: NSWindowController?
     private var bannedUsersWindowController: NSWindowController?
     private var userInfoWindowController: UserInfoWindowController?
@@ -136,6 +138,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         syncNicknamePreference()
         scheduleLaunchUpdateCheck()
         configurePushToTalkObservers()
+        // Slight delay so the announcement alert never races the main window.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.announcementService.checkAtLaunch()
+        }
     }
 
     private func syncNicknamePreference() {
@@ -1383,6 +1389,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
         preferencesWindowController?.showPreferences()
+    }
+
+    func openFeedback() {
+        if feedbackWindowController == nil {
+            feedbackWindowController = FeedbackWindowController(preferencesStore: preferencesStore)
+        }
+        feedbackWindowController?.show()
     }
 
     // MARK: - Updates

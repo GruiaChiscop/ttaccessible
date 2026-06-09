@@ -910,3 +910,27 @@
 "preferences.updates.autoCheck" = "Vérifier les mises à jour automatiquement";
 "preferences.updates.includeBeta" = "Inclure les versions bêta";
 "preferences.updates.includeBeta.help" = "Les versions bêta peuvent contenir des bugs. Désactivez pour ne recevoir que les versions stables.";
+
+"help.menu.contactDeveloper" = "Contacter le développeur…";
+"feedback.window.title" = "Contacter le développeur";
+"feedback.field.type" = "Type";
+"feedback.type.bug" = "Signaler un problème";
+"feedback.type.suggestion" = "Suggestion";
+"feedback.type.question" = "Question";
+"feedback.type.other" = "Autre";
+"feedback.field.email" = "Votre adresse email";
+"feedback.field.message" = "Message";
+"feedback.attachLog.toggle" = "Joindre le journal de diagnostic audio";
+"feedback.diagnostics.note" = "La version de l'application, la version de macOS et vos réglages audio seront inclus pour faciliter le diagnostic.";
+"feedback.button.send" = "Envoyer";
+"feedback.button.cancel" = "Annuler";
+"feedback.sending" = "Envoi en cours…";
+"feedback.success.title" = "Message envoyé";
+"feedback.success.message" = "Merci ! Votre message a bien été envoyé. Vous recevrez une réponse à l'adresse indiquée.";
+"feedback.success.button" = "OK";
+"feedback.error.title" = "Le message n'a pas pu être envoyé";
+"feedback.error.notConfigured" = "Cette version ne contient pas la configuration du service de commentaires. Merci de signaler le problème sur GitHub.";
+"feedback.error.network" = "Erreur réseau. Vérifiez votre connexion Internet puis réessayez.";
+"feedback.error.rateLimited" = "Trop de messages envoyés récemment. Veuillez réessayer dans une heure.";
+"feedback.error.validation" = "Vérifiez que votre adresse email est valide et que le message n'est pas vide.";
+"feedback.error.server" = "Le serveur n'a pas pu traiter le message. Veuillez réessayer plus tard.";
