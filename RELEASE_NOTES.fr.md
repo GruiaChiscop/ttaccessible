@@ -1,15 +1,9 @@
-Changement de périphérique audio plus fiable, import de fichiers `.tt` multi-serveurs, et notes de mise à jour qui suivent désormais votre langue.
+Signalez des bugs et envoyez vos suggestions directement depuis l'application — sans compte GitHub.
 
-## Corrections
+## Nouveautés
 
-- **Changer le périphérique d'entrée ou de sortie dans les Préférences fonctionne à nouveau** — choisir un nouvel appareil pendant que l'audio était actif était devenu sans effet. Le changement s'applique maintenant immédiatement, même si vous changez d'appareil deux fois de suite.
-- **Moins de redémarrages audio intempestifs** — les changements fréquents dans la liste des périphériques audio (transfert Continuité, appareils virtuels, démarrage de l'annulation d'écho) ne redémarrent plus tout le système audio à chaque fois. Cela met aussi fin à la série de demandes d'autorisation du microphone que certains utilisateurs constataient. Les appareils que vous choisissez vous-même dans les Préférences continuent de s'appliquer sans délai.
-- **Importer un fichier `.tt` contenant plusieurs serveurs les importe désormais tous** — auparavant, seul le premier serveur du fichier était ajouté et les autres étaient ignorés en silence (#15).
-
-## Améliorations
-
-- **Les notes de mise à jour suivent votre langue** — cette fenêtre de mise à jour affiche les notes en français pour les utilisateurs francophones, et en anglais pour les autres.
-- Mise à jour de l'outil de mise à jour Sparkle vers la version 2.9.3.
+- **Contacter le développeur, intégré à l'application** — un nouvel élément du menu Aide ouvre un formulaire simple où vous pouvez signaler un problème, envoyer une suggestion ou poser une question. Vous n'avez plus besoin d'un compte GitHub pour prendre contact. Lorsque vous signalez un problème, l'application joint un bref résumé technique (vos versions de l'application et de macOS, vos périphériques audio et quelques réglages audio) afin de faciliter le diagnostic. Vous pouvez indiquer une adresse e-mail si vous souhaitez une réponse, et l'application la mémorise pour la prochaine fois.
+- **Annonces occasionnelles au lancement** — l'application peut désormais afficher un court message accessible au démarrage, par exemple pour une nouvelle version ou une information importante. Il s'affiche dans votre langue, et les annonces ponctuelles ne s'affichent qu'une seule fois.
 
 ## Installation
 
@@ -17,6 +11,6 @@ Si vous êtes en 1.3.x, ttaccessible installera cette mise à jour pour vous —
 
 Installation manuelle :
 
-1. Téléchargez `ttaccessible-1.3.4-26.zip` ci-dessous.
+1. Téléchargez `ttaccessible-1.3.5-27.zip` ci-dessous.
 2. Décompressez l'archive et glissez `ttaccessible.app` dans votre dossier `/Applications`, en remplaçant la version précédente.
 3. Double-cliquez — aucun avertissement Gatekeeper grâce à la notarisation.

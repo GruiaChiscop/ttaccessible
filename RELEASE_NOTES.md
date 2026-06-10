@@ -1,15 +1,9 @@
-More reliable audio device switching, multi-server `.tt` import, and update notes that now follow your language.
+Report bugs and send suggestions right from the app — no GitHub account needed.
 
-## Fixed
+## New
 
-- **Switching the input or output device in Preferences works again** — picking a new device while audio was active had become a no-op. It now applies immediately, even when you change devices twice in quick succession.
-- **Fewer spurious audio restarts** — routine changes in the audio device list (Continuity handoff, virtual devices, echo cancellation starting up) no longer restart the whole sound system every time. This also stops the run of microphone-permission dialogs some users saw. Devices you pick yourself in Preferences still apply right away.
-- **Importing a `.tt` file with multiple servers now imports them all** — previously only the first server in the file was added and the rest were silently dropped (#15).
-
-## Improved
-
-- **Update notes now follow your language** — this update window shows the notes in French for French-language users and in English for everyone else.
-- Updated the Sparkle updater to 2.9.3.
+- **Contact the Developer, built into the app** — a new item in the Help menu opens a simple form where you can report a problem, send a suggestion, or ask a question. You no longer need a GitHub account to get in touch. When you report a problem, the app attaches a short technical summary (your app and macOS versions, audio devices, and a few audio settings) so issues are easier to track down. You can leave an email address if you'd like a reply, and the app remembers it for next time.
+- **Occasional announcements at launch** — the app can now show a short, accessible message when it starts up, for things like a new release or an important notice. It appears in your language, and one-time announcements only show once.
 
 ## Install
 
@@ -17,6 +11,6 @@ If you're on 1.3.x, ttaccessible will install this update for you — no action 
 
 Manual install:
 
-1. Download `ttaccessible-1.3.4-26.zip` below.
+1. Download `ttaccessible-1.3.5-27.zip` below.
 2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
 3. Double-click — no Gatekeeper warning thanks to notarization.
