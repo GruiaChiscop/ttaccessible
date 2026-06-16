@@ -50,6 +50,12 @@ final class ProfileContext {
                 requestedSlug = envSlug
             }
         }
+        // A Sparkle relaunch loses the launch arguments, so a non-default
+        // instance would come back as Default. Recover its slug from the
+        // one-shot token written in `updaterWillRelaunchApplication`.
+        if requestedSlug == nil {
+            requestedSlug = consumePendingRelaunchSlug()
+        }
         guard let rawSlug = requestedSlug else {
             return defaultProfile()
         }
@@ -236,5 +242,58 @@ final class ProfileContext {
         _ = status
 
         return true
+    }
+
+    // MARK: - Sparkle relaunch handoff
+
+    /// Sparkle relaunches the app without preserving `-profile <slug>`, so a
+    /// non-default instance would otherwise come back as Default. To bridge
+    /// that gap, `recordPendingRelaunchSlug(_:)` writes a one-shot token just
+    /// before Sparkle relaunches (from `updaterWillRelaunchApplication`), and
+    /// the next launch consumes it via `consumePendingRelaunchSlug()`.
+    ///
+    /// It is a single-use handoff, NOT a persisted "active profile": the token
+    /// is deleted on read and only trusted within a short freshness window, so
+    /// a stale token from a crashed update can't hijack a later manual launch
+    /// of the default profile. Other non-default instances aren't affected —
+    /// they keep their own `-profile` in memory and are never relaunched here.
+    private static var pendingRelaunchTokenURL: URL {
+        sharedCoordinationDirectory.appendingPathComponent("pending-relaunch-profile", isDirectory: false)
+    }
+
+    /// How long (seconds) a relaunch token is trusted. A Sparkle relaunch
+    /// follows within seconds; anything older is treated as stale and ignored.
+    private static let pendingRelaunchMaxAge: TimeInterval = 60
+
+    /// Record the slug of the profile being relaunched. No-op for the default
+    /// profile (a bare launch already binds it).
+    static func recordPendingRelaunchSlug(_ slug: String) {
+        let normalized = normalizeSlug(slug)
+        guard normalized.isEmpty == false, normalized != defaultSlug else { return }
+        try? FileManager.default.createDirectory(at: sharedCoordinationDirectory, withIntermediateDirectories: true)
+        let payload = "\(Int(Date().timeIntervalSince1970))\n\(normalized)\n"
+        try? payload.write(to: pendingRelaunchTokenURL, atomically: true, encoding: .utf8)
+    }
+
+    /// Read and delete the relaunch token. Returns the slug only when the token
+    /// exists and is fresh; nil otherwise. Always removes the file so it is
+    /// consumed exactly once.
+    private static func consumePendingRelaunchSlug() -> String? {
+        let url = pendingRelaunchTokenURL
+        guard let contents = try? String(contentsOf: url, encoding: .utf8) else {
+            return nil
+        }
+        try? FileManager.default.removeItem(at: url)
+        let lines = contents.split(separator: "\n", omittingEmptySubsequences: true)
+        guard lines.count == 2,
+              let stamp = TimeInterval(lines[0].trimmingCharacters(in: .whitespaces)) else {
+            return nil
+        }
+        let age = Date().timeIntervalSince1970 - stamp
+        guard age >= 0, age <= pendingRelaunchMaxAge else {
+            return nil
+        }
+        let slug = normalizeSlug(String(lines[1]))
+        return (slug.isEmpty || slug == defaultSlug) ? nil : slug
     }
 }

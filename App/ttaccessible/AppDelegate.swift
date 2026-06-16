@@ -2154,6 +2154,13 @@ extension AppDelegate: SPUUpdaterDelegate {
         }
         return includeBeta ? ["beta"] : []
     }
+
+    /// Sparkle relaunches the app without preserving `-profile <slug>`. Stash a
+    /// one-shot token so the relaunched process can rebind to this profile
+    /// instead of falling back to Default. No-op for the default profile.
+    nonisolated func updaterWillRelaunchApplication(_ updater: SPUUpdater) {
+        ProfileContext.recordPendingRelaunchSlug(ProfileContext.current.slug)
+    }
 }
 
 extension AppDelegate: UNUserNotificationCenterDelegate {
