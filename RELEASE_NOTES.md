@@ -9,6 +9,10 @@ Run more than one server identity at the same time, and get connected faster whe
 
 - **Buttons in launch announcements** — the occasional messages the app shows at startup can now include a button that opens a relevant link in your browser, alongside the usual OK button.
 
+## Note
+
+This version moves your saved servers and settings to a new per-profile storage location. If you later reinstall an older version, it won't see them — nothing is lost, they're just in the new location.
+
 ## Install
 
 If you're already running ttaccessible, it will install this update for you — no action needed.

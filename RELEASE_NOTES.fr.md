@@ -9,6 +9,10 @@ Utilisez plusieurs identités de serveur en même temps, et connectez-vous plus 
 
 - **Boutons dans les annonces de démarrage** — les messages occasionnels affichés au lancement peuvent maintenant inclure un bouton qui ouvre un lien dans votre navigateur, en plus du bouton OK habituel.
 
+## Note
+
+Cette version déplace vos serveurs enregistrés et vos réglages vers un nouvel emplacement de stockage par profil. Si vous réinstallez ultérieurement une version antérieure, elle ne les verra pas — rien n'est perdu, ils se trouvent simplement au nouvel emplacement.
+
 ## Installation
 
 Si vous utilisez déjà ttaccessible, la mise à jour s'installera toute seule — aucune action nécessaire.
