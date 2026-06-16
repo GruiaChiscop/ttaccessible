@@ -1,16 +1,20 @@
-Signalez des bugs et envoyez vos suggestions directement depuis l'application — sans compte GitHub.
+Utilisez plusieurs identités de serveur en même temps, et connectez-vous plus vite au démarrage.
 
 ## Nouveautés
 
-- **Contacter le développeur, intégré à l'application** — un nouvel élément du menu Aide ouvre un formulaire simple où vous pouvez signaler un problème, envoyer une suggestion ou poser une question. Vous n'avez plus besoin d'un compte GitHub pour prendre contact. Lorsque vous signalez un problème, l'application joint un bref résumé technique (vos versions de l'application et de macOS, vos périphériques audio et quelques réglages audio) afin de faciliter le diagnostic. Vous pouvez indiquer une adresse e-mail si vous souhaitez une réponse, et l'application la mémorise pour la prochaine fois.
-- **Annonces occasionnelles au lancement** — l'application peut désormais afficher un court message accessible au démarrage, par exemple pour une nouvelle version ou une information importante. Il s'affiche dans votre langue, et les annonces ponctuelles ne s'affichent qu'une seule fois.
+- **Plusieurs profils, côte à côte** — vous pouvez désormais garder des configurations séparées dans la même application. Un nouvel élément **Nouvelle instance…** dans le menu de l'application (Commande-Majuscule-N) ouvre un sélecteur où créer un profil ou en lancer un existant. Chaque profil possède ses propres serveurs enregistrés, préférences, mots de passe, packs de sons et historique de discussion, et s'exécute dans sa propre fenêtre — vous pouvez ainsi être connecté à deux serveurs à la fois, par exemple un personnel et un professionnel, sans qu'ils se mélangent. Un élément **Gérer les profils…** permet de renommer ou de supprimer les profils que vous avez créés. Votre configuration actuelle reste telle quelle et devient le profil par défaut : rien ne change tant que vous ne décidez pas d'en ajouter un. (Contribution de heath-toby.)
+- **Se connecter au dernier serveur au démarrage** — une nouvelle option dans les Préférences, dans l'onglet Connexion, fait que l'application se connecte directement au dernier serveur utilisé lorsqu'elle démarre, pour ne plus avoir à le choisir dans la liste à chaque fois. Elle est désactivée par défaut ; activez-la si vous le souhaitez. Si la connexion échoue, vous revenez simplement sur votre liste de serveurs, comme d'habitude.
+
+## Autres changements
+
+- **Boutons dans les annonces de démarrage** — les messages occasionnels affichés au lancement peuvent maintenant inclure un bouton qui ouvre un lien dans votre navigateur, en plus du bouton OK habituel.
 
 ## Installation
 
-Si vous êtes en 1.3.x, ttaccessible installera cette mise à jour pour vous — aucune action requise.
+Si vous utilisez déjà ttaccessible, la mise à jour s'installera toute seule — aucune action nécessaire.
 
 Installation manuelle :
 
-1. Téléchargez `ttaccessible-1.3.5-27.zip` ci-dessous.
+1. Téléchargez `ttaccessible-1.4.0-28.zip` ci-dessous.
 2. Décompressez l'archive et glissez `ttaccessible.app` dans votre dossier `/Applications`, en remplaçant la version précédente.
 3. Double-cliquez — aucun avertissement Gatekeeper grâce à la notarisation.
