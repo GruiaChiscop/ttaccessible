@@ -938,14 +938,12 @@
 
 "profile.menu.newInstance" = "New Instance…";
 "profile.newInstance.title" = "Open a new instance";
-"profile.newInstance.message" = "Choose a profile to launch as a separate instance. Each profile has its own servers, preferences, and settings, and runs side-by-side with the current one.";
+"profile.newInstance.message" = "Pick a profile to open in a separate window that runs alongside this one. Choosing the current profile opens another window sharing its servers and settings; or create a new, empty profile.";
 "profile.newInstance.launch" = "Launch";
 "profile.newInstance.createNew" = "New Profile…";
 "profile.newInstance.picker.accessibilityLabel" = "Profile to launch";
 "profile.newInstance.picker.currentSuffix" = "%@ (current)";
-"profile.newInstance.error.title" = "Could Not Launch Instance";
-"profile.newInstance.error.sameProfile" = "The profile \"%@\" is already running in this window. Pick a different profile, or create a new one.";
-"profile.create.title" = "Create a new profile";
+"profile.newInstance.error.title" = "Could Not Launch Instance";"profile.create.title" = "Create a new profile";
 "profile.create.message" = "Enter a name for the new profile. A separate instance of ttaccessible will launch with its own settings and saved servers.";
 "profile.create.launch" = "Create & Launch";
 "profile.create.placeholder" = "Profile name";
@@ -970,4 +968,3 @@
 "profile.delete.confirm.button" = "Delete";
 "profile.delete.error.currentRunning" = "The profile \"%@\" is the one currently running in this window. Quit this instance first, then delete it from another instance.";
 "profile.delete.error.otherInstanceRunning" = "Another instance of ttaccessible is running with the profile \"%@\". Quit that instance first.";
-"profile.newInstance.error.alreadyRunning" = "Another instance of ttaccessible is already running with the profile \"%@\". Bring that window forward instead of launching a second copy.";

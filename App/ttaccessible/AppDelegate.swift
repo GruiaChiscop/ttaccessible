@@ -798,6 +798,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// selected server still exists. The saved-servers window stays visible
     /// underneath, so a failed or cancelled connection falls back to the list.
     private func connectToLastServerOnLaunchIfEnabled() {
+        // A profile clone launched with -noconnect starts disconnected so it can
+        // be pointed at a different server (mirrors the Qt client). Passed via
+        // argument or environment (NSWorkspace may drop arguments).
+        let noConnect = ProfileContext.startsDisconnectedOnLaunch
+            || CommandLine.arguments.contains("-noconnect")
+            || ProcessInfo.processInfo.environment["TTACCESSIBLE_NOCONNECT"] == "1"
+        guard noConnect == false else {
+            return
+        }
         guard preferencesStore.preferences.connectToLastServerOnLaunch else {
             return
         }
@@ -2159,7 +2168,7 @@ extension AppDelegate: SPUUpdaterDelegate {
     /// one-shot token so the relaunched process can rebind to this profile
     /// instead of falling back to Default. No-op for the default profile.
     nonisolated func updaterWillRelaunchApplication(_ updater: SPUUpdater) {
-        ProfileContext.recordPendingRelaunchSlug(ProfileContext.current.slug)
+        ProfileContext.recordPendingHandoff(slug: ProfileContext.current.slug, suppressAutoConnect: false)
     }
 }
 

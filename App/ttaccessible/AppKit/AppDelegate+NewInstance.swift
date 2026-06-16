@@ -51,7 +51,11 @@ extension AppDelegate {
         switch response {
         case .alertFirstButtonReturn:
             guard let slug = popup.selectedItem?.representedObject as? String else { return }
-            launchInstance(forSlug: slug)
+            // Launching the current profile opens a second window that shares
+            // its servers/settings — start it disconnected so the user can
+            // point it at a different server (mirrors the Qt client).
+            let isCurrent = (slug == ProfileContext.current.slug)
+            launchInstance(forSlug: slug, suppressAutoConnect: isCurrent)
         case .alertSecondButtonReturn:
             promptCreateAndLaunchProfile()
         default:
@@ -143,7 +147,8 @@ extension AppDelegate {
             presentNewInstanceError(message: L10n.text("profile.create.error.invalid"))
             return
         }
-        launchInstance(forSlug: entry.slug)
+        // A brand-new profile is empty, so there's nothing to auto-connect to.
+        launchInstance(forSlug: entry.slug, suppressAutoConnect: false)
     }
 
     private func promptRenameProfile(_ entry: ProfileRegistry.Entry) {
@@ -209,39 +214,34 @@ extension AppDelegate {
         ProfileRegistry.shared.remove(slug: entry.slug)
     }
 
-    private func launchInstance(forSlug rawSlug: String) {
+    /// Launch a separate process bound to `rawSlug`. Multiple instances of the
+    /// same profile are allowed (like the Qt client): they intentionally share
+    /// servers/settings with last-writer-wins. `ProfileInstanceLock` is no
+    /// longer used to refuse a launch — only to guard profile deletion against
+    /// a live instance. When `suppressAutoConnect` is true (a clone of the
+    /// current profile), the new instance starts disconnected via `-noconnect`.
+    private func launchInstance(forSlug rawSlug: String, suppressAutoConnect: Bool) {
         let slug = ProfileContext.normalizeSlug(rawSlug)
-
-        // Launching another process bound to the same profile would have two
-        // processes writing into the same UserDefaults suite — that's almost
-        // always a mistake, especially for the Default profile, which IS the
-        // current process. Refuse instead of silently double-launching.
-        if slug == ProfileContext.current.slug {
-            presentNewInstanceError(message: L10n.format(
-                "profile.newInstance.error.sameProfile",
-                ProfileContext.current.displayName
-            ))
-            return
-        }
-
-        // Cross-process check: another instance may already be running this
-        // slug. Best-effort PID-file lock — see ProfileInstanceLock for the
-        // limitations (stale-on-crash + PID recycling).
-        if ProfileInstanceLock.isAnotherInstanceRunning(forSlug: slug) {
-            let entry = ProfileRegistry.shared.entry(forSlug: slug)
-            let name = entry?.displayName ?? slug
-            presentNewInstanceError(message: L10n.format(
-                "profile.newInstance.error.alreadyRunning",
-                name
-            ))
-            return
-        }
 
         let bundleURL = Bundle.main.bundleURL
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
         configuration.activates = true
-        configuration.arguments = ["-profile", slug]
+        // NSWorkspace drops `arguments` when a sandboxed app launches another
+        // instance of itself, so the profile is passed via the environment
+        // (read by ProfileContext as TTACCESSIBLE_PROFILE). Arguments are kept
+        // as a belt-and-braces for contexts where they do come through.
+        var arguments = ["-profile", slug]
+        var environment = ["TTACCESSIBLE_PROFILE": slug]
+        if suppressAutoConnect {
+            arguments.append("-noconnect")
+            environment["TTACCESSIBLE_NOCONNECT"] = "1"
+        }
+        configuration.arguments = arguments
+        configuration.environment = environment
+        // NSWorkspace drops arguments and environment for a sandboxed self-launch,
+        // so the reliable channel is the file handoff the child consumes at launch.
+        ProfileContext.recordPendingHandoff(slug: slug, suppressAutoConnect: suppressAutoConnect)
 
         NSWorkspace.shared.openApplication(at: bundleURL, configuration: configuration) { [weak self] _, error in
             guard let error else { return }

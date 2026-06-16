@@ -17,6 +17,13 @@ import Security
 final class ProfileContext {
     static let defaultSlug = "default"
     static let defaultDisplayName = "Default"
+    /// Dedicated suite for the default profile. The default profile no longer
+    /// uses `.standard` directly: its data is migrated into this suite so the
+    /// app's bundle domain (which every suite's search list falls through to)
+    /// stops leaking the default's data into other profiles. See
+    /// `migrateDefaultProfileStorageIfNeeded()`.
+    static let defaultSuiteName = "com.math65.ttaccessible.profile.default"
+    private static let defaultMigrationFlagKey = "profile.defaultMigration.v1"
 
     /// The active profile for this process. Resolved lazily on first access
     /// from `-profile <slug>` in `CommandLine.arguments`; stores that take a
@@ -32,6 +39,10 @@ final class ProfileContext {
     /// scripted launches. Unknown slugs are registered on the fly so a freshly
     /// chosen profile works on its very first launch.
     private static func resolveFromLaunchEnvironment() -> ProfileContext {
+        // Runs once per install (flag-guarded): moves the default profile's
+        // data out of the shared bundle domain so other profiles stop seeing it.
+        migrateDefaultProfileStorageIfNeeded()
+
         let args = CommandLine.arguments
         var requestedSlug: String?
         var i = 1
@@ -50,11 +61,15 @@ final class ProfileContext {
                 requestedSlug = envSlug
             }
         }
-        // A Sparkle relaunch loses the launch arguments, so a non-default
-        // instance would come back as Default. Recover its slug from the
-        // one-shot token written in `updaterWillRelaunchApplication`.
+        // NSWorkspace.openApplication drops arguments AND environment when a
+        // sandboxed app launches another instance of itself, and Sparkle
+        // relaunches without preserving them either. The reliable channel is the
+        // one-shot file token written just before the new instance starts.
         if requestedSlug == nil {
-            requestedSlug = consumePendingRelaunchSlug()
+            if let handoff = consumePendingHandoff() {
+                requestedSlug = handoff.slug
+                startsDisconnectedOnLaunch = handoff.suppressAutoConnect
+            }
         }
         guard let rawSlug = requestedSlug else {
             return defaultProfile()
@@ -87,10 +102,11 @@ final class ProfileContext {
     }
 
     static func defaultProfile() -> ProfileContext {
-        ProfileContext(
+        let defaults = UserDefaults(suiteName: defaultSuiteName) ?? .standard
+        return ProfileContext(
             slug: defaultSlug,
             displayName: defaultDisplayName,
-            userDefaults: .standard,
+            userDefaults: defaults,
             isDefault: true
         )
     }
@@ -205,6 +221,42 @@ final class ProfileContext {
         return "com.math65.ttaccessible.saved-server-password.profile.\(slug)"
     }
 
+    /// One-time migration: move the default profile's UserDefaults from the
+    /// app's bundle domain (`.standard`) into a dedicated suite.
+    ///
+    /// Why: in-process, every `UserDefaults(suiteName:)` search list falls
+    /// through to the main bundle's persistent domain. With the default
+    /// profile's data living there, a fresh non-default profile would read the
+    /// default's servers/preferences for any key it hadn't written yet. Moving
+    /// the default's app keys out of the bundle domain makes that fall-through
+    /// land on nothing → real isolation.
+    ///
+    /// Framework keys (Sparkle `SU…`, AppKit `NS…` window-frame autosave, etc.)
+    /// are intentionally LEFT in the bundle domain: Sparkle and AppKit read
+    /// them from `.standard`, and sharing them across instances is harmless.
+    ///
+    /// Flag-guarded and idempotent; safe to call on every launch and from any
+    /// profile's process (the bundle domain is shared by all instances).
+    static func migrateDefaultProfileStorageIfNeeded() {
+        guard let suite = UserDefaults(suiteName: defaultSuiteName) else { return }
+        if suite.bool(forKey: defaultMigrationFlagKey) { return }
+
+        let standard = UserDefaults.standard
+        if let bundleID = Bundle.main.bundleIdentifier,
+           let appDomain = standard.persistentDomain(forName: bundleID) {
+            let systemPrefixes = ["SU", "NS", "Apple", "com.apple", "WebKit", "Sparkle"]
+            for (key, value) in appDomain {
+                if systemPrefixes.contains(where: { key.hasPrefix($0) }) { continue }
+                suite.set(value, forKey: key)
+                standard.removeObject(forKey: key)
+            }
+        }
+
+        suite.set(true, forKey: defaultMigrationFlagKey)
+        suite.synchronize()
+        standard.synchronize()
+    }
+
     /// Tear down every storage location owned by a profile. Used by the
     /// Manage Profiles UI when the user deletes a profile. Refuses to touch
     /// the default profile.
@@ -244,56 +296,62 @@ final class ProfileContext {
         return true
     }
 
-    // MARK: - Sparkle relaunch handoff
+    // MARK: - Pending profile handoff (NSWorkspace self-launch + Sparkle relaunch)
 
-    /// Sparkle relaunches the app without preserving `-profile <slug>`, so a
-    /// non-default instance would otherwise come back as Default. To bridge
-    /// that gap, `recordPendingRelaunchSlug(_:)` writes a one-shot token just
-    /// before Sparkle relaunches (from `updaterWillRelaunchApplication`), and
-    /// the next launch consumes it via `consumePendingRelaunchSlug()`.
+    /// `NSWorkspace.openApplication` drops BOTH `arguments` and `environment`
+    /// when a sandboxed app launches another instance of itself, and Sparkle
+    /// relaunches without preserving them either. So the profile a freshly
+    /// launched instance should bind to is handed off via a one-shot file token
+    /// written just before the new instance starts; the new process consumes it
+    /// during launch resolution.
     ///
-    /// It is a single-use handoff, NOT a persisted "active profile": the token
-    /// is deleted on read and only trusted within a short freshness window, so
-    /// a stale token from a crashed update can't hijack a later manual launch
-    /// of the default profile. Other non-default instances aren't affected —
-    /// they keep their own `-profile` in memory and are never relaunched here.
-    private static var pendingRelaunchTokenURL: URL {
-        sharedCoordinationDirectory.appendingPathComponent("pending-relaunch-profile", isDirectory: false)
+    /// Single-use: deleted on read and only trusted within a short freshness
+    /// window, so a stale token (e.g. after a crash) can't hijack a later launch.
+    /// Sequential user-driven launches don't race; the only race
+    /// (two launches within the same instant) is astronomically unlikely and
+    /// degrades to "the other new instance binds the default profile".
+    private static var pendingHandoffTokenURL: URL {
+        sharedCoordinationDirectory.appendingPathComponent("pending-handoff", isDirectory: false)
     }
 
-    /// How long (seconds) a relaunch token is trusted. A Sparkle relaunch
-    /// follows within seconds; anything older is treated as stale and ignored.
-    private static let pendingRelaunchMaxAge: TimeInterval = 60
+    private static let pendingHandoffMaxAge: TimeInterval = 60
 
-    /// Record the slug of the profile being relaunched. No-op for the default
-    /// profile (a bare launch already binds it).
-    static func recordPendingRelaunchSlug(_ slug: String) {
+    /// Whether the instance launched this session should start disconnected (a
+    /// clone of the current profile, mirroring Qt's `-noconnect`). Set from the
+    /// consumed handoff token during launch resolution; read by AppDelegate.
+    private(set) static var startsDisconnectedOnLaunch = false
+
+    /// Record the profile a freshly launched instance should bind to, and
+    /// whether it should start disconnected. Written by the New Instance menu
+    /// before `NSWorkspace.openApplication`, and by `updaterWillRelaunchApplication`.
+    static func recordPendingHandoff(slug: String, suppressAutoConnect: Bool) {
         let normalized = normalizeSlug(slug)
-        guard normalized.isEmpty == false, normalized != defaultSlug else { return }
+        guard normalized.isEmpty == false else { return }
         try? FileManager.default.createDirectory(at: sharedCoordinationDirectory, withIntermediateDirectories: true)
-        let payload = "\(Int(Date().timeIntervalSince1970))\n\(normalized)\n"
-        try? payload.write(to: pendingRelaunchTokenURL, atomically: true, encoding: .utf8)
+        let payload = "\(Int(Date().timeIntervalSince1970))\n\(normalized)\n\(suppressAutoConnect ? "1" : "0")\n"
+        try? payload.write(to: pendingHandoffTokenURL, atomically: true, encoding: .utf8)
     }
 
-    /// Read and delete the relaunch token. Returns the slug only when the token
-    /// exists and is fresh; nil otherwise. Always removes the file so it is
-    /// consumed exactly once.
-    private static func consumePendingRelaunchSlug() -> String? {
-        let url = pendingRelaunchTokenURL
+    /// Read and delete the handoff token. Returns `(slug, suppressAutoConnect)`
+    /// only when the token exists and is fresh; nil otherwise. Consumed once.
+    private static func consumePendingHandoff() -> (slug: String, suppressAutoConnect: Bool)? {
+        let url = pendingHandoffTokenURL
         guard let contents = try? String(contentsOf: url, encoding: .utf8) else {
             return nil
         }
         try? FileManager.default.removeItem(at: url)
         let lines = contents.split(separator: "\n", omittingEmptySubsequences: true)
-        guard lines.count == 2,
+        guard lines.count >= 2,
               let stamp = TimeInterval(lines[0].trimmingCharacters(in: .whitespaces)) else {
             return nil
         }
         let age = Date().timeIntervalSince1970 - stamp
-        guard age >= 0, age <= pendingRelaunchMaxAge else {
+        guard age >= 0, age <= pendingHandoffMaxAge else {
             return nil
         }
         let slug = normalizeSlug(String(lines[1]))
-        return (slug.isEmpty || slug == defaultSlug) ? nil : slug
+        guard slug.isEmpty == false else { return nil }
+        let suppress = lines.count >= 3 && lines[2].trimmingCharacters(in: .whitespaces) == "1"
+        return (slug, suppress)
     }
 }
