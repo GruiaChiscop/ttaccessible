@@ -39,6 +39,15 @@ struct PreferencesConnectionView: View {
                 .toggleStyle(.switch)
 
                 Toggle(
+                    L10n.text("preferences.general.connectToLastServerOnLaunch"),
+                    isOn: Binding(
+                        get: { store.state.connectToLastServerOnLaunch },
+                        set: { store.updateConnectToLastServerOnLaunch($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+
+                Toggle(
                     L10n.text("preferences.connection.skipKickConfirmation"),
                     isOn: Binding(
                         get: { store.state.skipKickConfirmation },

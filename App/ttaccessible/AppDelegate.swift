@@ -128,6 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         requestNotificationPermission()
         showSavedServersWindow()
+        connectToLastServerOnLaunchIfEnabled()
         DispatchQueue.main.async { [weak self] in
             self?.preloadPreferencesWindow()
         }
@@ -785,6 +786,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         showSavedServersWindow()
+        savedServersViewController?.connectSelectedServer()
+    }
+
+    /// On launch, automatically connect to the last used server when the
+    /// `connectToLastServerOnLaunch` preference is enabled and a previously
+    /// selected server still exists. The saved-servers window stays visible
+    /// underneath, so a failed or cancelled connection falls back to the list.
+    private func connectToLastServerOnLaunchIfEnabled() {
+        guard preferencesStore.preferences.connectToLastServerOnLaunch else {
+            return
+        }
+        guard let selectedID = store.selectedServerID(),
+              store.load().contains(where: { $0.id == selectedID }) else {
+            return
+        }
         savedServersViewController?.connectSelectedServer()
     }
 

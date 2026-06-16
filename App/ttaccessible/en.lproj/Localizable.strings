@@ -353,6 +353,7 @@
 "preferences.general.autoJoinRootChannel" = "Automatically join the main channel on connect";
 "preferences.general.autoReconnect" = "Automatically reconnect on connection loss";
 "preferences.general.rejoinLastChannelOnReconnect" = "Automatically rejoin the last channel after reconnecting";
+"preferences.general.connectToLastServerOnLaunch" = "Connect to the last used server on launch";
 "preferences.connection.subscriptions.title" = "Default subscriptions";
 "preferences.connection.intercepts.title" = "Default intercepts";
 "preferences.connection.subscribePrivateMessages" = "Receive private messages";

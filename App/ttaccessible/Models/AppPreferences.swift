@@ -76,6 +76,7 @@ struct AppPreferences: Codable, Equatable {
         case autoJoinRootChannel
         case autoReconnect
         case rejoinLastChannelOnReconnect
+        case connectToLastServerOnLaunch
         case subscribePrivateMessages
         case subscribeChannelMessages
         case subscribeBroadcastMessages
@@ -125,6 +126,7 @@ struct AppPreferences: Codable, Equatable {
     var autoJoinRootChannel: Bool
     var autoReconnect: Bool
     var rejoinLastChannelOnReconnect: Bool
+    var connectToLastServerOnLaunch: Bool
     var subscribePrivateMessages: Bool
     var subscribeChannelMessages: Bool
     var subscribeBroadcastMessages: Bool
@@ -187,6 +189,7 @@ struct AppPreferences: Codable, Equatable {
         autoJoinRootChannel: Bool = true,
         autoReconnect: Bool = true,
         rejoinLastChannelOnReconnect: Bool = true,
+        connectToLastServerOnLaunch: Bool = false,
         subscribePrivateMessages: Bool = true,
         subscribeChannelMessages: Bool = true,
         subscribeBroadcastMessages: Bool = true,
@@ -242,6 +245,7 @@ struct AppPreferences: Codable, Equatable {
         self.autoJoinRootChannel = autoJoinRootChannel
         self.autoReconnect = autoReconnect
         self.rejoinLastChannelOnReconnect = rejoinLastChannelOnReconnect
+        self.connectToLastServerOnLaunch = connectToLastServerOnLaunch
         self.subscribePrivateMessages = subscribePrivateMessages
         self.subscribeChannelMessages = subscribeChannelMessages
         self.subscribeBroadcastMessages = subscribeBroadcastMessages
@@ -339,6 +343,7 @@ struct AppPreferences: Codable, Equatable {
         autoJoinRootChannel = try container.decodeIfPresent(Bool.self, forKey: .autoJoinRootChannel) ?? true
         autoReconnect = try container.decodeIfPresent(Bool.self, forKey: .autoReconnect) ?? true
         rejoinLastChannelOnReconnect = try container.decodeIfPresent(Bool.self, forKey: .rejoinLastChannelOnReconnect) ?? true
+        connectToLastServerOnLaunch = try container.decodeIfPresent(Bool.self, forKey: .connectToLastServerOnLaunch) ?? false
         subscribePrivateMessages = try container.decodeIfPresent(Bool.self, forKey: .subscribePrivateMessages) ?? true
         subscribeChannelMessages = try container.decodeIfPresent(Bool.self, forKey: .subscribeChannelMessages) ?? true
         subscribeBroadcastMessages = try container.decodeIfPresent(Bool.self, forKey: .subscribeBroadcastMessages) ?? true
@@ -410,6 +415,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(autoJoinRootChannel, forKey: .autoJoinRootChannel)
         try container.encode(autoReconnect, forKey: .autoReconnect)
         try container.encode(rejoinLastChannelOnReconnect, forKey: .rejoinLastChannelOnReconnect)
+        try container.encode(connectToLastServerOnLaunch, forKey: .connectToLastServerOnLaunch)
         try container.encode(subscribePrivateMessages, forKey: .subscribePrivateMessages)
         try container.encode(subscribeChannelMessages, forKey: .subscribeChannelMessages)
         try container.encode(subscribeBroadcastMessages, forKey: .subscribeBroadcastMessages)

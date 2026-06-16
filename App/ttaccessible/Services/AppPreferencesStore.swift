@@ -176,6 +176,10 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.rejoinLastChannelOnReconnect = enabled }
     }
 
+    func updateConnectToLastServerOnLaunch(_ enabled: Bool) {
+        mutate { $0.connectToLastServerOnLaunch = enabled }
+    }
+
     func updateSubscribeBroadcastMessages(_ enabled: Bool) {
         mutate { $0.subscribeBroadcastMessages = enabled }
     }
@@ -336,6 +340,7 @@ final class ConnectionPreferencesStore: ObservableObject {
         var autoJoinRootChannel: Bool
         var autoReconnect: Bool
         var rejoinLastChannelOnReconnect: Bool
+        var connectToLastServerOnLaunch: Bool
         var subscriptions: [UserSubscriptionOption: Bool]
         var skipKickConfirmation: Bool
         var adaptiveJitterBuffer: Bool
@@ -394,6 +399,10 @@ final class ConnectionPreferencesStore: ObservableObject {
         rootStore.updateRejoinLastChannelOnReconnect(enabled)
     }
 
+    func updateConnectToLastServerOnLaunch(_ enabled: Bool) {
+        rootStore.updateConnectToLastServerOnLaunch(enabled)
+    }
+
     func updateSkipKickConfirmation(_ enabled: Bool) {
         rootStore.mutateSkipKickConfirmation(enabled)
     }
@@ -425,6 +434,7 @@ final class ConnectionPreferencesStore: ObservableObject {
             autoJoinRootChannel: preferences.autoJoinRootChannel,
             autoReconnect: preferences.autoReconnect,
             rejoinLastChannelOnReconnect: preferences.rejoinLastChannelOnReconnect,
+            connectToLastServerOnLaunch: preferences.connectToLastServerOnLaunch,
             subscriptions: Dictionary(
                 uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
                     (option, preferences.isSubscriptionEnabledByDefault(option))
