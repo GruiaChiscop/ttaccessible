@@ -71,6 +71,14 @@ final class AppBackendClient {
         let body: String
         let style: String
         let mode: String
+        /// Optional secondary "link" button. Present (non-nil) only when the
+        /// announcement carries a link; `label` arrives already localized.
+        let link: Link?
+
+        struct Link: Decodable {
+            let label: String
+            let url: String
+        }
     }
 
     static let appID = "ttaccessible"
@@ -189,6 +197,22 @@ final class AppBackendClient {
             "id": announcementID,
         ]
         guard var request = makeRequest(path: "/api/announce/ack"),
+              let data = try? JSONSerialization.data(withJSONObject: body) else {
+            return
+        }
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = data
+        session.dataTask(with: request).resume()
+    }
+
+    /// Fire-and-forget: tells the backend the user pressed the secondary link button.
+    func reportAnnouncementClick(installID: String, announcementID: String) {
+        let body: [String: Any] = [
+            "app": Self.appID,
+            "install_id": installID,
+            "id": announcementID,
+        ]
+        guard var request = makeRequest(path: "/api/announce/click"),
               let data = try? JSONSerialization.data(withJSONObject: body) else {
             return
         }

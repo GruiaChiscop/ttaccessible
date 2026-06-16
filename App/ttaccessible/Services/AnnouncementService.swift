@@ -40,14 +40,28 @@ final class AnnouncementService {
         alert.alertStyle = announcement.style == "warning" ? .warning : .informational
         alert.messageText = announcement.title
         alert.informativeText = announcement.body
+        // For an interactive announcement, "OK" (dismiss) stays the default action
+        // and the link button is added second. Without a link, NSAlert shows its
+        // implicit single "OK" button.
+        if announcement.link != nil {
+            alert.addButton(withTitle: L10n.text("common.ok"))
+            alert.addButton(withTitle: announcement.link?.label ?? "")
+        }
         NSApp.activate(ignoringOtherApps: true)
-        alert.runModal()
+        let response = alert.runModal()
 
         if seenIDs.contains(announcement.id) == false {
             seenIDs.append(announcement.id)
             defaults.set(seenIDs, forKey: Self.seenAnnouncementIDsKey)
         }
         client.acknowledgeAnnouncement(installID: Self.installID, announcementID: announcement.id)
+
+        if let link = announcement.link,
+           response == .alertSecondButtonReturn,
+           let url = URL(string: link.url) {
+            NSWorkspace.shared.open(url)
+            client.reportAnnouncementClick(installID: Self.installID, announcementID: announcement.id)
+        }
     }
 
     /// Stable per-install UUID. The server only stores a hash of it, for
