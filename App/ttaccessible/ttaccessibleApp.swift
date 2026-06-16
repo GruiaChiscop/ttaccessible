@@ -29,6 +29,17 @@ struct ttaccessibleApp: App {
                 Button(L10n.text("update.menu.checkForUpdates")) {
                     appDelegate.checkForUpdates()
                 }
+
+                Divider()
+
+                Button(L10n.text("profile.menu.newInstance")) {
+                    appDelegate.openNewInstanceDialog()
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+
+                Button(L10n.text("profile.menu.manage")) {
+                    appDelegate.openManageProfilesDialog()
+                }
             }
 
             CommandGroup(after: .help) {

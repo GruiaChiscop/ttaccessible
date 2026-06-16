@@ -107,9 +107,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pushToTalkModeCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ProfileInstanceLock.acquire(for: ProfileContext.current)
         AudioLogger.clear()
         let sdkVersion = String(cString: TT_GetVersion())
-        AudioLogger.log("App launched — TeamTalk SDK %@", sdkVersion)
+        AudioLogger.log("App launched — TeamTalk SDK %@ — profile %@", sdkVersion, ProfileContext.current.slug)
         #if DEBUG
         _ = AudioPCMResamplerSelfTest.runAll()
         #endif
@@ -319,6 +320,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        ProfileInstanceLock.release(for: ProfileContext.current)
         connectionController.disconnectSynchronously()
         // The TeamTalk SDK's internal reactor thread sometimes outlives
         // TT_CloseTeamTalk and crashes when exit()'s static destructors race
@@ -381,7 +383,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            window.contentViewController is SavedServersViewController == false {
             let viewController = makeSavedServersViewController()
             window.contentViewController = viewController
-            window.title = L10n.text("savedServers.window.title")
+            window.title = ProfileContext.current.decorateWindowTitle(L10n.text("savedServers.window.title"))
         }
 
         menuState.setMode(.savedServers)
@@ -436,7 +438,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         savedServersWindowController?.window?.contentViewController = viewController
-        savedServersWindowController?.window?.title = L10n.format("connectedServer.window.title", session.displayName)
+        savedServersWindowController?.window?.title = ProfileContext.current.decorateWindowTitle(
+            L10n.format("connectedServer.window.title", session.displayName)
+        )
         menuState.setMode(.connectedServer)
         menuState.setHasSelection(false)
         if shouldActivateWindow {
