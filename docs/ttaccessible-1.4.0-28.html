@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.4.0-28</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<p>Run more than one server identity at the same time, and get connected
+faster when you launch.</p>
+<h2 id="new">New</h2>
+<ul>
+<li><strong>Multiple profiles, running side by side</strong> — you can
+now keep separate setups in the same app. A new <strong>New
+Instance…</strong> item in the app menu (Command-Shift-N) opens a
+chooser where you can create a profile or launch an existing one. Each
+profile has its own saved servers, preferences, passwords, sound packs,
+and chat history, and runs as its own window — so you can be signed in
+to two servers at once, for example a personal one and a work one,
+without them mixing. A <strong>Manage Profiles…</strong> item lets you
+rename or delete the profiles you've created. Your existing setup stays
+exactly as it is and becomes the default profile, so nothing changes
+unless you choose to add one. (Contributed by heath-toby.)</li>
+<li><strong>Connect to your last server on launch</strong> — a new
+option in Preferences, under Connection, makes the app connect straight
+to the server you used last when it starts, so you don't have to pick it
+from the list every time. It's off by default; turn it on if you'd like
+it. If the connection can't be made, you simply land back on your server
+list as usual.</li>
+</ul>
+<h2 id="other-changes">Other changes</h2>
+<ul>
+<li><strong>Buttons in launch announcements</strong> — the occasional
+messages the app shows at startup can now include a button that opens a
+relevant link in your browser, alongside the usual OK button.</li>
+</ul>
+<h2 id="install">Install</h2>
+<p>If you're already running ttaccessible, it will install this update
+for you — no action needed.</p>
+<p>Manual install:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.4.0-28.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+</body>
+</html>
