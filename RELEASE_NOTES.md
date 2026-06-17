@@ -1,17 +1,13 @@
-Run more than one server identity at the same time, and get connected faster when you launch.
+See everyone on the server at a glance, manage your profiles in a real window, and back up your whole server list to a file.
 
 ## New
 
-- **Multiple profiles, running side by side** — you can now keep separate setups in the same app. A new **New Instance…** item in the app menu (Command-Shift-N) opens a chooser where you can create a profile or launch an existing one. Each profile has its own saved servers, preferences, passwords, sound packs, and chat history, and runs as its own window — so you can be signed in to two servers at once, for example a personal one and a work one, without them mixing. A **Manage Profiles…** item lets you rename or delete the profiles you've created. Your existing setup stays exactly as it is and becomes the default profile, so nothing changes unless you choose to add one. (Contributed by heath-toby.)
-- **Connect to your last server on launch** — a new option in Preferences, under Connection, makes the app connect straight to the server you used last when it starts, so you don't have to pick it from the list every time. It's off by default; turn it on if you'd like it. If the connection can't be made, you simply land back on your server list as usual.
+- **See everyone connected to the server** — a new **Connected Users** window (Command-Shift-W, also in the Server menu) lists every person on the server, not just the people in your own channel. For each one you can see their nickname, which channel they're in, and other details, and the list updates on its own as people come and go. From there you can view someone's information, send them a private message, and — when you have the rights — move them, make them a channel operator, or remove them.
+- **Export your whole server list** — you can now save all of your servers at once. In the Server menu, **Export Server List…** lets you choose between putting every server in a single `.tt` file or saving one file per server into a folder. This makes it easy to carry the same servers across several Macs, since importing a list already worked. Your passwords are included, so the list is ready to use as soon as you import it on the other machine.
 
 ## Other changes
 
-- **Buttons in launch announcements** — the occasional messages the app shows at startup can now include a button that opens a relevant link in your browser, alongside the usual OK button.
-
-## Note
-
-This version moves your saved servers and settings to a new per-profile storage location. If you later reinstall an older version, it won't see them — nothing is lost, they're just in the new location.
+- **Profiles now have their own window** — creating, renaming, deleting, and launching profiles all happen in a proper, fully navigable window instead of a series of small pop-up dialogs. It's clearer to move around and much friendlier with VoiceOver.
 
 ## Install
 
@@ -19,6 +15,6 @@ If you're already running ttaccessible, it will install this update for you — 
 
 Manual install:
 
-1. Download `ttaccessible-1.4.0-28.zip` below.
+1. Download `ttaccessible-1.5.0-29.zip` below.
 2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
 3. Double-click — no Gatekeeper warning thanks to notarization.
