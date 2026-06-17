@@ -959,14 +959,24 @@
 "feedback.error.validation" = "Vérifiez que votre adresse email est valide et que le message n'est pas vide.";
 "feedback.error.server" = "Le serveur n'a pas pu traiter le message. Veuillez réessayer plus tard.";
 
+// Profiles window
+"profiles.window.title" = "Profils";
+"profiles.table.accessibilityLabel" = "Liste des profils";
+"profiles.column.name" = "Nom";
+"profiles.column.status" = "Statut";
+"profiles.status.current" = "Actuel";
+"profiles.status.running" = "En cours d'exécution";
+"profiles.status.default" = "Par défaut";
+"profiles.button.launch" = "Lancer";
+"profiles.button.new" = "Nouveau…";
+"profiles.button.rename" = "Renommer…";
+"profiles.button.delete" = "Supprimer";
+"profiles.button.refresh" = "Actualiser";
+
 "profile.menu.newInstance" = "Nouvelle instance…";
-"profile.newInstance.title" = "Ouvrir une nouvelle instance";
-"profile.newInstance.message" = "Choisissez un profil à ouvrir dans une fenêtre séparée, en parallèle de celle-ci. Le profil actuel ouvre une autre fenêtre qui partage ses serveurs et réglages ; vous pouvez aussi créer un nouveau profil vierge.";
-"profile.newInstance.launch" = "Lancer";
-"profile.newInstance.createNew" = "Nouveau profil…";
-"profile.newInstance.picker.accessibilityLabel" = "Profil à lancer";
-"profile.newInstance.picker.currentSuffix" = "%@ (actuel)";
-"profile.newInstance.error.title" = "Impossible de lancer l'instance";"profile.create.title" = "Créer un nouveau profil";
+"profile.menu.manage" = "Gérer les profils…";
+"profile.newInstance.error.title" = "Impossible de lancer l'instance";
+"profile.create.title" = "Créer un nouveau profil";
 "profile.create.message" = "Saisissez un nom pour le nouveau profil. Une instance distincte de ttaccessible se lancera avec ses propres paramètres et serveurs enregistrés.";
 "profile.create.launch" = "Créer et lancer";
 "profile.create.placeholder" = "Nom du profil";
@@ -974,20 +984,14 @@
 "profile.create.error.empty" = "Veuillez saisir un nom pour le profil.";
 "profile.create.error.invalid" = "Le nom du profil ne contient aucun caractère utilisable. Essayez un nom avec des lettres ou des chiffres.";
 "profile.create.error.reservedDefault" = "Le nom « Default » est réservé. Veuillez choisir un autre nom.";
-
-"profile.menu.manage" = "Gérer les profils…";
-"profile.manage.title" = "Gérer les profils";
-"profile.manage.message" = "Sélectionnez un profil, puis choisissez Renommer ou Supprimer.";
-"profile.manage.empty.message" = "Aucun profil personnalisé pour l'instant. Utilisez Nouvelle instance… pour en créer un.";
-"profile.manage.picker.accessibilityLabel" = "Profil à gérer";
-"profile.manage.rename" = "Renommer…";
-"profile.manage.delete" = "Supprimer…";
 "profile.rename.title" = "Renommer le profil";
 "profile.rename.message" = "Saisissez un nouveau nom à afficher pour « %@ ». Les données du profil ne sont ni déplacées, ni dupliquées.";
 "profile.rename.confirm" = "Renommer";
 "profile.rename.error.failed" = "Le profil n'a pas pu être renommé. Réessayez ou redémarrez l'application.";
+"profile.rename.success" = "Profil renommé en « %@ ».";
 "profile.delete.confirm.title" = "Supprimer le profil « %@ » ?";
 "profile.delete.confirm.message" = "Cette action retire le profil du sélecteur et supprime ses serveurs enregistrés, ses préférences, ses packs sonores, son historique de discussion et ses mots de passe stockés. Cette action est irréversible.";
 "profile.delete.confirm.button" = "Supprimer";
+"profile.delete.success" = "Profil « %@ » supprimé.";
 "profile.delete.error.currentRunning" = "Le profil « %@ » est celui en cours d'exécution dans cette fenêtre. Quittez d'abord cette instance, puis supprimez-le depuis une autre instance.";
 "profile.delete.error.otherInstanceRunning" = "Une autre instance de ttaccessible utilise déjà le profil « %@ ». Quittez-la d'abord.";

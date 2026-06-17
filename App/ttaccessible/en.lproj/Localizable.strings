@@ -959,14 +959,24 @@
 "feedback.error.validation" = "Check that your email address is valid and the message is not empty.";
 "feedback.error.server" = "The server could not process the message. Please try again later.";
 
+// Profiles window
+"profiles.window.title" = "Profiles";
+"profiles.table.accessibilityLabel" = "Profiles list";
+"profiles.column.name" = "Name";
+"profiles.column.status" = "Status";
+"profiles.status.current" = "Current";
+"profiles.status.running" = "Running";
+"profiles.status.default" = "Default";
+"profiles.button.launch" = "Launch";
+"profiles.button.new" = "New…";
+"profiles.button.rename" = "Rename…";
+"profiles.button.delete" = "Delete";
+"profiles.button.refresh" = "Refresh";
+
 "profile.menu.newInstance" = "New Instance…";
-"profile.newInstance.title" = "Open a new instance";
-"profile.newInstance.message" = "Pick a profile to open in a separate window that runs alongside this one. Choosing the current profile opens another window sharing its servers and settings; or create a new, empty profile.";
-"profile.newInstance.launch" = "Launch";
-"profile.newInstance.createNew" = "New Profile…";
-"profile.newInstance.picker.accessibilityLabel" = "Profile to launch";
-"profile.newInstance.picker.currentSuffix" = "%@ (current)";
-"profile.newInstance.error.title" = "Could Not Launch Instance";"profile.create.title" = "Create a new profile";
+"profile.menu.manage" = "Manage Profiles…";
+"profile.newInstance.error.title" = "Could Not Launch Instance";
+"profile.create.title" = "Create a new profile";
 "profile.create.message" = "Enter a name for the new profile. A separate instance of ttaccessible will launch with its own settings and saved servers.";
 "profile.create.launch" = "Create & Launch";
 "profile.create.placeholder" = "Profile name";
@@ -974,20 +984,14 @@
 "profile.create.error.empty" = "Please enter a name for the profile.";
 "profile.create.error.invalid" = "The profile name doesn't contain any usable characters. Try a name with letters or numbers.";
 "profile.create.error.reservedDefault" = "The name \"Default\" is reserved. Please choose a different name.";
-
-"profile.menu.manage" = "Manage Profiles…";
-"profile.manage.title" = "Manage profiles";
-"profile.manage.message" = "Pick a profile, then choose Rename or Delete.";
-"profile.manage.empty.message" = "No custom profiles yet. Use New Instance… to create one.";
-"profile.manage.picker.accessibilityLabel" = "Profile to manage";
-"profile.manage.rename" = "Rename…";
-"profile.manage.delete" = "Delete…";
 "profile.rename.title" = "Rename profile";
 "profile.rename.message" = "Enter a new display name for \"%@\". The profile's data is not moved or duplicated.";
 "profile.rename.confirm" = "Rename";
 "profile.rename.error.failed" = "Could not rename the profile. Try again or restart the app.";
+"profile.rename.success" = "Profile renamed to \"%@\".";
 "profile.delete.confirm.title" = "Delete the profile \"%@\"?";
 "profile.delete.confirm.message" = "This removes the profile from the picker and deletes its saved servers, preferences, sound packs, chat history, and stored passwords. This cannot be undone.";
 "profile.delete.confirm.button" = "Delete";
+"profile.delete.success" = "Profile \"%@\" deleted.";
 "profile.delete.error.currentRunning" = "The profile \"%@\" is the one currently running in this window. Quit this instance first, then delete it from another instance.";
 "profile.delete.error.otherInstanceRunning" = "Another instance of ttaccessible is running with the profile \"%@\". Quit that instance first.";

@@ -80,6 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var bannedUsersWindowController: NSWindowController?
     private var userInfoWindowController: UserInfoWindowController?
     private var connectedUsersWindowController: ConnectedUsersWindowController?
+    var profilesWindowController: ProfilesWindowController?
     private weak var savedServersViewController: SavedServersViewController?
     private weak var connectedServerViewController: ConnectedServerViewController?
     private weak var privateMessagesViewController: PrivateMessagesViewController?
@@ -88,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private weak var bannedUsersViewController: BannedUsersViewController?
     private weak var userInfoViewController: UserInfoViewController?
     private weak var connectedUsersViewController: ConnectedUsersViewController?
+    weak var profilesViewController: ProfilesViewController?
     private var hasFinishedLaunching = false
     private var pendingTTFileURLs: [URL] = []
     private var userInfoUserID: Int32?

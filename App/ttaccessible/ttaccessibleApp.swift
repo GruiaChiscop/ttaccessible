@@ -33,12 +33,12 @@ struct ttaccessibleApp: App {
                 Divider()
 
                 Button(L10n.text("profile.menu.newInstance")) {
-                    appDelegate.openNewInstanceDialog()
+                    appDelegate.openProfilesWindow()
                 }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
 
                 Button(L10n.text("profile.menu.manage")) {
-                    appDelegate.openManageProfilesDialog()
+                    appDelegate.openProfilesWindow()
                 }
             }
 
