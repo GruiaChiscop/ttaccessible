@@ -146,11 +146,45 @@ final class TTFileService {
         defaultStatusMessage: String = "",
         defaultGender: TeamTalkGender? = nil
     ) -> Data? {
-        let root = XMLElement(name: "teamtalk")
-        if let versionAttr = XMLNode.attribute(withName: "version", stringValue: supportedVersion) as? XMLNode {
-            root.addAttribute(versionAttr)
-        }
+        let host = makeHostElement(
+            record: record,
+            password: password,
+            defaultJoinChannelPath: defaultJoinChannelPath,
+            defaultJoinPassword: defaultJoinPassword,
+            defaultStatusMessage: defaultStatusMessage,
+            defaultGender: defaultGender
+        )
+        return serialize(hosts: [host])
+    }
 
+    /// Generate a single .tt file holding every server (one `<host>` per server,
+    /// the format the Qt client uses and that `loadAll` reads back).
+    func generateAllServersFileContents(
+        records: [(record: SavedServerRecord, password: String, channelPassword: String)],
+        defaultStatusMessage: String = "",
+        defaultGender: TeamTalkGender? = nil
+    ) -> Data? {
+        let hosts = records.map { entry in
+            makeHostElement(
+                record: entry.record,
+                password: entry.password,
+                defaultJoinChannelPath: entry.record.initialChannelPath.isEmpty ? nil : entry.record.initialChannelPath,
+                defaultJoinPassword: entry.channelPassword,
+                defaultStatusMessage: defaultStatusMessage,
+                defaultGender: defaultGender
+            )
+        }
+        return serialize(hosts: hosts)
+    }
+
+    private func makeHostElement(
+        record: SavedServerRecord,
+        password: String,
+        defaultJoinChannelPath: String?,
+        defaultJoinPassword: String,
+        defaultStatusMessage: String,
+        defaultGender: TeamTalkGender?
+    ) -> XMLElement {
         let host = XMLElement(name: "host")
         appendChild(named: "name", value: record.name, to: host)
         appendChild(named: "address", value: record.host, to: host)
@@ -184,7 +218,15 @@ final class TTFileService {
             host.addChild(client)
         }
 
-        root.addChild(host)
+        return host
+    }
+
+    private func serialize(hosts: [XMLElement]) -> Data? {
+        let root = XMLElement(name: "teamtalk")
+        if let versionAttr = XMLNode.attribute(withName: "version", stringValue: supportedVersion) as? XMLNode {
+            root.addAttribute(versionAttr)
+        }
+        hosts.forEach { root.addChild($0) }
 
         let document = XMLDocument(rootElement: root)
         document.characterEncoding = "UTF-8"

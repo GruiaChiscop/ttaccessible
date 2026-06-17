@@ -42,6 +42,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case ttLink
     }
 
+    private enum ServerListExportMode {
+        case singleFile
+        case filePerServer
+    }
+
     private struct ServerExportChannelContext {
         var name: String
         var path: String
@@ -664,6 +669,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             importPastedTTLink()
         case nil:
             return
+        }
+    }
+
+    func exportServerList() {
+        guard menuState.mode == .savedServers else {
+            return
+        }
+        showSavedServersWindow()
+        switch promptServerListExportMode() {
+        case .singleFile:
+            savedServersViewController?.exportAllServersToSingleFile(nil)
+        case .filePerServer:
+            savedServersViewController?.exportEachServerToFolder(nil)
+        case nil:
+            return
+        }
+    }
+
+    private func promptServerListExportMode() -> ServerListExportMode? {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.text("serverExport.mode.title")
+        alert.informativeText = L10n.text("serverExport.mode.message")
+        alert.addButton(withTitle: L10n.text("serverExport.mode.singleFile"))
+        alert.addButton(withTitle: L10n.text("serverExport.mode.filePerServer"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            return .singleFile
+        case .alertSecondButtonReturn:
+            return .filePerServer
+        default:
+            return nil
         }
     }
 

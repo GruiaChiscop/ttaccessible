@@ -686,6 +686,139 @@ final class SavedServersViewController: NSViewController {
         }
     }
 
+    @objc
+    func exportAllServersToSingleFile(_ sender: Any? = nil) {
+        guard records.isEmpty == false else {
+            presentInfoAlert(message: L10n.text("ttFile.exportAll.empty.message"))
+            return
+        }
+
+        let entries: [(record: SavedServerRecord, password: String, channelPassword: String)]
+        do {
+            entries = try records.map { record in
+                let password = try passwordStore.password(for: record.id) ?? ""
+                let channelPassword = try passwordStore.channelPassword(for: record.id) ?? record.initialChannelPassword
+                return (record, password, channelPassword)
+            }
+        } catch {
+            presentErrorAlert(message: error.localizedDescription)
+            return
+        }
+
+        guard let data = ttFileService.generateAllServersFileContents(
+            records: entries,
+            defaultStatusMessage: preferencesStore.preferences.defaultStatusMessage,
+            defaultGender: preferencesStore.preferences.defaultGender
+        ) else {
+            presentErrorAlert(message: L10n.text("ttFile.export.error.unreadable"))
+            return
+        }
+
+        let panel = NSSavePanel()
+        panel.title = L10n.text("ttFile.exportAll.panel.title")
+        panel.nameFieldStringValue = timestampedServersFileName()
+        panel.allowedContentTypes = [.init(filenameExtension: "tt") ?? .data]
+        panel.canCreateDirectories = true
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            presentErrorAlert(message: error.localizedDescription)
+        }
+    }
+
+    @objc
+    func exportEachServerToFolder(_ sender: Any? = nil) {
+        guard records.isEmpty == false else {
+            presentInfoAlert(message: L10n.text("ttFile.exportAll.empty.message"))
+            return
+        }
+
+        let panel = NSOpenPanel()
+        panel.title = L10n.text("ttFile.exportFolder.panel.title")
+        panel.prompt = L10n.text("ttFile.exportFolder.prompt")
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+
+        guard panel.runModal() == .OK, let directory = panel.url else {
+            return
+        }
+
+        var usedNames = Set<String>()
+        var written = 0
+        var failed = 0
+        for record in records {
+            let password: String
+            let channelPassword: String
+            do {
+                password = try passwordStore.password(for: record.id) ?? ""
+                channelPassword = try passwordStore.channelPassword(for: record.id) ?? record.initialChannelPassword
+            } catch {
+                failed += 1
+                continue
+            }
+
+            guard let data = ttFileService.generateFileContents(
+                record: record,
+                password: password,
+                defaultJoinChannelPath: record.initialChannelPath.isEmpty ? nil : record.initialChannelPath,
+                defaultJoinPassword: channelPassword,
+                defaultStatusMessage: preferencesStore.preferences.defaultStatusMessage,
+                defaultGender: preferencesStore.preferences.defaultGender
+            ) else {
+                failed += 1
+                continue
+            }
+
+            let fileName = uniqueFileName(for: record.name, used: &usedNames)
+            do {
+                try data.write(to: directory.appendingPathComponent(fileName), options: .atomic)
+                written += 1
+            } catch {
+                failed += 1
+            }
+        }
+
+        presentInfoAlert(message: L10n.format("ttFile.exportFolder.done.message", written, failed))
+    }
+
+    private func timestampedServersFileName() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return "\(L10n.text("ttFile.exportAll.defaultName"))-\(formatter.string(from: Date())).tt"
+    }
+
+    /// Builds a collision-free `<name>.tt` file name within a single export run.
+    private func uniqueFileName(for serverName: String, used: inout Set<String>) -> String {
+        let base = sanitizedTTFileName(for: serverName).replacingOccurrences(of: ".tt", with: "")
+        var candidate = "\(base).tt"
+        var index = 2
+        while used.contains(candidate.lowercased()) {
+            candidate = "\(base)-\(index).tt"
+            index += 1
+        }
+        used.insert(candidate.lowercased())
+        return candidate
+    }
+
+    private func presentInfoAlert(message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = message
+        if let window = view.window {
+            alert.beginSheetModal(for: window, completionHandler: nil)
+        } else {
+            alert.runModal()
+        }
+    }
+
     private func sanitizedTTFileName(for value: String) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         let baseName = trimmed.isEmpty ? "server" : trimmed

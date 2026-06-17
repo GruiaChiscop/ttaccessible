@@ -16,6 +16,7 @@
 "savedServers.menu.new" = "Nouveau serveur";
 "savedServers.menu.connect" = "Se connecter";
 "savedServers.menu.import" = "Importer les serveurs TeamTalk…";
+"savedServers.menu.exportList" = "Exporter la liste de serveurs…";
 "savedServers.menu.exportTT" = "Exporter un fichier .tt…";
 "savedServers.menu.edit" = "Modifier le serveur";
 "savedServers.menu.delete" = "Supprimer le serveur";
@@ -179,6 +180,10 @@
 "connectedServer.serverLink.copied" = "Lien du serveur copié dans le presse-papier.";
 "serverExport.menu.title" = "Exporter le serveur...";
 "serverExport.title" = "Exporter le serveur";
+"serverExport.mode.title" = "Exporter la liste de serveurs";
+"serverExport.mode.message" = "Choisissez comment exporter vos serveurs enregistrés.";
+"serverExport.mode.singleFile" = "Un seul fichier";
+"serverExport.mode.filePerServer" = "Un fichier par serveur";
 "serverExport.message" = "Choisissez comment exporter « %@ ».";
 "serverExport.ttFile" = "Fichier .tt...";
 "serverExport.link" = "Copier le lien tt://";
@@ -712,6 +717,12 @@
 "ttFile.clientSetup.unsupportedFields" = "Réglages non pris en charge ignorés : %1$@";
 "ttFile.export.panel.title" = "Exporter un fichier .tt";
 "ttFile.export.error.unreadable" = "Le fichier .tt n'a pas pu être généré.";
+"ttFile.exportAll.panel.title" = "Exporter la liste de serveurs";
+"ttFile.exportAll.defaultName" = "ttaccessible-serveurs";
+"ttFile.exportAll.empty.message" = "Aucun serveur enregistré à exporter.";
+"ttFile.exportFolder.panel.title" = "Exporter les serveurs dans un dossier";
+"ttFile.exportFolder.prompt" = "Exporter ici";
+"ttFile.exportFolder.done.message" = "%ld serveurs exportés, %ld en échec.";
 "userInfo.window.title" = "Informations utilisateur";
 "userInfo.window.title.withName" = "Informations utilisateur — %@";
 "userInfo.empty" = "Cet utilisateur n'est plus disponible.";

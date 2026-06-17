@@ -82,6 +82,10 @@ struct ttaccessibleApp: App {
                     }
                     .disabled(menuState.hasSelection == false)
 
+                    Button(L10n.text("savedServers.menu.exportList")) {
+                        appDelegate.exportServerList()
+                    }
+
                     Divider()
 
                     Button(L10n.text("savedServers.menu.edit")) {
