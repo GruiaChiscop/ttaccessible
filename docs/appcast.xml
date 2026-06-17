@@ -3,6 +3,17 @@
     <channel>
         <title>ttaccessible</title>
         <item>
+            <title>1.5.0</title>
+            <pubDate>Wed, 17 Jun 2026 22:49:21 +0200</pubDate>
+            <link>https://github.com/math65/ttaccessible/releases/tag/v1.5.0</link>
+            <sparkle:version>29</sparkle:version>
+            <sparkle:shortVersionString>1.5.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.5.0-29.html</sparkle:releaseNotesLink>
+            <sparkle:releaseNotesLink xml:lang="fr">https://math65.github.io/ttaccessible/ttaccessible-1.5.0-29.fr.html</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.5.0/ttaccessible-1.5.0-29.zip" length="41431827" type="application/octet-stream" sparkle:edSignature="Kb5XgWYQuWNp02ODlwK8b3jilt9OmjFiSsSujyltEITCPrClSEaj+JoNFDWvxIXYxXpnDdXbhMvbG/+BnO7tBg=="/>
+        </item>
+        <item>
             <title>1.4.0</title>
             <pubDate>Wed, 17 Jun 2026 00:23:43 +0200</pubDate>
             <link>https://github.com/math65/ttaccessible/releases/tag/v1.4.0</link>
@@ -23,17 +34,6 @@
             <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.3.5-27.html</sparkle:releaseNotesLink>
             <sparkle:releaseNotesLink xml:lang="fr">https://math65.github.io/ttaccessible/ttaccessible-1.3.5-27.fr.html</sparkle:releaseNotesLink>
             <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.3.5/ttaccessible-1.3.5-27.zip" length="41242524" type="application/octet-stream" sparkle:edSignature="oc5/Dstg99V0cB9npBkVCYX7owCkVtZvY/SUE7RZ2ZGq/vkg9xlj8GgV7Us1bsl5B2lNnNUKJ+4GAiL705srBQ=="/>
-        </item>
-        <item>
-            <title>1.3.4</title>
-            <pubDate>Mon, 08 Jun 2026 21:21:28 +0200</pubDate>
-            <link>https://github.com/math65/ttaccessible/releases/tag/v1.3.4</link>
-            <sparkle:version>26</sparkle:version>
-            <sparkle:shortVersionString>1.3.4</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.3.4-26.html</sparkle:releaseNotesLink>
-            <sparkle:releaseNotesLink xml:lang="fr">https://math65.github.io/ttaccessible/ttaccessible-1.3.4-26.fr.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.3.4/ttaccessible-1.3.4-26.zip" length="41132476" type="application/octet-stream" sparkle:edSignature="iXN4FlFCZ0L2rWnStP5mxQX7kOmo4Qx/1wgrnuS2Fmn82ERDSrzdkoH93zSGVhO9frrteuT6CY/FC5ktGDFdBQ=="/>
         </item>
     </channel>
 </rss>

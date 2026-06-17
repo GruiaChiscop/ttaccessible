@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.5.0-29</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<p>See everyone on the server at a glance, manage your profiles in a
+real window, and back up your whole server list to a file.</p>
+<h2 id="new">New</h2>
+<ul>
+<li><strong>See everyone connected to the server</strong> — a new
+<strong>Connected Users</strong> window (Command-Shift-W, also in the
+Server menu) lists every person on the server, not just the people in
+your own channel. For each one you can see their nickname, which channel
+they're in, and other details, and the list updates on its own as people
+come and go. From there you can view someone's information, send them a
+private message, and — when you have the rights — move them, make them a
+channel operator, or remove them.</li>
+<li><strong>Export your whole server list</strong> — you can now save
+all of your servers at once. In the Server menu, <strong>Export Server
+List…</strong> lets you choose between putting every server in a single
+<code>.tt</code> file or saving one file per server into a folder. This
+makes it easy to carry the same servers across several Macs, since
+importing a list already worked. Your passwords are included, so the
+list is ready to use as soon as you import it on the other machine.</li>
+</ul>
+<h2 id="other-changes">Other changes</h2>
+<ul>
+<li><strong>Profiles now have their own window</strong> — creating,
+renaming, deleting, and launching profiles all happen in a proper, fully
+navigable window instead of a series of small pop-up dialogs. It's
+clearer to move around and much friendlier with VoiceOver.</li>
+</ul>
+<h2 id="install">Install</h2>
+<p>If you're already running ttaccessible, it will install this update
+for you — no action needed.</p>
+<p>Manual install:</p>
+<ol type="1">
+<li>Download <code>ttaccessible-1.5.0-29.zip</code> below.</li>
+<li>Unzip and drag <code>ttaccessible.app</code> into your
+<code>/Applications</code> folder, replacing the previous version.</li>
+<li>Double-click — no Gatekeeper warning thanks to notarization.</li>
+</ol>
+</body>
+</html>
