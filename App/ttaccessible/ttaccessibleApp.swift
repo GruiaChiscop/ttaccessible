@@ -149,6 +149,12 @@ struct ttaccessibleApp: App {
 
                     Divider()
 
+                    Button(L10n.text("connectedUsers.menu.open")) {
+                        appDelegate.openConnectedUsers()
+                    }
+                    .keyboardShortcut("w", modifiers: [.command, .shift])
+                    .disabled(menuState.mode != .connectedServer)
+
                     Button(L10n.text("accounts.menu.open")) {
                         appDelegate.openUserAccounts()
                     }

@@ -79,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var userAccountsWindowController: NSWindowController?
     private var bannedUsersWindowController: NSWindowController?
     private var userInfoWindowController: UserInfoWindowController?
+    private var connectedUsersWindowController: ConnectedUsersWindowController?
     private weak var savedServersViewController: SavedServersViewController?
     private weak var connectedServerViewController: ConnectedServerViewController?
     private weak var privateMessagesViewController: PrivateMessagesViewController?
@@ -86,6 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private weak var userAccountsViewController: UserAccountsViewController?
     private weak var bannedUsersViewController: BannedUsersViewController?
     private weak var userInfoViewController: UserInfoViewController?
+    private weak var connectedUsersViewController: ConnectedUsersViewController?
     private var hasFinishedLaunching = false
     private var pendingTTFileURLs: [URL] = []
     private var userInfoUserID: Int32?
@@ -1383,6 +1385,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let user = connectedServerViewController?.selectedUserForInfo() else {
             return
         }
+        openUserInfo(for: user)
+    }
+
+    func openUserInfo(for user: ConnectedServerUser) {
+        guard menuState.mode == .connectedServer else { return }
 
         let viewController: UserInfoViewController
         if let existing = userInfoViewController {
@@ -1573,6 +1580,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         userAccountsWindowController?.close()
         userAccountsWindowController = nil
         userAccountsViewController = nil
+    }
+
+    func openConnectedUsers() {
+        guard menuState.mode == .connectedServer else { return }
+        let vc: ConnectedUsersViewController
+        if let existing = connectedUsersViewController {
+            vc = existing
+        } else {
+            vc = ConnectedUsersViewController(serverViewController: connectedServerViewController, appDelegate: self)
+            connectedUsersViewController = vc
+        }
+        if connectedUsersWindowController == nil {
+            connectedUsersWindowController = ConnectedUsersWindowController(contentViewController: vc)
+        }
+        if let session = connectedServerViewController?.session {
+            vc.update(users: flattenedUsers(in: session.rootChannels))
+        }
+        connectedUsersWindowController?.showWindow(nil)
+        connectedUsersWindowController?.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func closeConnectedUsersWindow() {
+        connectedUsersWindowController?.close()
+        connectedUsersWindowController = nil
+        connectedUsersViewController = nil
     }
 
     func openBannedUsers() {
@@ -2047,6 +2080,9 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
                 closeChannelFilesWindow()
             }
         }
+        if connectedUsersWindowController?.window?.isVisible == true {
+            connectedUsersViewController?.update(users: flattenedUsers(in: session.rootChannels))
+        }
         if let userInfoUserID, userInfoWindowController != nil {
             let user = flattenedUsers(in: session.rootChannels).first(where: { $0.id == userInfoUserID })
             userInfoViewController?.update(user: user)
@@ -2073,6 +2109,7 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
         closeUserAccountsWindow()
         closeBannedUsersWindow()
         closeUserInfoWindow()
+        closeConnectedUsersWindow()
         showSavedServersWindow()
 
         if let shouldShowAlert {

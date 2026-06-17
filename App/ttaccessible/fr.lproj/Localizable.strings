@@ -668,6 +668,7 @@
 "connectedServer.move.title" = "Déplacer %@";
 "connectedServer.move.title.multiple" = "Déplacer %ld utilisateurs";
 "connectedServer.move.confirm" = "Déplacer";
+"connectedServer.move.noChannel" = "Aucun autre canal disponible";
 
 // VoiceOver custom actions
 "connectedServer.voAction.join" = "Rejoindre";
@@ -765,6 +766,28 @@
 "bans.kickban.message" = "Choisissez le type de ban à appliquer.";
 "bans.kickban.byIP" = "Bannir par adresse IP";
 "bans.kickban.byUsername" = "Bannir par nom d'utilisateur";
+
+// Connected users (server-wide list)
+"connectedUsers.window.title" = "Utilisateurs connectés";
+"connectedUsers.menu.open" = "Utilisateurs connectés…";
+"connectedUsers.table.accessibilityLabel" = "Liste des utilisateurs connectés";
+"connectedUsers.count" = "%ld utilisateurs connectés";
+"connectedUsers.count.one" = "%ld utilisateur connecté";
+"connectedUsers.copied" = "Informations de l'utilisateur copiées";
+"connectedUsers.column.nickname" = "Pseudo";
+"connectedUsers.column.status" = "Message de statut";
+"connectedUsers.column.username" = "Nom d'utilisateur";
+"connectedUsers.column.channel" = "Canal";
+"connectedUsers.column.ip" = "Adresse IP";
+"connectedUsers.column.version" = "Version";
+"connectedUsers.column.id" = "ID";
+"connectedUsers.action.info" = "Voir les informations";
+"connectedUsers.action.copy" = "Copier";
+"connectedUsers.action.message" = "Message privé";
+"connectedUsers.action.kickChannel" = "Expulser du canal";
+"connectedUsers.action.kickServer" = "Expulser du serveur";
+"connectedUsers.action.kickBan" = "Expulser et bannir";
+"connectedUsers.action.move" = "Déplacer vers un canal…";
 
 // User accounts
 "accounts.window.title" = "Comptes utilisateurs";

@@ -668,6 +668,7 @@
 "connectedServer.move.title" = "Move %@";
 "connectedServer.move.title.multiple" = "Move %ld users";
 "connectedServer.move.confirm" = "Move";
+"connectedServer.move.noChannel" = "No other channel available";
 
 // VoiceOver custom actions
 "connectedServer.voAction.join" = "Join";
@@ -764,6 +765,28 @@
 "bans.kickban.message" = "Choose the type of ban to apply.";
 "bans.kickban.byIP" = "Ban by IP address";
 "bans.kickban.byUsername" = "Ban by username";
+
+// Connected users (server-wide list)
+"connectedUsers.window.title" = "Connected Users";
+"connectedUsers.menu.open" = "Connected Users…";
+"connectedUsers.table.accessibilityLabel" = "Connected users list";
+"connectedUsers.count" = "%ld users connected";
+"connectedUsers.count.one" = "%ld user connected";
+"connectedUsers.copied" = "User information copied";
+"connectedUsers.column.nickname" = "Nickname";
+"connectedUsers.column.status" = "Status message";
+"connectedUsers.column.username" = "Username";
+"connectedUsers.column.channel" = "Channel";
+"connectedUsers.column.ip" = "IP address";
+"connectedUsers.column.version" = "Version";
+"connectedUsers.column.id" = "ID";
+"connectedUsers.action.info" = "View user information";
+"connectedUsers.action.copy" = "Copy";
+"connectedUsers.action.message" = "Private message";
+"connectedUsers.action.kickChannel" = "Kick from channel";
+"connectedUsers.action.kickServer" = "Kick from server";
+"connectedUsers.action.kickBan" = "Kick and ban";
+"connectedUsers.action.move" = "Move to channel…";
 
 // User accounts
 "accounts.window.title" = "User Accounts";

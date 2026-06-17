@@ -194,6 +194,20 @@ extension ConnectedServerViewController {
 
     @objc func toggleChannelOperatorAction(_ sender: Any? = nil) {
         guard case .user(let user)? = selectedNode, !user.isCurrentUser else { return }
+        performToggleOperator(user, presentingWindow: view.window)
+    }
+
+    /// Resolves a window to host a confirmation sheet, falling back to the app's
+    /// key/main window when the caller has none.
+    private func sheetHostWindow(_ window: NSWindow?) -> NSWindow? {
+        window ?? NSApp.keyWindow ?? NSApp.mainWindow
+    }
+
+    /// Parameterized core so other windows (e.g. the connected-users list) can
+    /// trigger the same op/de-op flow with their own window for sheet presentation.
+    /// A nil window is allowed for the no-sheet branch (rights/admin op).
+    func performToggleOperator(_ user: ConnectedServerUser, presentingWindow window: NSWindow?) {
+        guard !user.isCurrentUser else { return }
         let makeOp = !user.isChannelOperator
         let displayName = user.displayName
 
@@ -203,7 +217,7 @@ extension ConnectedServerViewController {
             case .success:
                 let key = makeOp ? "connectedServer.op.announced.promoted" : "connectedServer.op.announced.revoked"
                 let announcement = L10n.format(key, displayName)
-                let element: Any = self.view.window ?? NSApp as Any
+                let element: Any = window ?? (NSApp as Any)
                 NSAccessibility.post(element: element, notification: .announcementRequested, userInfo: [
                     NSAccessibility.NotificationUserInfoKey.announcement: announcement,
                     NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
@@ -216,7 +230,7 @@ extension ConnectedServerViewController {
         if connectionController.hasOperatorEnableRight() || session.currentUser?.isAdministrator == true {
             connectionController.channelOp(userID: user.id, channelID: user.channelID, makeOperator: makeOp, completion: handleResult)
         } else {
-            guard let window = view.window else { return }
+            guard let host = sheetHostWindow(window) else { return }
             let alert = NSAlert()
             alert.messageText = L10n.text("connectedServer.op.passwordPrompt.title")
             alert.informativeText = L10n.text("connectedServer.op.passwordPrompt.message")
@@ -226,7 +240,7 @@ extension ConnectedServerViewController {
             field.placeholderString = L10n.text("connectedServer.op.passwordPrompt.placeholder")
             alert.accessoryView = field
             alert.window.initialFirstResponder = field
-            alert.beginSheetModal(for: window) { [weak self] response in
+            alert.beginSheetModal(for: host) { [weak self] response in
                 guard response == .alertFirstButtonReturn, let self else { return }
                 let password = field.stringValue
                 self.connectionController.channelOpEx(userID: user.id, channelID: user.channelID, password: password, makeOperator: makeOp, completion: handleResult)
@@ -235,71 +249,60 @@ extension ConnectedServerViewController {
     }
 
     @objc func kickUserAction(_ sender: Any? = nil) {
-        guard case .user(let user)? = selectedNode,
-              !user.isCurrentUser else { return }
-
-        if connectionController.preferencesStore.preferences.skipKickConfirmation {
-            connectionController.kickUser(userID: user.id, channelID: user.channelID) { [weak self] result in
-                if case .failure(let error) = result {
-                    self?.presentError(error)
-                }
-            }
-            return
-        }
-
-        guard let window = view.window else { return }
-
-        let alert = NSAlert()
-        alert.messageText = L10n.format("connectedServer.kick.title", user.displayName)
-        alert.informativeText = L10n.text("connectedServer.kick.message")
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: L10n.text("connectedServer.kick.confirm"))
-        alert.addButton(withTitle: L10n.text("common.cancel"))
-        alert.beginSheetModal(for: window) { [weak self] response in
-            guard response == .alertFirstButtonReturn, let self else { return }
-            self.connectionController.kickUser(userID: user.id, channelID: user.channelID) { [weak self] result in
-                if case .failure(let error) = result {
-                    self?.presentError(error)
-                }
-            }
-        }
+        guard case .user(let user)? = selectedNode, !user.isCurrentUser else { return }
+        performKick(user, fromServer: false, presentingWindow: view.window)
     }
 
     @objc func kickUserFromServerAction(_ sender: Any? = nil) {
-        guard case .user(let user)? = selectedNode,
-              !user.isCurrentUser else { return }
+        guard case .user(let user)? = selectedNode, !user.isCurrentUser else { return }
+        performKick(user, fromServer: true, presentingWindow: view.window)
+    }
 
-        if connectionController.preferencesStore.preferences.skipKickConfirmation {
-            connectionController.kickUser(userID: user.id, channelID: 0) { [weak self] result in
+    /// Parameterized core for kicking a user from the channel (`fromServer: false`)
+    /// or the whole server (`fromServer: true`). Honors `skipKickConfirmation`.
+    /// A nil window is allowed for the skip-confirmation branch.
+    func performKick(_ user: ConnectedServerUser, fromServer: Bool, presentingWindow window: NSWindow?) {
+        guard !user.isCurrentUser else { return }
+        let channelID: Int32 = fromServer ? 0 : user.channelID
+
+        let doKick: () -> Void = { [weak self] in
+            self?.connectionController.kickUser(userID: user.id, channelID: channelID) { [weak self] result in
                 if case .failure(let error) = result {
                     self?.presentError(error)
                 }
             }
+        }
+
+        if connectionController.preferencesStore.preferences.skipKickConfirmation {
+            doKick()
             return
         }
 
-        guard let window = view.window else { return }
-
+        guard let host = sheetHostWindow(window) else { return }
         let alert = NSAlert()
-        alert.messageText = L10n.format("connectedServer.kickServer.title", user.displayName)
-        alert.informativeText = L10n.text("connectedServer.kickServer.message")
+        alert.messageText = fromServer
+            ? L10n.format("connectedServer.kickServer.title", user.displayName)
+            : L10n.format("connectedServer.kick.title", user.displayName)
+        alert.informativeText = fromServer
+            ? L10n.text("connectedServer.kickServer.message")
+            : L10n.text("connectedServer.kick.message")
         alert.alertStyle = .warning
         alert.addButton(withTitle: L10n.text("connectedServer.kick.confirm"))
         alert.addButton(withTitle: L10n.text("common.cancel"))
-        alert.beginSheetModal(for: window) { [weak self] response in
-            guard response == .alertFirstButtonReturn, let self else { return }
-            self.connectionController.kickUser(userID: user.id, channelID: 0) { [weak self] result in
-                if case .failure(let error) = result {
-                    self?.presentError(error)
-                }
-            }
+        alert.beginSheetModal(for: host) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            doKick()
         }
     }
 
     @objc func kickBanUserAction(_ sender: Any? = nil) {
-        guard case .user(let user)? = selectedNode,
-              !user.isCurrentUser,
-              let window = view.window else { return }
+        guard case .user(let user)? = selectedNode, !user.isCurrentUser else { return }
+        performKickBan(user, presentingWindow: view.window)
+    }
+
+    /// Parameterized core for kick & ban (always confirms, regardless of `skipKickConfirmation`).
+    func performKickBan(_ user: ConnectedServerUser, presentingWindow window: NSWindow?) {
+        guard !user.isCurrentUser, let host = sheetHostWindow(window) else { return }
 
         let alert = NSAlert()
         alert.messageText = L10n.format("bans.kickban.title", user.displayName)
@@ -308,7 +311,7 @@ extension ConnectedServerViewController {
         alert.addButton(withTitle: L10n.text("bans.kickban.byUsername"))
         alert.addButton(withTitle: L10n.text("common.cancel"))
 
-        alert.beginSheetModal(for: window) { [weak self] response in
+        alert.beginSheetModal(for: host) { [weak self] response in
             guard let self else { return }
             let banTypes: UInt32
             switch response {
@@ -328,14 +331,29 @@ extension ConnectedServerViewController {
     }
 
     @objc func moveUserAction(_ sender: Any? = nil) {
-        let users = selectedUserNodes()
-        guard !users.isEmpty, let window = view.window else { return }
+        performMove(selectedUserNodes(), presentingWindow: view.window)
+    }
+
+    /// Parameterized core for moving one or more users to another channel.
+    func performMove(_ users: [ConnectedServerUser], presentingWindow window: NSWindow?) {
+        guard !users.isEmpty, let host = sheetHostWindow(window) else { return }
 
         // Available channels: all except the common channel if all users are in the same one
         let commonChannelID = users.count == 1 ? users[0].channelID : nil
         let allChannels = flatChannels(from: session.rootChannels)
         let channels = allChannels.filter { $0.id != commonChannelID }
-        guard !channels.isEmpty else { return }
+        guard !channels.isEmpty else {
+            let element: Any = host
+            NSAccessibility.post(
+                element: element,
+                notification: .announcementRequested,
+                userInfo: [
+                    NSAccessibility.NotificationUserInfoKey.announcement: L10n.text("connectedServer.move.noChannel"),
+                    NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
+                ]
+            )
+            return
+        }
 
         let title = users.count == 1
             ? L10n.format("connectedServer.move.title", users[0].displayName)
@@ -351,7 +369,7 @@ extension ConnectedServerViewController {
         alert.accessoryView = popup
         alert.window.initialFirstResponder = popup
 
-        alert.beginSheetModal(for: window) { [weak self] response in
+        alert.beginSheetModal(for: host) { [weak self] response in
             let selectedIndex = popup.indexOfSelectedItem
             guard response == .alertFirstButtonReturn, let self,
                   selectedIndex >= 0, selectedIndex < channels.count else { return }
