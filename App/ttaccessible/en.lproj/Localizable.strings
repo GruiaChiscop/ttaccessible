@@ -380,6 +380,7 @@
 "preferences.audio.outputDevice" = "Output device";
 "preferences.audio.inputDevice" = "Input device";
 "preferences.audio.systemDefault" = "System default";
+"preferences.audio.noOutput" = "No output device";
 "preferences.audio.advanced.title" = "Microphone";
 "preferences.audio.advanced.summary.active" = "%@, %@.";
 "preferences.audio.advanced.summary.aecOn" = "echo cancellation enabled";

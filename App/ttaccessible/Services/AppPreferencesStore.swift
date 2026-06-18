@@ -668,6 +668,9 @@ final class AudioPreferencesStore: ObservableObject {
     }
 
     func selectionID(for preference: AudioDevicePreference, devices: [AudioDeviceOption]) -> String {
+        if preference.usesNoOutput {
+            return Self.noOutputDeviceTag
+        }
         guard let persistentID = preference.persistentID,
               devices.contains(where: { $0.persistentID == persistentID }) else {
             return Self.defaultDeviceTag
@@ -720,6 +723,9 @@ final class AudioPreferencesStore: ObservableObject {
     }
 
     private func preference(for selectionID: String, devices: [AudioDeviceOption]) -> AudioDevicePreference {
+        if selectionID == Self.noOutputDeviceTag {
+            return .noOutput
+        }
         guard selectionID != Self.defaultDeviceTag,
               let device = devices.first(where: { $0.id == selectionID }) else {
             return .systemDefault
@@ -728,6 +734,10 @@ final class AudioPreferencesStore: ObservableObject {
     }
 
     private static let defaultDeviceTag = "__system_default__"
+    // Mirrors AudioDevicePreference.noOutputSentinelID — duplicated to keep
+    // this `static let` usable from `private func preference(...)` without
+    // poking through to the model namespace at every call site.
+    fileprivate static let noOutputDeviceTag = AudioDevicePreference.noOutputSentinelID
 }
 
 @MainActor

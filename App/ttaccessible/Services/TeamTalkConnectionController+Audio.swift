@@ -123,7 +123,16 @@ extension TeamTalkConnectionController {
                 return
             }
 
-            if hadOutput, let instance = self.instance {
+            // Re-open output if either: (a) it was open before the restart, or
+            // (b) it wasn't open but the user's current preference is a real
+            // device. Case (b) covers the no-output→device switch while only
+            // the mic is active: hadOutput is false, but the user does want
+            // playback after the change. ensureDirectOutputAudioReadyLocked
+            // self-skips when the preference is no-output, so an unconditional
+            // call would also be safe — this guard just avoids the function
+            // call when there's clearly nothing to do.
+            let prefersOutputDevice = !self.preferencesStore.preferences.preferredOutputDevice.usesNoOutput
+            if (hadOutput || prefersOutputDevice), let instance = self.instance {
                 do {
                     try self.ensureDirectOutputAudioReadyLocked(instance: instance)
                     if self.masterMuted {
@@ -509,6 +518,14 @@ extension TeamTalkConnectionController {
 
     func ensureDirectOutputAudioReadyLocked(instance: UnsafeMutableRawPointer) throws {
         guard outputAudioReady == false else {
+            return
+        }
+
+        // Explicit "no output device" preference: the user wants this profile
+        // to transmit and stay connected while another instance carries the
+        // audio. Skip the SDK init entirely and leave outputAudioReady=false.
+        if preferencesStore.preferences.preferredOutputDevice.usesNoOutput {
+            AudioLogger.log("ensureDirectOutputAudioReady: preference is no-output — skipping init")
             return
         }
 
