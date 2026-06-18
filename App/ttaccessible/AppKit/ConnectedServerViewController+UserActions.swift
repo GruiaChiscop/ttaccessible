@@ -7,8 +7,14 @@ import AppKit
 
 extension ConnectedServerViewController {
     @objc func adjustUserVolume(_ sender: Any? = nil) {
-        guard case .user(let user)? = selectedNode,
-              view.window != nil else { return }
+        guard case .user(let user)? = selectedNode else { return }
+        performAdjustVolume(user, presentingWindow: view.window)
+    }
+
+    /// Parameterized core so other windows (e.g. the connected-users list) can open
+    /// the volume/stereo sheet for a given user, attached to their own window.
+    func performAdjustVolume(_ user: ConnectedServerUser, presentingWindow window: NSWindow?) {
+        guard let host = sheetHostWindow(window) else { return }
 
         let storedVoiceVolume = connectionController.userVolumeStore.volume(forUsername: user.username)
         let storedMediaFileVolume = connectionController.userVolumeStore.mediaFileVolume(forUsername: user.username)
@@ -20,7 +26,8 @@ extension ConnectedServerViewController {
         let originalMediaFileVolume = effectiveMediaFileVolume
 
         connectionController.getUserStereo(userID: user.id) { [weak self] currentLeft, currentRight in
-            guard let self, let window = self.view.window else { return }
+            guard let self else { return }
+            let window = host
             let originalLeft = currentLeft
             let originalRight = currentRight
 
@@ -145,17 +152,24 @@ extension ConnectedServerViewController {
     }
 
     @objc func toggleMuteUserAction(_ sender: Any? = nil) {
-        guard case .user(let outlineUser)? = selectedNode, !outlineUser.isCurrentUser else { return }
-        let userID = outlineUser.id
-        let displayName = outlineUser.displayName
-        let currentlyMuted = localMuteState[userID] ?? outlineUser.isMuted
+        guard case .user(let outlineUser)? = selectedNode else { return }
+        performToggleMute(outlineUser, presentingWindow: view.window)
+    }
+
+    /// Parameterized core so other windows (e.g. the connected-users list) can
+    /// toggle voice mute for a given user with their own window for announcements.
+    func performToggleMute(_ user: ConnectedServerUser, presentingWindow window: NSWindow?) {
+        guard !user.isCurrentUser else { return }
+        let userID = user.id
+        let displayName = user.displayName
+        let currentlyMuted = localMuteState[userID] ?? user.isMuted
         let newMuted = !currentlyMuted
         localMuteState[userID] = newMuted
         connectionController.muteUser(userID: userID, mute: newMuted)
         let announcement = newMuted
             ? L10n.format("connectedServer.mute.announced.muted", displayName)
             : L10n.format("connectedServer.mute.announced.unmuted", displayName)
-        let element: Any = view.window ?? NSApp as Any
+        let element: Any = window ?? view.window ?? NSApp as Any
         NSAccessibility.post(
             element: element,
             notification: .announcementRequested,
@@ -169,17 +183,23 @@ extension ConnectedServerViewController {
     }
 
     @objc func toggleMuteUserMediaFileAction(_ sender: Any? = nil) {
-        guard case .user(let outlineUser)? = selectedNode, !outlineUser.isCurrentUser else { return }
-        let userID = outlineUser.id
-        let displayName = outlineUser.displayName
-        let currentlyMuted = localMediaFileMuteState[userID] ?? outlineUser.isMediaFileMuted
+        guard case .user(let outlineUser)? = selectedNode else { return }
+        performToggleMuteMediaFile(outlineUser, presentingWindow: view.window)
+    }
+
+    /// Parameterized core so other windows can toggle media-file mute for a user.
+    func performToggleMuteMediaFile(_ user: ConnectedServerUser, presentingWindow window: NSWindow?) {
+        guard !user.isCurrentUser else { return }
+        let userID = user.id
+        let displayName = user.displayName
+        let currentlyMuted = localMediaFileMuteState[userID] ?? user.isMediaFileMuted
         let newMuted = !currentlyMuted
         localMediaFileMuteState[userID] = newMuted
         connectionController.muteUserMediaFile(userID: userID, mute: newMuted)
         let announcement = newMuted
             ? L10n.format("connectedServer.mediaFileMute.announced.muted", displayName)
             : L10n.format("connectedServer.mediaFileMute.announced.unmuted", displayName)
-        let element: Any = view.window ?? NSApp as Any
+        let element: Any = window ?? view.window ?? NSApp as Any
         NSAccessibility.post(
             element: element,
             notification: .announcementRequested,
@@ -411,6 +431,12 @@ extension ConnectedServerViewController {
             return
         }
 
+        setSubscription(option, enabled: enabled, forUserIDs: userIDs)
+    }
+
+    /// Parameterized core so other windows can change a subscription for given users.
+    func setSubscription(_ option: UserSubscriptionOption, enabled: Bool, forUserIDs userIDs: [Int32]) {
+        guard userIDs.isEmpty == false else { return }
         connectionController.setSubscription(option, forUserIDs: userIDs, enabled: enabled) { [weak self] result in
             if case .failure(let error) = result {
                 self?.presentActionError(error.localizedDescription)

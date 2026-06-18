@@ -137,6 +137,7 @@ final class ChannelFilesViewController: NSViewController {
             currentChannelID: session.currentChannelID,
             isAdministrator: session.isAdministrator,
             rootChannels: session.rootChannels,
+            usersWithoutChannel: session.usersWithoutChannel,
             channelChatHistory: session.channelChatHistory,
             sessionHistory: session.sessionHistory,
             privateConversations: session.privateConversations,

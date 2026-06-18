@@ -1167,52 +1167,81 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         connectedServerViewController?.promptChangeStatus()
     }
 
-    func toggleChannelOperator() {
+    /// True when the Connected Users window is the key window — per-user keyboard
+    /// shortcuts then act on its selection instead of the main outline view.
+    private var connectedUsersWindowIsKey: Bool {
+        connectedUsersViewController?.view.window?.isKeyWindow == true
+    }
+
+    /// Dispatches a per-user action to the Connected Users window when it is key,
+    /// otherwise to the main outline view (bringing the main window forward).
+    private func routeUserAction(
+        connectedUsers: (ConnectedUsersViewController) -> Void,
+        mainWindow: () -> Void
+    ) {
         guard menuState.mode == .connectedServer else { return }
+        if connectedUsersWindowIsKey, let vc = connectedUsersViewController {
+            connectedUsers(vc)
+            return
+        }
         restoreMainWindow()
-        connectedServerViewController?.toggleChannelOperatorAction()
+        mainWindow()
+    }
+
+    func toggleChannelOperator() {
+        routeUserAction(
+            connectedUsers: { $0.keyToggleOperatorSelectedUser() },
+            mainWindow: { connectedServerViewController?.toggleChannelOperatorAction() }
+        )
     }
 
     func kickSelectedUser() {
-        guard menuState.mode == .connectedServer else { return }
-        restoreMainWindow()
-        connectedServerViewController?.kickUserAction()
+        routeUserAction(
+            connectedUsers: { $0.keyKickSelectedUser() },
+            mainWindow: { connectedServerViewController?.kickUserAction() }
+        )
     }
 
     func kickSelectedUserFromServer() {
-        guard menuState.mode == .connectedServer else { return }
-        restoreMainWindow()
-        connectedServerViewController?.kickUserFromServerAction()
+        routeUserAction(
+            connectedUsers: { $0.keyKickFromServerSelectedUser() },
+            mainWindow: { connectedServerViewController?.kickUserFromServerAction() }
+        )
     }
 
     func kickBanSelectedUser() {
-        guard menuState.mode == .connectedServer else { return }
-        restoreMainWindow()
-        connectedServerViewController?.kickBanUserAction()
+        routeUserAction(
+            connectedUsers: { $0.keyKickBanSelectedUser() },
+            mainWindow: { connectedServerViewController?.kickBanUserAction() }
+        )
     }
 
     func moveSelectedUser() {
-        guard menuState.mode == .connectedServer else { return }
-        restoreMainWindow()
-        connectedServerViewController?.moveUserAction()
+        routeUserAction(
+            connectedUsers: { $0.keyMoveSelectedUser() },
+            mainWindow: { connectedServerViewController?.moveUserAction() }
+        )
     }
 
     func toggleMuteSelectedUser() {
-        guard menuState.mode == .connectedServer else { return }
-        restoreMainWindow()
-        connectedServerViewController?.toggleMuteUserAction()
+        routeUserAction(
+            connectedUsers: { $0.keyMuteSelectedUser() },
+            mainWindow: { connectedServerViewController?.toggleMuteUserAction() }
+        )
     }
 
     func toggleMuteSelectedUserMediaFile() {
-        guard menuState.mode == .connectedServer else { return }
-        restoreMainWindow()
-        connectedServerViewController?.toggleMuteUserMediaFileAction()
+        routeUserAction(
+            connectedUsers: { $0.keyMuteMediaFileSelectedUser() },
+            mainWindow: { connectedServerViewController?.toggleMuteUserMediaFileAction() }
+        )
     }
 
     func adjustSelectedUserVolume() {
-        guard menuState.mode == .connectedServer else { return }
-        restoreMainWindow()
-        connectedServerViewController?.adjustUserVolume()
+        routeUserAction(
+            connectedUsers: { $0.keyAdjustVolumeSelectedUser() },
+            mainWindow: { connectedServerViewController?.adjustUserVolume() }
+        )
     }
 
     func toggleRecording() {
@@ -1422,10 +1451,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func openSelectedUserInfo() {
-        guard menuState.mode == .connectedServer,
-              let user = connectedServerViewController?.selectedUserForInfo() else {
+        guard menuState.mode == .connectedServer else { return }
+        if connectedUsersWindowIsKey {
+            connectedUsersViewController?.keyShowInfoSelectedUser()
             return
         }
+        guard let user = connectedServerViewController?.selectedUserForInfo() else { return }
         openUserInfo(for: user)
     }
 
@@ -1541,9 +1572,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func setSelectedUsersSubscription(_ option: UserSubscriptionOption, enabled: Bool) {
-        guard menuState.mode == .connectedServer else { return }
-        restoreMainWindow()
-        connectedServerViewController?.setSelectedUsersSubscription(option, enabled: enabled)
+        routeUserAction(
+            connectedUsers: { $0.keySetSubscription(option, enabled: enabled) },
+            mainWindow: { connectedServerViewController?.setSelectedUsersSubscription(option, enabled: enabled) }
+        )
     }
 
     func updateChannel() {
@@ -1636,7 +1668,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             connectedUsersWindowController = ConnectedUsersWindowController(contentViewController: vc)
         }
         if let session = connectedServerViewController?.session {
-            vc.update(users: flattenedUsers(in: session.rootChannels))
+            vc.update(users: allConnectedUsers(in: session))
         }
         connectedUsersWindowController?.showWindow(nil)
         connectedUsersWindowController?.window?.makeKeyAndOrderFront(nil)
@@ -1647,6 +1679,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         connectedUsersWindowController?.close()
         connectedUsersWindowController = nil
         connectedUsersViewController = nil
+        // The window no longer owns the per-user menu state; let the main outline reclaim it.
+        connectedServerViewController?.updateMenuState()
     }
 
     func openBannedUsers() {
@@ -2122,10 +2156,10 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
             }
         }
         if connectedUsersWindowController?.window?.isVisible == true {
-            connectedUsersViewController?.update(users: flattenedUsers(in: session.rootChannels))
+            connectedUsersViewController?.update(users: allConnectedUsers(in: session))
         }
         if let userInfoUserID, userInfoWindowController != nil {
-            let user = flattenedUsers(in: session.rootChannels).first(where: { $0.id == userInfoUserID })
+            let user = allConnectedUsers(in: session).first(where: { $0.id == userInfoUserID })
             userInfoViewController?.update(user: user)
             userInfoWindowController?.window?.title = user.map {
                 L10n.format("userInfo.window.title.withName", $0.displayName)
@@ -2268,5 +2302,11 @@ extension AppDelegate: NSWindowDelegate {
 private extension AppDelegate {
     func flattenedUsers(in channels: [ConnectedServerChannel]) -> [ConnectedServerUser] {
         channels.flatMap { $0.users + flattenedUsers(in: $0.children) }
+    }
+
+    /// Every user connected to the server, including those not in any channel
+    /// (which have no node in the channel tree). Feeds the Connected Users window.
+    func allConnectedUsers(in session: ConnectedServerSession) -> [ConnectedServerUser] {
+        flattenedUsers(in: session.rootChannels) + session.usersWithoutChannel
     }
 }

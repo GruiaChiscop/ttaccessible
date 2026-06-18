@@ -139,6 +139,119 @@ final class ConnectedUsersViewController: NSViewController {
         setupTable()
         setupLayout()
         refreshCountLabel(announce: false)
+        observeWindowFocus()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: - Menu-state ownership
+
+    /// While this window is key, it drives the per-user fields of the shared menu
+    /// state so the User-menu keyboard shortcuts (Cmd+I, Cmd+Shift+M, …) act on the
+    /// selection here. On resign-key the main outline view reclaims ownership.
+    private func observeWindowFocus() {
+        let center = NotificationCenter.default
+        center.addObserver(self, selector: #selector(windowDidBecomeKey(_:)), name: NSWindow.didBecomeKeyNotification, object: nil)
+        center.addObserver(self, selector: #selector(windowDidResignKey(_:)), name: NSWindow.didResignKeyNotification, object: nil)
+    }
+
+    @objc private func windowDidBecomeKey(_ note: Notification) {
+        guard (note.object as? NSWindow) === view.window else { return }
+        pushMenuState()
+    }
+
+    @objc private func windowDidResignKey(_ note: Notification) {
+        guard (note.object as? NSWindow) === view.window else { return }
+        serverViewController?.updateMenuState()
+    }
+
+    /// Mirrors `ConnectedServerViewController.updateMenuState()` for the row selected
+    /// here. No-op unless this window is key, so it never clobbers the main outline's
+    /// state while in the background.
+    func pushMenuState() {
+        guard view.window?.isKeyWindow == true else { return }
+        let menuState = SavedServersMenuState.shared
+        guard let user = selectedUser() else {
+            menuState.setSelectedUsersState(
+                hasSelectedUsers: false,
+                hasSingleSelectedUser: false,
+                hasSingleSelectedOtherUser: false,
+                isSelectedUserMuted: false,
+                isSelectedUserMediaFileMuted: false,
+                isSelectedUserChannelOperator: false,
+                states: [:]
+            )
+            return
+        }
+        let isOther = !user.isCurrentUser
+        let muted = serverViewController?.localMuteState[user.id] ?? user.isMuted
+        let mediaMuted = serverViewController?.localMediaFileMuteState[user.id] ?? user.isMediaFileMuted
+        menuState.setSelectedUsersState(
+            hasSelectedUsers: isOther,
+            hasSingleSelectedUser: true,
+            hasSingleSelectedOtherUser: isOther,
+            isSelectedUserMuted: isOther ? muted : false,
+            isSelectedUserMediaFileMuted: isOther ? mediaMuted : false,
+            isSelectedUserChannelOperator: isOther ? user.isChannelOperator : false,
+            states: Dictionary(
+                uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
+                    (option, isOther && user.isSubscriptionEnabled(option))
+                }
+            )
+        )
+    }
+
+    // MARK: - Keyboard-shortcut entry points (routed from AppDelegate when key)
+
+    func keyShowInfoSelectedUser() {
+        selectedUser().map { appDelegate?.openUserInfo(for: $0) }
+    }
+
+    func keyMuteSelectedUser() {
+        guard let user = selectedUser() else { return }
+        serverViewController?.performToggleMute(user, presentingWindow: presentingWindow)
+    }
+
+    func keyMuteMediaFileSelectedUser() {
+        guard let user = selectedUser() else { return }
+        serverViewController?.performToggleMuteMediaFile(user, presentingWindow: presentingWindow)
+    }
+
+    func keyAdjustVolumeSelectedUser() {
+        guard let user = selectedUser() else { return }
+        serverViewController?.performAdjustVolume(user, presentingWindow: presentingWindow)
+    }
+
+    func keyToggleOperatorSelectedUser() {
+        guard let user = selectedUser() else { return }
+        serverViewController?.performToggleOperator(user, presentingWindow: presentingWindow)
+    }
+
+    func keyKickSelectedUser() {
+        guard let user = selectedUser() else { return }
+        serverViewController?.performKick(user, fromServer: false, presentingWindow: presentingWindow)
+    }
+
+    func keyKickFromServerSelectedUser() {
+        guard let user = selectedUser() else { return }
+        serverViewController?.performKick(user, fromServer: true, presentingWindow: presentingWindow)
+    }
+
+    func keyKickBanSelectedUser() {
+        guard let user = selectedUser() else { return }
+        serverViewController?.performKickBan(user, presentingWindow: presentingWindow)
+    }
+
+    func keyMoveSelectedUser() {
+        guard let user = selectedUser() else { return }
+        serverViewController?.performMove([user], presentingWindow: presentingWindow)
+    }
+
+    func keySetSubscription(_ option: UserSubscriptionOption, enabled: Bool) {
+        guard let user = selectedUser(), !user.isCurrentUser else { return }
+        serverViewController?.setSubscription(option, enabled: enabled, forUserIDs: [user.id])
     }
 
     // MARK: - Setup
@@ -483,6 +596,10 @@ extension ConnectedUsersViewController: NSTableViewDataSource {
 // MARK: - NSTableViewDelegate
 
 extension ConnectedUsersViewController: NSTableViewDelegate {
+    func tableViewSelectionDidChange(_ notification: Notification) {
+        pushMenuState()
+    }
+
     func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
         let rowView = ConnectedUsersRowView()
         rowView.accessibilityActionsProvider = { [weak self, weak rowView] in

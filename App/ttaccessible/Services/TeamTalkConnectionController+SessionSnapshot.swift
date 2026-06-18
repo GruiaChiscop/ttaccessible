@@ -109,6 +109,7 @@ extension TeamTalkConnectionController {
 
         // Single pass over users: build byID dict, byChannel dict, subscription states, and cache display names.
         var roots = previousSnapshot?.rootChannels ?? []
+        var usersWithoutChannel = previousSnapshot?.usersWithoutChannel ?? []
         var currentNickname = previousSnapshot?.currentNickname ?? effectiveNickname(for: record)
         var currentStatusMode = previousSnapshot?.currentStatusMode ?? .available
         var currentStatusMessage = previousSnapshot?.currentStatusMessage ?? ""
@@ -180,55 +181,60 @@ extension TeamTalkConnectionController {
                 }
             }
 
+            func sortUsersByDisplayName(_ users: [User]) -> [User] {
+                users.sorted { lhs, rhs in
+                    let leftName = cachedDisplayNames[lhs.nUserID] ?? ""
+                    let rightName = cachedDisplayNames[rhs.nUserID] ?? ""
+                    if leftName.localizedCaseInsensitiveCompare(rightName) == .orderedSame {
+                        return lhs.nUserID < rhs.nUserID
+                    }
+                    return leftName.localizedCaseInsensitiveCompare(rightName) == .orderedAscending
+                }
+            }
+
+            func makeUser(from user: User, channelPathComponents: [String]) -> ConnectedServerUser {
+                let nickname = cachedDisplayNames[user.nUserID] ?? ""
+                return ConnectedServerUser(
+                    id: user.nUserID,
+                    username: ttString(from: user.szUsername),
+                    nickname: nickname,
+                    channelID: user.nChannelID,
+                    statusMode: TeamTalkStatusMode(bitmask: user.nStatusMode),
+                    statusMessage: ttString(from: user.szStatusMsg),
+                    gender: TeamTalkGender(statusBitmask: user.nStatusMode),
+                    isCurrentUser: user.nUserID == currentUserID,
+                    isAdministrator: (user.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0,
+                    isChannelOperator: TT_IsChannelOperator(instance, user.nUserID, user.nChannelID) != 0,
+                    isTalking: user.nUserID == currentUserID
+                        ? voiceTransmissionEnabled
+                        : (user.uUserState & UInt32(USERSTATE_VOICE.rawValue)) != 0,
+                    isMuted: (user.uUserState & UInt32(USERSTATE_MUTE_VOICE.rawValue)) != 0,
+                    isMediaFileMuted: (user.uUserState & UInt32(USERSTATE_MUTE_MEDIAFILE.rawValue)) != 0,
+                    isStreamingMediaFileVideo: (user.uUserState & UInt32(USERSTATE_MEDIAFILE_VIDEO.rawValue)) != 0,
+                    isAway: (user.nStatusMode & 0xFF) == 0x01,
+                    isQuestion: (user.nStatusMode & 0xFF) == 0x02,
+                    ipAddress: ttString(from: user.szIPAddress),
+                    clientName: ttString(from: user.szClientName),
+                    clientVersion: clientVersion(for: user),
+                    volumeVoice: user.nVolumeVoice,
+                    volumeMediaFile: user.nVolumeMediaFile,
+                    subscriptionStates: Dictionary(
+                        uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
+                            (option, option.isLocallyEnabled(for: user))
+                        }
+                    ),
+                    channelPathComponents: channelPathComponents
+                )
+            }
+
             func buildChannelTree(parentID: Int32, parentPathComponents: [String]) -> [ConnectedServerChannel] {
                 let childChannels = channelsByParent[parentID] ?? []
 
                 let built = childChannels.map { channel in
                     let channelName = cachedChannelNames[channel.nChannelID] ?? ""
                     let channelPathComponents = parentPathComponents + [channelName]
-                    let channelUsers = (usersByChannel[channel.nChannelID] ?? [])
-                        .sorted { lhs, rhs in
-                            let leftName = cachedDisplayNames[lhs.nUserID] ?? ""
-                            let rightName = cachedDisplayNames[rhs.nUserID] ?? ""
-                            if leftName.localizedCaseInsensitiveCompare(rightName) == .orderedSame {
-                                return lhs.nUserID < rhs.nUserID
-                            }
-                            return leftName.localizedCaseInsensitiveCompare(rightName) == .orderedAscending
-                        }
-                        .map { user in
-                            let nickname = cachedDisplayNames[user.nUserID] ?? ""
-                            return ConnectedServerUser(
-                                id: user.nUserID,
-                                username: ttString(from: user.szUsername),
-                                nickname: nickname,
-                                channelID: user.nChannelID,
-                                statusMode: TeamTalkStatusMode(bitmask: user.nStatusMode),
-                                statusMessage: ttString(from: user.szStatusMsg),
-                                gender: TeamTalkGender(statusBitmask: user.nStatusMode),
-                                isCurrentUser: user.nUserID == currentUserID,
-                                isAdministrator: (user.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0,
-                                isChannelOperator: TT_IsChannelOperator(instance, user.nUserID, user.nChannelID) != 0,
-                                isTalking: user.nUserID == currentUserID
-                                    ? voiceTransmissionEnabled
-                                    : (user.uUserState & UInt32(USERSTATE_VOICE.rawValue)) != 0,
-                                isMuted: (user.uUserState & UInt32(USERSTATE_MUTE_VOICE.rawValue)) != 0,
-                                isMediaFileMuted: (user.uUserState & UInt32(USERSTATE_MUTE_MEDIAFILE.rawValue)) != 0,
-                                isStreamingMediaFileVideo: (user.uUserState & UInt32(USERSTATE_MEDIAFILE_VIDEO.rawValue)) != 0,
-                                isAway: (user.nStatusMode & 0xFF) == 0x01,
-                                isQuestion: (user.nStatusMode & 0xFF) == 0x02,
-                                ipAddress: ttString(from: user.szIPAddress),
-                                clientName: ttString(from: user.szClientName),
-                                clientVersion: clientVersion(for: user),
-                                volumeVoice: user.nVolumeVoice,
-                                volumeMediaFile: user.nVolumeMediaFile,
-                                subscriptionStates: Dictionary(
-                                    uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
-                                        (option, option.isLocallyEnabled(for: user))
-                                    }
-                                ),
-                                channelPathComponents: channelPathComponents
-                            )
-                        }
+                    let channelUsers = sortUsersByDisplayName(usersByChannel[channel.nChannelID] ?? [])
+                        .map { makeUser(from: $0, channelPathComponents: channelPathComponents) }
 
                     return ConnectedServerChannel(
                         id: channel.nChannelID,
@@ -248,6 +254,11 @@ extension TeamTalkConnectionController {
             }
 
             roots = buildChannelTree(parentID: 0, parentPathComponents: [])
+            // Users with nChannelID == 0 are connected to the server but not in any
+            // channel; they never appear in the channel tree above. Surface them so the
+            // Connected Users window can list everyone on the server.
+            usersWithoutChannel = sortUsersByDisplayName(usersByChannel[0] ?? [])
+                .map { makeUser(from: $0, channelPathComponents: []) }
             let effectiveRecordNickname = effectiveNickname(for: record)
             currentNickname = currentUser.map { cachedDisplayNames[$0.nUserID] ?? displayName(for: $0) } ?? effectiveRecordNickname
             currentStatusMode = TeamTalkStatusMode(bitmask: currentUser?.nStatusMode ?? TeamTalkStatusMode.available.rawValue)
@@ -307,6 +318,7 @@ extension TeamTalkConnectionController {
             currentChannelID: currentChannelID,
             isAdministrator: myIsAdmin,
             rootChannels: roots,
+            usersWithoutChannel: usersWithoutChannel,
             channelChatHistory: previousSnapshot == nil || invalidation.contains(.chat) ? channelChatHistory : (previousSnapshot?.channelChatHistory ?? channelChatHistory),
             sessionHistory: previousSnapshot == nil || invalidation.contains(.history) ? sessionHistory : (previousSnapshot?.sessionHistory ?? sessionHistory),
             privateConversations: previousSnapshot == nil || invalidation.contains(.privateConversations) || invalidation.contains(.rootTree)

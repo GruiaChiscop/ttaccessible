@@ -145,6 +145,10 @@ struct ConnectedServerSession: Equatable {
     let currentChannelID: Int32
     let isAdministrator: Bool
     let rootChannels: [ConnectedServerChannel]
+    /// Users connected to the server but not in any channel (nChannelID == 0).
+    /// They have no node in the channel tree, so the Connected Users window
+    /// surfaces them separately.
+    let usersWithoutChannel: [ConnectedServerUser]
     let channelChatHistory: [ChannelChatMessage]
     let sessionHistory: [SessionHistoryEntry]
     let privateConversations: [PrivateConversation]
