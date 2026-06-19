@@ -231,6 +231,9 @@ private enum FeedbackDiagnostics {
         if device.usesSystemDefault {
             return "défaut système"
         }
+        if device.usesNoOutput {
+            return "aucune sortie audio"
+        }
         return device.displayName ?? device.persistentID ?? "?"
     }
 }

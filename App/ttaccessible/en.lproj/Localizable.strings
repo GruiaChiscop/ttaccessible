@@ -120,6 +120,7 @@
 "connectedServer.chat.send.accessibilityLabel" = "Send the message to the channel";
 "connectedServer.audio.status.accessibilityLabel" = "Server audio status";
 "connectedServer.audio.status.unavailable" = "Audio not initialized.";
+"connectedServer.audio.status.noOutput" = "Output disabled (no output device).";
 "connectedServer.audio.status.outputReady" = "Audio output active. You can hear the channel.";
 "connectedServer.audio.status.inputReady" = "Microphone input ready.";
 "connectedServer.audio.status.microphoneActive" = "Microphone active. Your voice is being transmitted.";

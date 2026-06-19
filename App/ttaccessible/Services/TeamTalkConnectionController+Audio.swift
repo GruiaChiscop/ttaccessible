@@ -448,6 +448,10 @@ extension TeamTalkConnectionController {
             status = L10n.text("connectedServer.audio.status.inputReady")
         } else if outputAudioReady {
             status = L10n.text("connectedServer.audio.status.outputReady")
+        } else if preferencesStore.preferences.preferredOutputDevice.usesNoOutput {
+            // No output is a deliberate choice, not a failure — don't report it
+            // as "unavailable" (which reads as an error, esp. via VoiceOver).
+            status = L10n.text("connectedServer.audio.status.noOutput")
         } else {
             status = L10n.text("connectedServer.audio.status.unavailable")
         }
