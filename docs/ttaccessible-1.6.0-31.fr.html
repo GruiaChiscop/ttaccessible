@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ttaccessible-1.6.0-31.fr</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --code-bg: #f5f5f7;
+  --link: #0066cc;
+  --link-hover: #0040a0;
+  --rule: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --code-bg: #2d2d2d;
+    --link: #4eaaff;
+    --link-hover: #82c4ff;
+    --rule: #3a3a3a;
+  }
+}
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 1rem 1.25rem 1.5rem;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.15rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: 0.95rem; color: var(--muted); }
+p { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; margin: 0.6em 0; }
+li { margin: 0.25em 0; }
+li > p { margin: 0.3em 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { color: var(--link-hover); text-decoration: underline; }
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.75em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; }
+blockquote {
+  border-left: 3px solid var(--rule);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<p>Vous pouvez désormais dupliquer un profil pour en créer un nouveau à
+partir d'un profil existant en quelques clics, et une nouvelle option «
+Aucune sortie audio » permet à un profil de rester connecté et de
+continuer à transmettre sans jouer le moindre son.</p>
+<h2 id="profils">Profils</h2>
+<ul>
+<li><strong>Dupliquer un profil</strong> — Configurer un deuxième profil
+obligeait jusqu'ici à ressaisir à la main tous vos serveurs, mots de
+passe et réglages. Désormais, dans la fenêtre Profils, sélectionnez un
+profil et choisissez <strong>Dupliquer…</strong> (depuis le menu
+contextuel, la rangée de boutons ou ses actions VoiceOver) pour en faire
+une copie complète sous un nouveau nom : serveurs, mots de passe, tous
+les réglages, votre historique de chat et vos packs de sons
+personnalisés. La copie apparaît dans la liste, prête à être lancée —
+rien ne se connecte automatiquement, vous pouvez donc la vérifier ou la
+renommer d'abord.</li>
+</ul>
+<h2 id="audio">Audio</h2>
+<ul>
+<li><strong>Nouvelle option « Aucune sortie audio »</strong> — Le menu
+de sortie dans Préférences › Audio propose maintenant un troisième
+choix, <strong>Aucune sortie audio</strong>, à côté de « Par défaut du
+système » et de vos périphériques. Choisissez-le et le profil reste
+connecté et continue d'envoyer votre micro, mais n'ouvre jamais de
+sortie son — pratique lorsqu'un second profil ou une autre application
+vous fait déjà entendre le canal. Contrairement à la sourdine, qui garde
+le périphérique de sortie occupé, cette option le laisse entièrement
+libre.</li>
+</ul>
+<h2 id="installation">Installation</h2>
+<p>Si vous utilisez déjà ttaccessible, la mise à jour s'installera toute
+seule — aucune action nécessaire.</p>
+<p>Installation manuelle :</p>
+<ol type="1">
+<li>Téléchargez <code>ttaccessible-1.6.0-31.zip</code> ci-dessous.</li>
+<li>Décompressez l'archive et glissez <code>ttaccessible.app</code> dans
+votre dossier <code>/Applications</code>, en remplaçant la version
+précédente.</li>
+<li>Double-cliquez — aucun avertissement Gatekeeper grâce à la
+notarisation.</li>
+</ol>
+</body>
+</html>
