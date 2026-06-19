@@ -102,6 +102,9 @@ private struct ProfileRow {
 
     var canRename: Bool { !isDefault }
     var canDelete: Bool { !isDefault && !isCurrent && !isRunning }
+    // The current profile (isRunning == false) can be duplicated; only a profile
+    // open in another instance is blocked (its data could change mid-copy).
+    var canDuplicate: Bool { !isRunning }
 }
 
 // MARK: - View controller
@@ -113,6 +116,7 @@ final class ProfilesViewController: NSViewController {
     private var tableView: ProfilesTableView!
     private var launchButton: NSButton!
     private var newButton: NSButton!
+    private var duplicateButton: NSButton!
     private var renameButton: NSButton!
     private var deleteButton: NSButton!
     private var refreshButton: NSButton!
@@ -177,10 +181,11 @@ final class ProfilesViewController: NSViewController {
     private func setupButtons() {
         launchButton = NSButton(title: L10n.text("profiles.button.launch"), target: self, action: #selector(launchSelected))
         newButton = NSButton(title: L10n.text("profiles.button.new"), target: self, action: #selector(createProfile))
+        duplicateButton = NSButton(title: L10n.text("profiles.button.duplicate"), target: self, action: #selector(duplicateSelected))
         renameButton = NSButton(title: L10n.text("profiles.button.rename"), target: self, action: #selector(renameSelected))
         deleteButton = NSButton(title: L10n.text("profiles.button.delete"), target: self, action: #selector(deleteSelected))
         refreshButton = NSButton(title: L10n.text("profiles.button.refresh"), target: self, action: #selector(refresh))
-        for button in [launchButton, newButton, renameButton, deleteButton, refreshButton] {
+        for button in [launchButton, newButton, duplicateButton, renameButton, deleteButton, refreshButton] {
             button?.bezelStyle = .rounded
             button?.translatesAutoresizingMaskIntoConstraints = false
         }
@@ -195,7 +200,7 @@ final class ProfilesViewController: NSViewController {
 
         let spacer = NSView()
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        let buttonStack = NSStackView(views: [refreshButton, spacer, launchButton, newButton, renameButton, deleteButton])
+        let buttonStack = NSStackView(views: [refreshButton, spacer, launchButton, newButton, duplicateButton, renameButton, deleteButton])
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         buttonStack.orientation = .horizontal
         buttonStack.spacing = 8
@@ -253,6 +258,7 @@ final class ProfilesViewController: NSViewController {
     private func updateButtonStates() {
         let row = selectedRow
         launchButton.isEnabled = row != nil
+        duplicateButton.isEnabled = row?.canDuplicate ?? false
         renameButton.isEnabled = row?.canRename ?? false
         deleteButton.isEnabled = row?.canDelete ?? false
     }
@@ -300,6 +306,43 @@ final class ProfilesViewController: NSViewController {
             self.selectRow(slug: entry.slug)
             // A brand-new profile is empty, so there's nothing to auto-connect to.
             self.appDelegate?.launchProfile(slug: entry.slug)
+        }
+    }
+
+    @objc private func duplicateSelected() {
+        guard let row = selectedRow, row.canDuplicate else { return }
+        let entry = row.entry
+        if ProfileInstanceLock.isAnotherInstanceRunning(forSlug: entry.slug) {
+            presentError(L10n.format("profile.duplicate.error.otherInstanceRunning", entry.displayName))
+            return
+        }
+        // If duplicating the running (current) profile, persist its latest edits
+        // before the copy reads from its UserDefaults suite.
+        if row.isCurrent {
+            appDelegate?.flushPersistableStores()
+        }
+        presentNameSheet(
+            title: L10n.text("profile.duplicate.title"),
+            message: L10n.format("profile.duplicate.message", entry.displayName),
+            initial: L10n.format("profile.duplicate.defaultName", entry.displayName),
+            confirmTitle: L10n.text("profile.duplicate.confirm")
+        ) { [weak self] rawName in
+            guard let self else { return }
+            let newName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !newName.isEmpty else {
+                self.presentError(L10n.text("profile.create.error.empty"))
+                return
+            }
+            do {
+                let created = try ProfileDuplicator.duplicate(sourceSlug: entry.slug, newDisplayName: newName)
+                self.reload()
+                self.selectRow(slug: created.slug)
+                // Deliberately NOT launched — the user reviews/tweaks the copy first.
+                self.announce(L10n.format("profile.duplicate.success", created.displayName))
+            } catch {
+                let message = (error as? LocalizedError)?.errorDescription ?? L10n.text("profile.duplicate.error.failed")
+                self.presentError(message)
+            }
         }
     }
 
@@ -415,6 +458,12 @@ final class ProfilesViewController: NSViewController {
                 return true
             }
         ]
+        if row.canDuplicate {
+            actions.append(NSAccessibilityCustomAction(name: L10n.text("profiles.button.duplicate")) { [weak self] in
+                self?.perform(row) { ctrl, _ in ctrl.duplicateSelected() }
+                return true
+            })
+        }
         if row.canRename {
             actions.append(NSAccessibilityCustomAction(name: L10n.text("profiles.button.rename")) { [weak self] in
                 self?.perform(row) { ctrl, _ in ctrl.renameSelected() }
@@ -446,6 +495,12 @@ final class ProfilesViewController: NSViewController {
         let launchItem = NSMenuItem(title: L10n.text("profiles.button.launch"), action: #selector(launchSelected), keyEquivalent: "")
         launchItem.target = self
         menu.addItem(launchItem)
+
+        if row.canDuplicate {
+            let duplicateItem = NSMenuItem(title: L10n.text("profiles.button.duplicate"), action: #selector(duplicateSelected), keyEquivalent: "")
+            duplicateItem.target = self
+            menu.addItem(duplicateItem)
+        }
 
         if row.canRename {
             menu.addItem(.separator())

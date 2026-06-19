@@ -982,6 +982,7 @@
 "profiles.button.new" = "New…";
 "profiles.button.rename" = "Rename…";
 "profiles.button.delete" = "Delete";
+"profiles.button.duplicate" = "Duplicate…";
 "profiles.button.refresh" = "Refresh";
 
 "profile.menu.newInstance" = "New Instance…";
@@ -1000,6 +1001,13 @@
 "profile.rename.confirm" = "Rename";
 "profile.rename.error.failed" = "Could not rename the profile. Try again or restart the app.";
 "profile.rename.success" = "Profile renamed to \"%@\".";
+"profile.duplicate.title" = "Duplicate profile";
+"profile.duplicate.message" = "Enter a name for the copy of \"%@\". Its servers, passwords, settings, chat history and sound packs will be copied into a new profile.";
+"profile.duplicate.defaultName" = "%@ copy";
+"profile.duplicate.confirm" = "Duplicate";
+"profile.duplicate.success" = "Profile duplicated as \"%@\".";
+"profile.duplicate.error.failed" = "Could not duplicate the profile. Try again or restart the app.";
+"profile.duplicate.error.otherInstanceRunning" = "Another instance of ttaccessible is running with the profile \"%@\". Quit that instance first.";
 "profile.delete.confirm.title" = "Delete the profile \"%@\"?";
 "profile.delete.confirm.message" = "This removes the profile from the picker and deletes its saved servers, preferences, sound packs, chat history, and stored passwords. This cannot be undone.";
 "profile.delete.confirm.button" = "Delete";

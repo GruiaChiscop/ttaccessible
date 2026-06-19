@@ -155,6 +155,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Flush any pending debounced writes of the live preference / saved-server
+    /// stores to the current profile's UserDefaults suite. Called before
+    /// duplicating the current profile so the copy captures the latest edits.
+    func flushPersistableStores() {
+        store.flushPendingChanges()
+        preferencesStore.flushPendingChanges()
+    }
+
     private func syncNicknamePreference() {
         nicknameCancellable = preferencesStore.$preferences
             .map(\.defaultNickname)

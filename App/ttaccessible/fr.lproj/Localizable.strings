@@ -982,6 +982,7 @@
 "profiles.button.new" = "Nouveau…";
 "profiles.button.rename" = "Renommer…";
 "profiles.button.delete" = "Supprimer";
+"profiles.button.duplicate" = "Dupliquer…";
 "profiles.button.refresh" = "Actualiser";
 
 "profile.menu.newInstance" = "Nouvelle instance…";
@@ -1000,6 +1001,13 @@
 "profile.rename.confirm" = "Renommer";
 "profile.rename.error.failed" = "Le profil n'a pas pu être renommé. Réessayez ou redémarrez l'application.";
 "profile.rename.success" = "Profil renommé en « %@ ».";
+"profile.duplicate.title" = "Dupliquer le profil";
+"profile.duplicate.message" = "Saisissez un nom pour la copie de « %@ ». Ses serveurs, mots de passe, réglages, historique de chat et packs de sons seront copiés dans un nouveau profil.";
+"profile.duplicate.defaultName" = "%@ copie";
+"profile.duplicate.confirm" = "Dupliquer";
+"profile.duplicate.success" = "Profil dupliqué sous le nom « %@ ».";
+"profile.duplicate.error.failed" = "Impossible de dupliquer le profil. Réessayez ou redémarrez l'application.";
+"profile.duplicate.error.otherInstanceRunning" = "Une autre instance de ttaccessible est en cours d'exécution avec le profil « %@ ». Quittez d'abord cette instance.";
 "profile.delete.confirm.title" = "Supprimer le profil « %@ » ?";
 "profile.delete.confirm.message" = "Cette action retire le profil du sélecteur et supprime ses serveurs enregistrés, ses préférences, ses packs sonores, son historique de discussion et ses mots de passe stockés. Cette action est irréversible.";
 "profile.delete.confirm.button" = "Supprimer";

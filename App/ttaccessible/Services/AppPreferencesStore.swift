@@ -327,6 +327,16 @@ final class AppPreferencesStore: ObservableObject {
         pendingPersistWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: workItem)
     }
+
+    /// Cancel any pending debounced write and persist the current preferences
+    /// immediately. Used before duplicating the current profile so the copy
+    /// captures the very latest edits instead of a value up to ~150 ms stale.
+    func flushPendingChanges() {
+        pendingPersistWorkItem?.cancel()
+        pendingPersistWorkItem = nil
+        guard let data = try? encoder.encode(preferences) else { return }
+        userDefaults.set(data, forKey: Keys.preferences)
+    }
 }
 
 @MainActor
