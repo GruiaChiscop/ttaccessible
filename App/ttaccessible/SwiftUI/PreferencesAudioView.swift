@@ -8,6 +8,7 @@ import SwiftUI
 
 struct PreferencesAudioView: View {
     private let defaultDeviceTag = "__system_default__"
+    private let noOutputDeviceTag = AudioDevicePreference.noOutputSentinelID
 
     @ObservedObject var store: AudioPreferencesStore
 
@@ -22,6 +23,7 @@ struct PreferencesAudioView: View {
                     Text(L10n.text("preferences.audio.outputDevice"))
                     Picker("", selection: $selectedOutputID) {
                         Text(L10n.text("preferences.audio.systemDefault")).tag(defaultDeviceTag)
+                        Text(L10n.text("preferences.audio.noOutput")).tag(noOutputDeviceTag)
                         ForEach(store.state.catalog.outputDevices) { device in
                             Text(device.displayName).tag(device.persistentID)
                         }
