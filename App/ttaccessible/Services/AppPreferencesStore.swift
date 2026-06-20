@@ -694,13 +694,18 @@ final class AudioPreferencesStore: ObservableObject {
         }
 
         state.isCatalogLoading = true
-        Task { @MainActor [weak self, connectionController] in
-            let catalog = forceRefresh
-                ? connectionController.refreshAvailableAudioDevices()
-                : connectionController.availableAudioDevices()
+        // Enumerate devices off the main thread (the connection controller hops to its
+        // serial queue and delivers back on main). A blocking `queue.sync` here froze the
+        // main runloop at launch when Preferences is preloaded, contending with SDK init.
+        let deliver: (AudioDeviceCatalog) -> Void = { [weak self] catalog in
             guard let self else { return }
             self.state.catalog = catalog
             self.state.isCatalogLoading = false
+        }
+        if forceRefresh {
+            connectionController.refreshAvailableAudioDevices(completion: deliver)
+        } else {
+            connectionController.availableAudioDevices(completion: deliver)
         }
     }
 

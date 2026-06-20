@@ -39,6 +39,35 @@ extension TeamTalkConnectionController {
         }
     }
 
+    /// Non-blocking variant of `availableAudioDevices()`. Enumerates devices on the
+    /// TeamTalk serial queue and delivers the catalog on the main thread. Used by
+    /// launch-time Preferences warmup so it never blocks the main runloop with a
+    /// `queue.sync` that contends with SDK init running on the same serial queue.
+    func availableAudioDevices(completion: @escaping (AudioDeviceCatalog) -> Void) {
+        queue.async { [weak self] in
+            guard let self else {
+                DispatchQueue.main.async { completion(.empty) }
+                return
+            }
+            let catalog = self.availableAudioDevicesLocked(forceRefresh: false)
+            DispatchQueue.main.async { completion(catalog) }
+        }
+    }
+
+    /// Non-blocking variant of `refreshAvailableAudioDevices()` (forced re-enumeration).
+    func refreshAvailableAudioDevices(completion: @escaping (AudioDeviceCatalog) -> Void) {
+        queue.async { [weak self] in
+            guard let self else {
+                DispatchQueue.main.async { completion(.empty) }
+                return
+            }
+            self.cachedSoundDevices = []
+            self.cachedAudioDeviceCatalog = nil
+            let catalog = self.availableAudioDevicesLocked(forceRefresh: true)
+            DispatchQueue.main.async { completion(catalog) }
+        }
+    }
+
     func invalidateAudioDeviceCache() {
         queue.async { [weak self] in
             self?.cachedSoundDevices = []
