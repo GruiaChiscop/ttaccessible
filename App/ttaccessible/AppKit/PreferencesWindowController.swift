@@ -172,6 +172,13 @@ private final class PreferencesContainerViewController: NSViewController {
         selectPane(.general)
     }
 
+    // Escape closes the Preferences window. As the window's content view
+    // controller, this VC is in the responder chain, so an unhandled Escape
+    // (cancelOperation:) bubbles up to here.
+    override func cancelOperation(_ sender: Any?) {
+        view.window?.performClose(nil)
+    }
+
     func warmupExpensiveDependencies() {
         audioPreferencesStore.warmup()
         notificationsPreferencesStore.prepareIfNeeded()
@@ -398,9 +405,13 @@ private final class PreferencesSidebarCellView: NSTableCellView {
 
         paneImageView.translatesAutoresizingMaskIntoConstraints = false
         paneImageView.imageScaling = .scaleProportionallyDown
+        // The row already carries the pane title as its accessibility label, so the
+        // icon and the duplicate text field shouldn't be separate VoiceOver stops.
+        paneImageView.setAccessibilityElement(false)
 
         paneTextField.translatesAutoresizingMaskIntoConstraints = false
         paneTextField.font = .systemFont(ofSize: NSFont.systemFontSize)
+        paneTextField.setAccessibilityElement(false)
 
         addSubview(paneImageView)
         addSubview(paneTextField)
