@@ -306,7 +306,7 @@
 "connectedServer.channelPassword.join" = "Rejoindre";
 "connectedServer.identity.nickname.menu" = "Changer le pseudo";
 "connectedServer.identity.nickname.title" = "Changer le pseudo";
-"connectedServer.identity.nickname.message" = "Saisissez le nouveau pseudo utilisé sur ce serveur.";
+"connectedServer.identity.nickname.message" = "Saisissez le nouveau pseudo utilisé sur ce serveur. Laissez le champ vide pour utiliser votre pseudo par défaut.";
 "connectedServer.identity.nickname.placeholder" = "Pseudo";
 "connectedServer.identity.nickname.field" = "Pseudo";
 "connectedServer.identity.nickname.updated" = "Pseudo mis à jour.";
