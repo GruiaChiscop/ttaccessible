@@ -20,7 +20,7 @@ struct PreferencesBearWareView: View {
     private let webLoginClient = BearWareWebLoginClient()
 
     var body: some View {
-        PreferencesPaneScrollView {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.bearware.title")) {
             VStack(alignment: .leading, spacing: 18) {
                 Text(L10n.text("preferences.bearware.section"))
                     .font(.headline)
