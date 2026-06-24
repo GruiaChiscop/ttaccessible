@@ -1,25 +1,23 @@
-## v1.7.0-beta.5 (build 36) — 2026-06-22
+## v1.7.0-beta.6 (build 37) — 2026-06-24
 
 This is a **beta** release, for testing new changes before they ship to everyone. To receive beta updates, turn on **Include beta versions** in Preferences › General.
 
-## Fixes
+This beta is a focused VoiceOver and accessibility pass, contributed by Rocco Fiorentino.
 
-- **BearWare web login no longer fails with "unexpected response".** Connecting to a server with your BearWare account could intermittently fail with a "the BearWare login service returned an unexpected response" error and stop the connection. The login now completes the same way the official client does — a hiccup from the BearWare service no longer blocks you, and if a server genuinely refuses the account you get a clear message instead. The settings hints now also point to **Preferences › BearWare** (not General).
+## Accessibility & VoiceOver
 
-## Also in this beta
-
-- **VoiceOver announces more control changes.** VoiceOver speaks the new value right away when you adjust the sliders in Notifications and Announcements preferences, and announces the microphone status when you turn transmission on or off.
-- **VoiceOver announces volume slider changes.** When you adjust the microphone gain or output volume sliders, VoiceOver speaks the new value right away instead of repeating the previous one. Thanks to Gabriel for reporting this.
-- **Faster launch.** The app paused for a moment when it started up. That pause is gone — ttaccessible now opens straight away.
-- **Clearing your nickname keeps you connected.** When you change your nickname (F5) and leave the field empty, ttaccessible now falls back to your default nickname from settings instead of showing a "nickname cannot be empty" error.
-- **Sign in with a BearWare account.** Connect to servers that use BearWare web login (bearware.dk) without creating a separate account on each one. Set up your free BearWare account once in **Preferences › BearWare**, then turn on **Use BearWare web login** for any server that supports it. This feature is still looking for testers — feedback is very welcome via Help › Contact the Developer.
+- **The app is now called tt-Accessible.** The previous run-together name was mispronounced by VoiceOver and some synthesizers (notably Eloquence). The new spelling reads correctly. Nothing else changes — your servers, settings and recordings stay exactly where they were.
+- **VoiceOver press (VO-Space) now joins servers and channels.** Pressing a server in the list, or a channel in the tree, with VoiceOver now connects or joins just like pressing Return — no need to leave VoiceOver to click.
+- **Cleaner Preferences navigation.** The settings sidebar no longer reads duplicate labels or its icons, each settings page is announced as a named area, and Escape now closes the Preferences window.
+- **Less repetition.** The volume dialog no longer reads the percentage twice, your display name is no longer read twice when it matches your username, and the per-sound switches are grouped into a single VoiceOver element instead of one per word.
+- **Hear-myself button announces its state.** The Hear myself toolbar button now reports as selected to VoiceOver when it's on.
 
 ## Install
 
-If you have beta updates enabled, ttaccessible will install this update for you — no action needed.
+If you have beta updates enabled, tt-Accessible will install this update for you — no action needed.
 
 Manual install:
 
-1. Download `ttaccessible-1.7.0-beta.5-36.zip` below.
+1. Download `ttaccessible-1.7.0-beta.6-37.zip` below.
 2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
 3. Double-click — no Gatekeeper warning thanks to notarization.
