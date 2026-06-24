@@ -131,7 +131,7 @@ private final class OutputAudioSampleRing {
 }
 
 /// One remote user's decoded PCM, resampled to the device rate and queued for
-/// mixing. Touched only on the TeamTalk serial queue.
+/// mixing. Touched only on `engineQueue` (the feed hops there from the message loop).
 private final class PerUserMixSource {
     private var buffer: ContiguousArray<Int16> = []
     private var head: Int = 0
@@ -383,6 +383,14 @@ final class OutputAudioRenderEngine {
         self.underflowCount = 0
         primedCell.pointee = 0
 
+        // Publish the RT render state written just above (rtPull / rtPullCapacity /
+        // rtPlanePtrs / rtDeviceChannels / currentGain / ring) with a release fence,
+        // paired with the acquire at the top of render(). On the very first start the
+        // AudioOutputUnitStart below is itself a de-facto barrier, but switchDevice
+        // re-runs startImpl on the SAME engine instance — make the happens-before
+        // explicit instead of relying on the AU start internals.
+        ttac_atomic_fence_release()
+
         status = AudioUnitInitialize(au)
         guard status == noErr else { teardownAfterFailedStart(); throw OutputAudioRenderEngineError.startFailed }
         status = AudioOutputUnitStart(au)
@@ -586,6 +594,9 @@ final class OutputAudioRenderEngine {
         _ ioData: UnsafeMutablePointer<AudioBufferList>?
     ) -> OSStatus {
         guard let ioData else { return noErr }
+        // Acquire the RT render state published by startImpl's release fence before
+        // reading rtDeviceChannels / rtPlanePtrs / rtPullCapacity / rtPull / currentGain.
+        ttac_atomic_fence_acquire()
         let abl = UnsafeMutableAudioBufferListPointer(ioData)
         let devCh = rtDeviceChannels
         let frameCount = Int(inNumberFrames)

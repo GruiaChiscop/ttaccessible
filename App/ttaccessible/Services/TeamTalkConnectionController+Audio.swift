@@ -168,8 +168,8 @@ extension TeamTalkConnectionController {
             let prefersOutputDevice = !self.preferencesStore.preferences.preferredOutputDevice.usesNoOutput
             if (hadOutput || prefersOutputDevice), let instance = self.instance {
                 do {
-                    // Reopens the virtual output + muxed event; the render engine
-                    // restarts on the next muxed block (gain/mute reapplied inside).
+                    // Reopens the virtual output + muxed event and starts the render
+                    // engine directly (gain/mute reapplied inside).
                     try self.ensureDirectOutputAudioReadyLocked(instance: instance)
                 } catch {
                     AudioLogger.log("restartSoundSystem: output re-open failed — %@", error.localizedDescription)

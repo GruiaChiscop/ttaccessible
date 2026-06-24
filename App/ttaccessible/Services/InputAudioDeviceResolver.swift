@@ -36,7 +36,12 @@ enum InputAudioDeviceResolver {
             return nameMatch
         }
 
-        return defaultInputDevice(from: devices) ?? devices.first
+        // The user explicitly chose a specific input device and it isn't present.
+        // Return nil rather than silently substituting the default / first device —
+        // grabbing the "wrong mic" without telling anyone is worse than reporting the
+        // device as unavailable. This mirrors resolveOutputDevice's no-match semantics;
+        // callers that need a device surface a "device unavailable" error instead.
+        return nil
     }
 
     nonisolated static func availablePresetOptions(for device: InputAudioDeviceInfo?) -> [InputChannelPresetOption] {

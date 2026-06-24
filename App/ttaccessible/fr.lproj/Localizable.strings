@@ -658,6 +658,9 @@
 "mixer.muted.media" = "média coupé";
 "mixer.area.label" = "Mixeur";
 "mixer.area.roleDescription" = "zone";
+"mixer.strip.roleDescription" = "tranche de console";
+"mixer.control.slider.roleDescription" = "curseur";
+"mixer.control.button.roleDescription" = "bouton";
 "mixer.voice.label.short" = "Volume";
 "mixer.media.label.short" = "Volume du média";
 "mixer.pan.label.short" = "Panoramique";
