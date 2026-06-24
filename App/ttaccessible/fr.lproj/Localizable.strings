@@ -210,8 +210,8 @@
 "connectedServer.volume.sliderLabel" = "Volume en pourcentage";
 "connectedServer.volume.voice" = "Voix";
 "connectedServer.volume.mediaFile" = "Fichier média";
-"connectedServer.volume.voiceSliderLabel" = "Volume de la voix en pourcentage";
-"connectedServer.volume.mediaFileSliderLabel" = "Volume du fichier média en pourcentage";
+"connectedServer.volume.voiceSliderLabel" = "Volume de la voix";
+"connectedServer.volume.mediaFileSliderLabel" = "Volume du fichier média";
 "connectedServer.menu.makeOperator" = "Promouvoir opérateur de canal";
 "connectedServer.menu.revokeOperator" = "Révoquer opérateur de canal";
 "user.menu.makeOperator" = "Promouvoir opérateur de canal";
@@ -350,7 +350,7 @@
 "preferences.notifications.tts.volume" = "Volume";
 "preferences.notifications.tts.volume.value" = "%@%%";
 "preferences.notifications.tts.test" = "Tester la voix";
-"preferences.notifications.tts.testPhrase" = "Ceci est un test de la synthèse vocale de TTAccessible.";
+"preferences.notifications.tts.testPhrase" = "Ceci est un test de la synthèse vocale de tt-Accessible.";
 "preferences.import.title" = "Import";
 "preferences.general.defaultNickname" = "Pseudo par défaut";
 "preferences.general.defaultNickname.help" = "Utilisé quand un serveur enregistré n'a pas de pseudo spécifique.";
@@ -950,6 +950,7 @@
 "toolbar.recording.stop" = "Arrêter l'enregistrement";
 "toolbar.recording.stop.tooltip" = "Arrêter l'enregistrement (⌘R)";
 "toolbar.hearMyself" = "M'entendre";
+"toolbar.hearMyself.selected" = "M'entendre, sélectionné";
 "toolbar.hearMyself.tooltip" = "Activer / désactiver l'écoute de soi (⌘⇧H)";
 "preferences.updates.section" = "Mises à jour";
 "preferences.updates.autoCheck" = "Vérifier les mises à jour automatiquement";

@@ -72,7 +72,7 @@ final class TeamTalkConnectionController {
 
     let queueKey = DispatchSpecificKey<Void>()
     let queue = DispatchQueue(label: "com.math65.ttaccessible.teamtalk")
-    let clientName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "TTAccessible"
+    let clientName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "tt-Accessible"
     let preferencesStore: AppPreferencesStore
     let userVolumeStore = UserVolumeStore()
     let lastChannelStore = LastChannelStore()
@@ -335,7 +335,7 @@ final class TeamTalkConnectionController {
             return preferredNickname
         }
 
-        return "TTAccessible"
+        return "tt-Accessible"
     }
 
     func clientVersion(for user: User) -> String {
