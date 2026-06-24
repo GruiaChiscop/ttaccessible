@@ -3,6 +3,18 @@
     <channel>
         <title>ttaccessible</title>
         <item>
+            <title>1.7.0-beta.6</title>
+            <pubDate>Wed, 24 Jun 2026 11:36:42 +0200</pubDate>
+            <link>https://github.com/math65/ttaccessible/releases/tag/v1.7.0-beta.6</link>
+            <sparkle:channel>beta</sparkle:channel>
+            <sparkle:version>37</sparkle:version>
+            <sparkle:shortVersionString>1.7.0-beta.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.7.0-beta.6-37.html</sparkle:releaseNotesLink>
+            <sparkle:releaseNotesLink xml:lang="fr">https://math65.github.io/ttaccessible/ttaccessible-1.7.0-beta.6-37.fr.html</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.7.0-beta.6/ttaccessible-1.7.0-beta.6-37.zip" length="42881112" type="application/octet-stream" sparkle:edSignature="B03IfvtBbsPe1iOf7NSyS+Odj0jWTBjsbPXOxhvwJ+qmTkj+kt/2daOI6wMA4VdyfQOBlZb2IJkawNdl5tgyAw=="/>
+        </item>
+        <item>
             <title>1.7.0-beta.5</title>
             <pubDate>Mon, 22 Jun 2026 17:14:49 +0200</pubDate>
             <link>https://github.com/math65/ttaccessible/releases/tag/v1.7.0-beta.5</link>
@@ -25,18 +37,6 @@
             <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.7.0-beta.4-35.html</sparkle:releaseNotesLink>
             <sparkle:releaseNotesLink xml:lang="fr">https://math65.github.io/ttaccessible/ttaccessible-1.7.0-beta.4-35.fr.html</sparkle:releaseNotesLink>
             <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.7.0-beta.4/ttaccessible-1.7.0-beta.4-35.zip" length="42840628" type="application/octet-stream" sparkle:edSignature="THS1/q5dDGoU/gXbTlfp+mexES2F/VYDYmX3IBJbF9T1ZYPMO2fxrm6ws92SfrHffCVdUauHAnS/44pLKrzQCQ=="/>
-        </item>
-        <item>
-            <title>1.7.0-beta.3</title>
-            <pubDate>Sun, 21 Jun 2026 20:54:15 +0200</pubDate>
-            <link>https://github.com/math65/ttaccessible/releases/tag/v1.7.0-beta.3</link>
-            <sparkle:channel>beta</sparkle:channel>
-            <sparkle:version>34</sparkle:version>
-            <sparkle:shortVersionString>1.7.0-beta.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://math65.github.io/ttaccessible/ttaccessible-1.7.0-beta.3-34.html</sparkle:releaseNotesLink>
-            <sparkle:releaseNotesLink xml:lang="fr">https://math65.github.io/ttaccessible/ttaccessible-1.7.0-beta.3-34.fr.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/math65/ttaccessible/releases/download/v1.7.0-beta.3/ttaccessible-1.7.0-beta.3-34.zip" length="41538874" type="application/octet-stream" sparkle:edSignature="P5meVGeatwT6AEKQ/Z1l0bj/oEpNp/Yy+tFCMaJIe2fDzE04bxvHQrq3CZrgRg/X1F1RjeDh2vQOiNCDGVebAg=="/>
         </item>
         <item>
             <title>1.6.0</title>
