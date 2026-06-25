@@ -27,5 +27,12 @@ This is a deep rewrite of how audio is played back — solid in daily use, but t
 
 The entire audio release was designed and built by Rocco Fiorentino — thank you, Rocco.
 
-### Download
-[ttaccessible-1.7.0-beta.7-38.zip](https://github.com/math65/ttaccessible/releases/download/v1.7.0-beta.7/ttaccessible-1.7.0-beta.7-38.zip)
+## Install
+
+If you have beta updates enabled, tt-Accessible will install this update for you — no action needed.
+
+Manual install:
+
+1. Download `ttaccessible-1.7.0-beta.7-38.zip` below.
+2. Unzip and drag `ttaccessible.app` into your `/Applications` folder, replacing the previous version.
+3. Double-click — no Gatekeeper warning thanks to notarization.

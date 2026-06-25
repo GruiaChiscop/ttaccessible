@@ -27,5 +27,12 @@ Cette version réécrit en profondeur la lecture du son. Elle est parfaitement s
 
 Toute cette refonte audio a été imaginée et réalisée par Rocco Fiorentino — un grand merci à lui.
 
-### Téléchargement
-[ttaccessible-1.7.0-beta.7-38.zip](https://github.com/math65/ttaccessible/releases/download/v1.7.0-beta.7/ttaccessible-1.7.0-beta.7-38.zip)
+## Installation
+
+Si vous avez activé les mises à jour bêta, tt-Accessible installera cette mise à jour pour vous — aucune action nécessaire.
+
+Installation manuelle :
+
+1. Téléchargez `ttaccessible-1.7.0-beta.7-38.zip` ci-dessous.
+2. Décompressez l'archive et glissez `ttaccessible.app` dans votre dossier `/Applications`, en remplaçant la version précédente.
+3. Double-cliquez — aucun avertissement Gatekeeper grâce à la notarisation.
