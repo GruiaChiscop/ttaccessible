@@ -28,4 +28,4 @@ Cette version réécrit en profondeur la lecture du son. Elle est parfaitement s
 Toute cette refonte audio a été imaginée et réalisée par Rocco Fiorentino — un grand merci à lui.
 
 ### Téléchargement
-[ttaccessible-1.7.0-beta.7.zip](https://github.com/math65/ttaccessible/releases/download/v1.7.0-beta.7/ttaccessible-1.7.0-beta.7.zip)
+[ttaccessible-1.7.0-beta.7-38.zip](https://github.com/math65/ttaccessible/releases/download/v1.7.0-beta.7/ttaccessible-1.7.0-beta.7-38.zip)
