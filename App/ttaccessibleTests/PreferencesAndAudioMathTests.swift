@@ -176,6 +176,47 @@ final class PreferencesCodableTests: XCTestCase {
     func testAdvancedInputAudioEmptyJSONUsesDefaults() throws {
         let prefs = try decode(AdvancedInputAudioPreferences.self, "{}")
         XCTAssertEqual(prefs.preset, .auto)
+        XCTAssertEqual(prefs.processingMode, .none)
         XCTAssertFalse(prefs.echoCancellationEnabled)
+        XCTAssertFalse(prefs.noiseSuppressionEnabled)
+    }
+
+    // Migration: legacy boolean `echoCancellationEnabled` maps to the processing mode.
+
+    func testAdvancedInputAudioLegacyAECTrueMigratesToEchoAndNoise() throws {
+        let prefs = try decode(AdvancedInputAudioPreferences.self, #"{"echoCancellationEnabled": true}"#)
+        XCTAssertEqual(prefs.processingMode, .echoAndNoise)
+        XCTAssertTrue(prefs.echoCancellationEnabled)
+        XCTAssertTrue(prefs.noiseSuppressionEnabled)
+    }
+
+    func testAdvancedInputAudioLegacyAECFalseMigratesToNone() throws {
+        let prefs = try decode(AdvancedInputAudioPreferences.self, #"{"echoCancellationEnabled": false}"#)
+        XCTAssertEqual(prefs.processingMode, .none)
+        XCTAssertFalse(prefs.echoCancellationEnabled)
+        XCTAssertFalse(prefs.noiseSuppressionEnabled)
+    }
+
+    func testAdvancedInputAudioNoiseSuppressionOnlyMode() throws {
+        let prefs = try decode(AdvancedInputAudioPreferences.self, #"{"processingMode": "noiseSuppression"}"#)
+        XCTAssertEqual(prefs.processingMode, .noiseSuppression)
+        XCTAssertFalse(prefs.echoCancellationEnabled)
+        XCTAssertTrue(prefs.noiseSuppressionEnabled)
+    }
+
+    func testAdvancedInputAudioModernKeyTakesPrecedenceOverLegacy() throws {
+        // When both the new mode and the legacy boolean are present, the new key wins.
+        let json = #"{"processingMode": "noiseSuppression", "echoCancellationEnabled": true}"#
+        let prefs = try decode(AdvancedInputAudioPreferences.self, json)
+        XCTAssertEqual(prefs.processingMode, .noiseSuppression)
+    }
+
+    func testAdvancedInputAudioProcessingModeRoundTrips() throws {
+        for mode in MicrophoneProcessingMode.allCases {
+            let original = AdvancedInputAudioPreferences(preset: .auto, processingMode: mode)
+            let data = try JSONEncoder().encode(original)
+            let decoded = try JSONDecoder().decode(AdvancedInputAudioPreferences.self, from: data)
+            XCTAssertEqual(decoded.processingMode, mode)
+        }
     }
 }

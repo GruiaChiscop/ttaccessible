@@ -57,23 +57,34 @@ struct PreferencesAudioView: View {
                 }
                 .disabled(store.state.isCatalogLoading)
 
-                // Microphone settings (AEC, channel preset, preview).
+                // Microphone settings (processing mode, channel preset, preview).
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.text("preferences.audio.advanced.title"))
                         .font(.headline)
                         .accessibilityAddTraits(.isHeader)
 
-                    Toggle(isOn: Binding(
-                        get: { store.advancedPreferences.echoCancellationEnabled },
-                        set: { store.updateEchoCancellationEnabled($0) }
-                    )) {
-                        Text(L10n.text("preferences.audio.advanced.echoCancellation"))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.text("preferences.audio.advanced.processing"))
                             .accessibilityHidden(true)
+                        Picker(
+                            "",
+                            selection: Binding(
+                                get: { store.advancedPreferences.processingMode },
+                                set: { store.updateProcessingMode($0) }
+                            )
+                        ) {
+                            Text(L10n.text("preferences.audio.advanced.processing.none"))
+                                .tag(MicrophoneProcessingMode.none)
+                            Text(L10n.text("preferences.audio.advanced.processing.noiseSuppression"))
+                                .tag(MicrophoneProcessingMode.noiseSuppression)
+                            Text(L10n.text("preferences.audio.advanced.processing.echoAndNoise"))
+                                .tag(MicrophoneProcessingMode.echoAndNoise)
+                        }
+                        .labelsHidden()
+                        .accessibilityLabel(L10n.text("preferences.audio.advanced.processing"))
                     }
-                    .toggleStyle(.switch)
-                    .accessibilityLabel(L10n.text("preferences.audio.advanced.echoCancellation"))
 
-                    Text(L10n.text("preferences.audio.advanced.echoCancellation.help"))
+                    Text(L10n.text("preferences.audio.advanced.processing.help"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

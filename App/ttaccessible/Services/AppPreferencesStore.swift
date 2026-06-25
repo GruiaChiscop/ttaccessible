@@ -740,8 +740,8 @@ final class AudioPreferencesStore: ObservableObject {
         }
     }
 
-    func updateEchoCancellationEnabled(_ enabled: Bool) {
-        advancedSettingsStore.updateEchoCancellationEnabled(enabled)
+    func updateProcessingMode(_ mode: MicrophoneProcessingMode) {
+        advancedSettingsStore.updateProcessingMode(mode)
     }
 
     func updateMicrophoneMode(_ mode: AppPreferences.MicrophoneMode) {

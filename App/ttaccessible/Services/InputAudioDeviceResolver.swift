@@ -96,10 +96,16 @@ enum InputAudioDeviceResolver {
 
     nonisolated static func summary(for preferences: AdvancedInputAudioPreferences) -> String {
         let presetTitle = title(for: preferences.preset)
-        let aecStatus = preferences.echoCancellationEnabled
-            ? L10n.text("preferences.audio.advanced.summary.aecOn")
-            : L10n.text("preferences.audio.advanced.summary.aecOff")
-        return L10n.format("preferences.audio.advanced.summary.active", presetTitle, aecStatus)
+        let processingStatus: String
+        switch preferences.processingMode {
+        case .none:
+            processingStatus = L10n.text("preferences.audio.advanced.summary.processingNone")
+        case .noiseSuppression:
+            processingStatus = L10n.text("preferences.audio.advanced.summary.processingNoiseSuppression")
+        case .echoAndNoise:
+            processingStatus = L10n.text("preferences.audio.advanced.summary.processingEchoAndNoise")
+        }
+        return L10n.format("preferences.audio.advanced.summary.active", presetTitle, processingStatus)
     }
 
     nonisolated static func availableInputDevices() -> [InputAudioDeviceInfo] {

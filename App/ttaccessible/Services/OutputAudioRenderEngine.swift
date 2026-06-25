@@ -47,6 +47,19 @@ struct OutputUserMixSettings: Equatable {
     var muted: Bool = false
 }
 
+/// Buffering profile for a mix source, picked by how its PCM is delivered.
+enum OutputSourceBufferProfile {
+    /// Regularly-clocked real-time source (the local mic "hear myself" monitor):
+    /// minimal buffering for low latency.
+    case lowLatency
+    /// Network-delivered remote user audio: the standard jitter target.
+    case network
+    /// Our OWN decoded media-file stream — burstier than network (the SDK feeds it
+    /// from the file decoder, not a paced network jitter buffer), so it needs a
+    /// deeper prime buffer and a much higher catch-up ceiling to stay smooth.
+    case localMedia
+}
+
 /// Lock-free single-producer / single-consumer ring of interleaved Int16 at the
 /// output device rate. Producer (mix thread) writes `tail`, consumer (RT) writes
 /// `head`; monotonic 64-bit counters index a power-of-two buffer.
@@ -141,6 +154,14 @@ private final class PerUserMixSource {
     private let maxFrames: Int
     private var isPrimed = false
 
+    /// When set, append() logs throttled buffer stats (fill / drops / re-primes) —
+    /// used to diagnose choppy sources like our own streamed media.
+    var diagLabel: String?
+    private var diagDropEvents = 0
+    private var diagRePrimes = 0
+    private var diagAppends = 0
+    private var lastDiagAt: CFAbsoluteTime = 0
+
     init(channels: Int, primeFrames: Int, maxFrames: Int, settings: OutputUserMixSettings) {
         self.channels = max(1, channels)
         self.primeFrames = max(primeFrames, 1)
@@ -160,10 +181,20 @@ private final class PerUserMixSource {
         let availFrames = (buffer.count - head) / channels
         if availFrames > maxFrames {
             head += (availFrames - primeFrames) * channels
+            diagDropEvents += 1
         }
         if head > 16_384 {
             buffer.removeFirst(head)
             head = 0
+        }
+        if let diagLabel {
+            diagAppends += 1
+            let now = CFAbsoluteTimeGetCurrent()
+            if now - lastDiagAt >= 1.0 {
+                lastDiagAt = now
+                AudioLogger.log("mix source %@: fill=%d frames (prime=%d max=%d) appends=%d drops=%d reprimes=%d",
+                                diagLabel, availableFrames, primeFrames, maxFrames, diagAppends, diagDropEvents, diagRePrimes)
+            }
         }
     }
 
@@ -173,7 +204,7 @@ private final class PerUserMixSource {
     func prepareForMix() -> Bool {
         if settings.muted { return false }
         if isPrimed {
-            if availableFrames == 0 { isPrimed = false; return false }
+            if availableFrames == 0 { isPrimed = false; diagRePrimes += 1; return false }
             return true
         }
         if availableFrames >= primeFrames { isPrimed = true; return true }
@@ -498,7 +529,9 @@ final class OutputAudioRenderEngine {
     // `pcm` is a COPY made by the caller (the SDK audio block is released right after),
     // so we can hop to engineQueue without lifetime concerns. Interleaved, frames*channels.
 
-    func enqueueUser(_ userID: Int32, pcm: [Int16], frames: Int, channels: Int, sampleRate: Double) {
+    /// `profile` selects the buffering target by how this source is delivered (see
+    /// OutputSourceBufferProfile). Defaults to `.network` (remote users).
+    func enqueueUser(_ userID: Int32, pcm: [Int16], frames: Int, channels: Int, sampleRate: Double, profile: OutputSourceBufferProfile = .network) {
         engineQueue.async { [weak self] in
             guard let self, self.isRunning, frames > 0, channels > 0, self.deviceSampleRate > 0 else { return }
 
@@ -506,17 +539,29 @@ final class OutputAudioRenderEngine {
             if let existing = self.userSources[userID], existing.channels == channels {
                 source = existing
             } else {
-                // Reserved negative keys (e.g. the local "hear myself" monitor) want
-                // minimal buffering for low latency; real users get the normal jitter target.
-                let lowLatency = userID < 0
-                let prime = lowLatency ? max(Int(0.010 * self.deviceSampleRate), 32) : self.perUserPrimeFrames
-                let maxF = lowLatency ? max(Int(0.080 * self.deviceSampleRate), prime + 32) : self.perUserMaxFrames
+                let rate = self.deviceSampleRate
+                let prime: Int
+                let maxF: Int
+                switch profile {
+                case .lowLatency:
+                    prime = max(Int(0.010 * rate), 32)
+                    maxF = max(Int(0.080 * rate), prime + 32)
+                case .network:
+                    prime = self.perUserPrimeFrames
+                    maxF = self.perUserMaxFrames
+                case .localMedia:
+                    // Deeper buffer + high ceiling: the decoder can deliver in bursts
+                    // and run slightly off the device clock without dropping/glitching.
+                    prime = max(Int(0.090 * rate), 64)
+                    maxF = max(Int(0.500 * rate), prime + 64)
+                }
                 source = PerUserMixSource(
                     channels: channels,
                     primeFrames: prime,
                     maxFrames: maxF,
                     settings: self.defaultUserSettings[userID] ?? OutputUserMixSettings()
                 )
+                if case .localMedia = profile { source.diagLabel = "local-media" }
                 self.userSources[userID] = source
             }
 
