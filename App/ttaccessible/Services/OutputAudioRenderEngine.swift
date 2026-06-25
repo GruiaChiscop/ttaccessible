@@ -154,14 +154,6 @@ private final class PerUserMixSource {
     private let maxFrames: Int
     private var isPrimed = false
 
-    /// When set, append() logs throttled buffer stats (fill / drops / re-primes) —
-    /// used to diagnose choppy sources like our own streamed media.
-    var diagLabel: String?
-    private var diagDropEvents = 0
-    private var diagRePrimes = 0
-    private var diagAppends = 0
-    private var lastDiagAt: CFAbsoluteTime = 0
-
     init(channels: Int, primeFrames: Int, maxFrames: Int, settings: OutputUserMixSettings) {
         self.channels = max(1, channels)
         self.primeFrames = max(primeFrames, 1)
@@ -181,20 +173,10 @@ private final class PerUserMixSource {
         let availFrames = (buffer.count - head) / channels
         if availFrames > maxFrames {
             head += (availFrames - primeFrames) * channels
-            diagDropEvents += 1
         }
         if head > 16_384 {
             buffer.removeFirst(head)
             head = 0
-        }
-        if let diagLabel {
-            diagAppends += 1
-            let now = CFAbsoluteTimeGetCurrent()
-            if now - lastDiagAt >= 1.0 {
-                lastDiagAt = now
-                AudioLogger.log("mix source %@: fill=%d frames (prime=%d max=%d) appends=%d drops=%d reprimes=%d",
-                                diagLabel, availableFrames, primeFrames, maxFrames, diagAppends, diagDropEvents, diagRePrimes)
-            }
         }
     }
 
@@ -204,7 +186,7 @@ private final class PerUserMixSource {
     func prepareForMix() -> Bool {
         if settings.muted { return false }
         if isPrimed {
-            if availableFrames == 0 { isPrimed = false; diagRePrimes += 1; return false }
+            if availableFrames == 0 { isPrimed = false; return false }
             return true
         }
         if availableFrames >= primeFrames { isPrimed = true; return true }
@@ -561,7 +543,6 @@ final class OutputAudioRenderEngine {
                     maxFrames: maxF,
                     settings: self.defaultUserSettings[userID] ?? OutputUserMixSettings()
                 )
-                if case .localMedia = profile { source.diagLabel = "local-media" }
                 self.userSources[userID] = source
             }
 

@@ -158,7 +158,8 @@ final class EchoCanceller {
 
     private func logDiagnosticsIfNeeded(refRate: Int, refChannels: Int) {
         let now = CFAbsoluteTimeGetCurrent()
-        guard now - lastDiagnosticTime >= 5.0 else { return }
+        // Sparse heartbeat (cumulative counters) — keeps a long session's log small.
+        guard now - lastDiagnosticTime >= 30.0 else { return }
         lastDiagnosticTime = now
         AudioLogger.log(
             "AEC diag: config=%dHz/%dch, ref=%dHz/%dch, refFrames=%d, capFrames=%d",
