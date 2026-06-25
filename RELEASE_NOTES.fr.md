@@ -1,31 +1,25 @@
-## v1.7.0-beta.7 (build 38) — 2026-06-25
+## v1.7.0-beta.8 (build 39) — 2026-06-25
 
 Ceci est une version **bêta**, destinée à tester les nouveautés avant leur diffusion à tout le monde. Pour recevoir les mises à jour bêta, activez **Inclure les versions bêta** dans Préférences › Général.
 
 ### À la une
-- **Voici le Mixeur du canal** — une véritable table de mixage pour les personnes présentes dans votre canal. Réglez chaque voix indépendamment, placez vos interlocuteurs à gauche ou à droite, faites taire ce qui vous dérange ou isolez la seule voix que vous voulez entendre. Pensé pour le clavier et VoiceOver dès la première ligne.
+- **La réduction de bruit, enfin seule.** Vous pouvez désormais atténuer le bruit de fond de votre microphone sans activer l'annulation d'écho.
+- **Entendez vos propres médias.** Lorsque vous diffusez un fichier audio ou musical dans un canal, vous l'entendez enfin vous aussi — plus seulement les autres.
 
 ### Nouveautés
 
-**Le Mixeur du canal.** Chaque personne de votre canal dispose de sa propre tranche de console : volume de la voix, volume des médias, placement stéréo, sourdine et solo. Il prend place directement dans la fenêtre principale, se lit sans détour sous VoiceOver, et tout se commande au clavier :
+**La réduction de bruit sans l'annulation d'écho.** Jusqu'ici, la réduction de bruit du micro était indissociable de l'annulation d'écho : c'était tout ou rien. Préférences › Audio propose maintenant un menu unique, **Traitement du micro**, avec trois choix limpides :
 
-- **Flèches haut / bas** — le volume de la voix de la personne sélectionnée
-- **⌘ Haut / ⌘ Bas** — son volume des médias (ou votre volume de sortie général lorsque vous n'êtes pas sur une tranche)
-- **Flèches gauche / droite** — déplacez la personne vers la gauche ou la droite dans l'image stéréo
-- **V, P, M, S** — appuyez une fois pour entendre le volume, le panoramique, la sourdine ou le solo ; appuyez deux fois pour ramener le volume au centre, recentrer le panoramique, ou activer la sourdine ou le solo
+- **Aucun** — le son passe tel quel, sans traitement.
+- **Réduction de bruit** — atténue le souffle, le ventilateur, le bruit de la pièce. Sans annulation d'écho, donc rien d'autre ne vient s'en mêler.
+- **Annulation d'écho + réduction de bruit** — le traitement complet, idéal lorsque vous êtes sur haut-parleurs plutôt qu'au casque (l'annulation d'écho conserve toujours la réduction de bruit, car elle en a besoin pour bien fonctionner).
 
-Les réglages de chacun sont conservés et rétablis dès que la personne revient.
+Passez de l'un à l'autre quand vous voulez — même en pleine conversation — et le changement prend effet aussitôt. Plus besoin d'arrêter puis de relancer votre microphone.
 
-**Changez de sortie sans la moindre coupure.** Changer de casque ou d'enceintes en pleine conversation pouvait parfois figer le son. Le moteur de lecture a été entièrement repensé : il ne retient plus jamais le périphérique. Choisissez une autre sortie quand bon vous semble, le son suit, tout naturellement.
-
-**Une connexion quasi immédiate.** Sur les configurations équipées de nombreux périphériques audio, la première connexion pouvait traîner une dizaine de secondes, le temps que l'application passe chaque appareil en revue. Cette inspection laborieuse a disparu : vous êtes connecté en une fraction de seconde.
-
-**Vos périphériques, reconnus à coup sûr.** L'application identifie désormais chaque micro et chaque sortie par une signature stable. Vos choix résistent au débranchement, au rebranchement et au redémarrage — fini le mauvais micro retenu sans rien dire.
+**Vous entendez les médias que vous diffusez.** Lorsque vous diffusiez un fichier audio ou musical dans un canal, tout le monde l'entendait… sauf vous. C'est corrigé : vous entendez maintenant votre propre lecture, fluide, en même temps que les personnes de votre canal. Les commandes de lecture (lecture, pause, volume) fonctionnent comme avant, et le curseur de volume de diffusion règle toujours le niveau que les autres entendent.
 
 ### Bon à savoir
-Cette version réécrit en profondeur la lecture du son. Elle est parfaitement stable à l'usage quotidien, mais c'est précisément à cela que sert une bêta : mettez-la à l'épreuve et dites-nous comment elle tient le coup.
-
-Toute cette refonte audio a été imaginée et réalisée par Rocco Fiorentino — un grand merci à lui.
+Ces deux nouveautés s'appuient sur le moteur audio entièrement repensé dans la bêta 7. Il est stable à l'usage quotidien, mais c'est précisément à cela que sert une bêta : mettez-la à l'épreuve et dites-nous comment elle tient le coup.
 
 ## Installation
 
@@ -33,6 +27,6 @@ Si vous avez activé les mises à jour bêta, tt-Accessible installera cette mis
 
 Installation manuelle :
 
-1. Téléchargez `ttaccessible-1.7.0-beta.7-38.zip` ci-dessous.
+1. Téléchargez `ttaccessible-1.7.0-beta.8-39.zip` ci-dessous.
 2. Décompressez l'archive et glissez `ttaccessible.app` dans votre dossier `/Applications`, en remplaçant la version précédente.
 3. Double-cliquez — aucun avertissement Gatekeeper grâce à la notarisation.
