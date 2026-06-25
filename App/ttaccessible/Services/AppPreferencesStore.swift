@@ -12,6 +12,7 @@ import Foundation
 final class AppPreferencesStore: ObservableObject {
     private enum Keys {
         static let preferences = "appPreferences.value"
+        static let audioDeviceCatalog = "audioDeviceCatalog.cache"
     }
 
     @Published private(set) var preferences: AppPreferences
@@ -30,9 +31,89 @@ final class AppPreferencesStore: ObservableObject {
         } else {
             preferences = AppPreferences()
         }
+        // One-time upgrade of device prefs persisted with the old unstable SDK
+        // identifier ("legacy:<nDeviceID>") to the stable CoreAudio UID, so the
+        // picker, the binding layer, and the saved preference all agree and the
+        // selected device survives restarts / hot-plug. Runs before the
+        // SoundPlayer setup below so it picks up the upgraded output ID.
+        migrateAudioDevicePreferencesToStableUIDs()
         SoundPlayer.shared.isEnabled = preferences.soundNotificationsEnabled
+        SoundPlayer.shared.setGains(effectsDB: preferences.soundEffectsGainDB, masterDB: preferences.outputGainDB)
         SoundPlayer.shared.loadPack(preferences.soundPack)
         SoundPlayer.shared.disabledSounds = preferences.disabledSoundEvents
+        SoundPlayer.shared.updateOutputDevice(
+            persistentID: preferences.preferredOutputDevice.persistentID,
+            displayName: preferences.preferredOutputDevice.displayName
+        )
+    }
+
+    /// Upgrade any device preference still keyed by the legacy unstable SDK
+    /// identifier ("legacy:<nDeviceID>", or any value that is not a current
+    /// CoreAudio UID) to the stable `kAudioDevicePropertyDeviceUID`, matched by
+    /// the saved display name. A device that isn't currently present is left
+    /// untouched — the resolver's name fallback still binds it, and it upgrades
+    /// on a future launch when it's plugged in. Idempotent.
+    private func migrateAudioDevicePreferencesToStableUIDs() {
+        let inputs = InputAudioDeviceResolver.availableInputDevices().map { (uid: $0.uid, name: $0.name) }
+        let outputs = InputAudioDeviceResolver.availableOutputDevices().map { (uid: $0.uid, name: $0.name) }
+
+        func upgraded(_ preference: AudioDevicePreference, in devices: [(uid: String, name: String)]) -> AudioDevicePreference? {
+            // Only real device selections — skip system-default and the no-output sentinel.
+            guard preference.usesSystemDefault == false,
+                  preference.usesNoOutput == false,
+                  let persistentID = preference.persistentID else {
+                return nil
+            }
+            // Already a valid current UID → nothing to do (idempotent).
+            if devices.contains(where: { $0.uid == persistentID }) {
+                return nil
+            }
+            // Resolve by the saved display name; leave untouched if the device
+            // isn't present right now.
+            guard let displayName = preference.displayName,
+                  let match = devices.first(where: { $0.name.localizedCaseInsensitiveCompare(displayName) == .orderedSame }) else {
+                return nil
+            }
+            return AudioDevicePreference(persistentID: match.uid, displayName: match.name)
+        }
+
+        var updated = preferences
+        var changed = false
+
+        if let newInput = upgraded(preferences.preferredInputDevice, in: inputs),
+           let newID = newInput.persistentID {
+            let oldID = preferences.preferredInputDevice.persistentID
+            updated.preferredInputDevice = newInput
+            // Carry any per-device advanced-input profile over to the new UID key.
+            if let oldID, oldID != newID,
+               let profile = updated.advancedInputAudioProfiles.profilesByDeviceID.removeValue(forKey: oldID) {
+                updated.advancedInputAudioProfiles.profilesByDeviceID[newID] = profile
+            }
+            changed = true
+        }
+        if let newOutput = upgraded(preferences.preferredOutputDevice, in: outputs) {
+            updated.preferredOutputDevice = newOutput
+            changed = true
+        }
+
+        guard changed else { return }
+        preferences = updated
+        persist(updated)
+        AudioLogger.log("migrateAudioDevicePreferences: upgraded legacy device ID(s) to CoreAudio UID(s)")
+    }
+
+    /// Last device catalog persisted from a successful scan. Used to populate the
+    /// Audio preferences pickers instantly on launch while a fresh CoreAudio scan
+    /// runs in the background — the picker no longer shows a bare "System
+    /// Default" while the scan completes.
+    func cachedAudioDeviceCatalog() -> AudioDeviceCatalog? {
+        guard let data = userDefaults.data(forKey: Keys.audioDeviceCatalog) else { return nil }
+        return try? decoder.decode(AudioDeviceCatalog.self, from: data)
+    }
+
+    func storeCachedAudioDeviceCatalog(_ catalog: AudioDeviceCatalog) {
+        guard catalog != .empty, let data = try? encoder.encode(catalog) else { return }
+        userDefaults.set(data, forKey: Keys.audioDeviceCatalog)
     }
 
     func updateDefaultNickname(_ nickname: String) {
@@ -93,6 +174,11 @@ final class AppPreferencesStore: ObservableObject {
 
     func updatePreferredOutputDevice(_ preference: AudioDevicePreference) {
         mutate { $0.preferredOutputDevice = preference }
+        // Keep notification sounds on the same output device as TeamTalk audio.
+        SoundPlayer.shared.updateOutputDevice(
+            persistentID: preference.persistentID,
+            displayName: preference.displayName
+        )
     }
 
     func advancedInputAudio(for deviceID: String?) -> AdvancedInputAudioPreferences {
@@ -153,7 +239,16 @@ final class AppPreferencesStore: ObservableObject {
     }
 
     func updateOutputGainDB(_ value: Double) {
-        mutate { $0.outputGainDB = AppPreferences.clampGainDB(value) }
+        let clamped = AppPreferences.clampGainDB(value)
+        mutate { $0.outputGainDB = clamped }
+        // Master volume also scales the app sound effects.
+        SoundPlayer.shared.setMasterGainDB(clamped)
+    }
+
+    func updateSoundEffectsGainDB(_ value: Double) {
+        let clamped = AppPreferences.clampGainDB(value)
+        mutate { $0.soundEffectsGainDB = clamped }
+        SoundPlayer.shared.setEffectsGainDB(clamped)
     }
 
     func updateSavedServersSortField(_ field: AppPreferences.SavedServersSortField) {
@@ -480,8 +575,11 @@ final class AudioPreferencesStore: ObservableObject {
     private var hasPrepared = false
     private var isVisible = false
     private var applyWorkItem: DispatchWorkItem?
-    private var lastAppliedInputPreference: AudioDevicePreference
-    private var lastAppliedOutputPreference: AudioDevicePreference
+    // nil means "the applied audio state is unknown" — set after a failed apply
+    // so the dedup guard in scheduleApplyAudioPreferencesIfNeeded never skips a
+    // recovery re-selection (including re-picking the previously-applied device).
+    private var lastAppliedInputPreference: AudioDevicePreference?
+    private var lastAppliedOutputPreference: AudioDevicePreference?
 
     var advancedPreferences: AdvancedInputAudioPreferences {
         advancedSettingsStore.advancedPreferences
@@ -512,7 +610,9 @@ final class AudioPreferencesStore: ObservableObject {
         self.state = State(
             preferredInputDevice: rootStore.preferences.preferredInputDevice,
             preferredOutputDevice: rootStore.preferences.preferredOutputDevice,
-            catalog: .empty,
+            // Seed from the last persisted scan so the pickers populate instantly;
+            // a fresh background scan (see loadCatalogIfNeeded) replaces it.
+            catalog: rootStore.cachedAudioDeviceCatalog() ?? .empty,
             isCatalogLoading: false,
             lastErrorMessage: nil,
             advancedFeedbackMessage: advancedSettingsStore.feedbackMessage,
@@ -624,11 +724,15 @@ final class AudioPreferencesStore: ObservableObject {
             guard let self else { return }
             switch result {
             case .success:
-                let catalog = self.connectionController.refreshAvailableAudioDevices()
-                self.state.catalog = catalog
-                self.state.isCatalogLoading = false
-                self.state.lastErrorMessage = nil
-                self.advancedSettingsStore.refresh()
+                self.connectionController.refreshAvailableAudioDevices { [weak self] catalog in
+                    guard let self else { return }
+                    self.state.catalog = catalog
+                    self.state.isCatalogLoading = false
+                    self.state.lastErrorMessage = nil
+                    self.hasLoadedFreshCatalog = true
+                    self.rootStore.storeCachedAudioDeviceCatalog(catalog)
+                    self.advancedSettingsStore.refresh()
+                }
             case .failure(let error):
                 self.state.isCatalogLoading = false
                 self.state.lastErrorMessage = error.localizedDescription
@@ -688,24 +792,32 @@ final class AudioPreferencesStore: ObservableObject {
         return persistentID
     }
 
+    private var hasLoadedFreshCatalog = false
+
     private func loadCatalogIfNeeded(forceRefresh: Bool) {
-        if forceRefresh == false, state.catalog != .empty || state.isCatalogLoading {
+        // Gate on whether a real scan has happened this session, not on catalog
+        // emptiness — the catalog is seeded non-empty from the persisted cache, so
+        // an emptiness check would never trigger the background refresh.
+        if forceRefresh == false, hasLoadedFreshCatalog || state.isCatalogLoading {
             return
         }
 
         state.isCatalogLoading = true
-        // Enumerate devices off the main thread (the connection controller hops to its
-        // serial queue and delivers back on main). A blocking `queue.sync` here froze the
-        // main runloop at launch when Preferences is preloaded, contending with SDK init.
-        let deliver: (AudioDeviceCatalog) -> Void = { [weak self] catalog in
+        // Enumerate devices off the main thread (the connection controller hops to
+        // its serial queue and delivers back on main). A blocking `queue.sync` here
+        // froze the main runloop at launch when Preferences is preloaded. Our catalog
+        // now comes from CoreAudio directly, so the work delivered here is light.
+        let apply: @MainActor (AudioDeviceCatalog) -> Void = { [weak self] catalog in
             guard let self else { return }
             self.state.catalog = catalog
             self.state.isCatalogLoading = false
+            self.hasLoadedFreshCatalog = true
+            self.rootStore.storeCachedAudioDeviceCatalog(catalog)
         }
         if forceRefresh {
-            connectionController.refreshAvailableAudioDevices(completion: deliver)
+            connectionController.refreshAvailableAudioDevices(completion: apply)
         } else {
-            connectionController.availableAudioDevices(completion: deliver)
+            connectionController.availableAudioDevices(completion: apply)
         }
     }
 
@@ -729,6 +841,13 @@ final class AudioPreferencesStore: ObservableObject {
                     self.lastAppliedOutputPreference = outputPreference
                     self.state.lastErrorMessage = nil
                 case .failure(let error):
+                    // The apply failed, so the audio system is in neither the
+                    // requested nor the previously-applied state. Forget the
+                    // applied prefs so the dedup guard above won't skip a
+                    // recovery re-selection — otherwise re-picking the prior
+                    // device is silently ignored and audio never comes back.
+                    self.lastAppliedInputPreference = nil
+                    self.lastAppliedOutputPreference = nil
                     self.state.lastErrorMessage = error.localizedDescription
                 }
             }
