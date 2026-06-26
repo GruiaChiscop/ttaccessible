@@ -220,3 +220,86 @@ final class PreferencesCodableTests: XCTestCase {
         }
     }
 }
+
+// MARK: - UserVolumeStore server scoping (issue #24)
+
+final class UserVolumeStoreScopingTests: XCTestCase {
+
+    private var suiteName: String!
+    private var defaults: UserDefaults!
+
+    override func setUp() {
+        super.setUp()
+        suiteName = "UserVolumeStoreScopingTests.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)
+    }
+
+    override func tearDown() {
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults = nil
+        suiteName = nil
+        super.tearDown()
+    }
+
+    // A non-default value so it actually persists (default is pruned to "no entry").
+    private let louder = Int32(SOUND_VOLUME_DEFAULT.rawValue) + 1000
+
+    func testVolumeIsIsolatedBetweenServers() {
+        let store = UserVolumeStore(defaults: defaults)
+
+        store.setServerScope("serverA:10333")
+        store.setVolume(louder, forUsername: "guest")
+        XCTAssertEqual(store.volume(forUsername: "guest"), louder)
+
+        // Same generic username on a different server must NOT inherit the value.
+        store.setServerScope("serverB:10333")
+        XCTAssertNil(store.volume(forUsername: "guest"))
+
+        // Back to the first server: the value is still there.
+        store.setServerScope("serverA:10333")
+        XCTAssertEqual(store.volume(forUsername: "guest"), louder)
+    }
+
+    func testPanAndStereoAreAlsoScoped() {
+        let store = UserVolumeStore(defaults: defaults)
+
+        store.setServerScope("serverA:10333")
+        store.setPan(0.5, forUsername: "guest")
+        store.setStereoBalance(.init(left: true, right: false), forUsername: "guest")
+
+        store.setServerScope("serverB:10333")
+        XCTAssertNil(store.pan(forUsername: "guest"))
+        XCTAssertNil(store.stereoBalance(forUsername: "guest"))
+
+        store.setServerScope("serverA:10333")
+        XCTAssertEqual(store.pan(forUsername: "guest"), 0.5)
+        XCTAssertEqual(store.stereoBalance(forUsername: "guest"), .init(left: true, right: false))
+    }
+
+    func testLegacyUnscopedEntriesDoNotMatchScopedLookup() {
+        // Simulate a pre-fix entry written with no scope (bare-username key)...
+        let legacy = UserVolumeStore(defaults: defaults)
+        legacy.setVolume(louder, forUsername: "guest")   // scope is "" → key is "guest"
+        XCTAssertEqual(legacy.volume(forUsername: "guest"), louder)
+
+        // ...once connected (scope set), the polluted value no longer applies → 50% default.
+        let scoped = UserVolumeStore(defaults: defaults)
+        scoped.setServerScope("serverA:10333")
+        XCTAssertNil(scoped.volume(forUsername: "guest"))
+    }
+
+    func testDefaultVolumePrunesEntry() {
+        let store = UserVolumeStore(defaults: defaults)
+        store.setServerScope("serverA:10333")
+        store.setVolume(louder, forUsername: "guest")
+        store.setVolume(Int32(SOUND_VOLUME_DEFAULT.rawValue), forUsername: "guest")
+        XCTAssertNil(store.volume(forUsername: "guest"))
+    }
+
+    func testEmptyUsernameIsNeverStored() {
+        let store = UserVolumeStore(defaults: defaults)
+        store.setServerScope("serverA:10333")
+        store.setVolume(louder, forUsername: "")
+        XCTAssertNil(store.volume(forUsername: ""))
+    }
+}

@@ -39,6 +39,7 @@ extension TeamTalkConnectionController {
                 }
                 self.instance = instance
                 self.connectedRecord = record
+                self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
                 self.autoJoinAfterLoginLocked(instance: instance, options: options)
                 try self.applyPostLoginOptionsLocked(instance: instance, options: options)
                 self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
@@ -213,6 +214,7 @@ extension TeamTalkConnectionController {
             try ensureOutputAudioReadyLocked(instance: instance)
             self.instance = instance
             self.connectedRecord = record
+            self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
 
             // Rejoindre le dernier canal si possible
             let shouldRejoinLastChannel = preferencesStore.preferences.rejoinLastChannelOnReconnect
@@ -966,6 +968,7 @@ extension TeamTalkConnectionController {
 
         instance = nil
         connectedRecord = nil
+        userVolumeStore.setServerScope(nil)
         channelChatHistory = []
         sessionHistory = []
         activeTransferProgress = [:]

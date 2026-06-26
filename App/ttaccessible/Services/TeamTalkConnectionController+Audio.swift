@@ -1256,6 +1256,14 @@ extension TeamTalkConnectionController {
         return Int(min(max(pct.rounded(), 0), 100))
     }
 
+    /// Stable per-server scope used to namespace stored per-user volumes (issue #24).
+    /// Host:port identifies the physical server, so it is shared correctly across
+    /// duplicate saved entries that point to the same server. Host is lowercased for
+    /// case-insensitive matching.
+    nonisolated static func serverVolumeScope(for record: SavedServerRecord) -> String {
+        "\(record.host.lowercased()):\(record.tcpPort)"
+    }
+
     nonisolated static func formatGainDB(_ value: Double) -> String {
         let rounded = AppPreferences.clampGainDB(value)
         if rounded > 0 {
