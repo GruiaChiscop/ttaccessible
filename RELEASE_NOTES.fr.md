@@ -1,25 +1,25 @@
-## v1.7.0-beta.8 (build 39) — 2026-06-25
+## v1.7.0-beta.9 (build 40) — 2026-06-28
 
 Ceci est une version **bêta**, destinée à tester les nouveautés avant leur diffusion à tout le monde. Pour recevoir les mises à jour bêta, activez **Inclure les versions bêta** dans Préférences › Général.
 
 ### À la une
-- **La réduction de bruit, enfin seule.** Vous pouvez désormais atténuer le bruit de fond de votre microphone sans activer l'annulation d'écho.
-- **Entendez vos propres médias.** Lorsque vous diffusez un fichier audio ou musical dans un canal, vous l'entendez enfin vous aussi — plus seulement les autres.
+- **Les volumes par utilisateur restent à leur place.** Le volume, la balance et la position panoramique que vous réglez pour une personne ne débordent plus d'un serveur à l'autre — ni sur quelqu'un d'autre qui utiliserait le même identifiant.
+- **C'est vous qui décidez de ce qui est retenu.** Un nouveau réglage permet de conserver ces volumes pour toujours, le temps d'une session seulement, ou pas du tout.
 
 ### Nouveautés
 
-**La réduction de bruit sans l'annulation d'écho.** Jusqu'ici, la réduction de bruit du micro était indissociable de l'annulation d'écho : c'était tout ou rien. Préférences › Audio propose maintenant un menu unique, **Traitement du micro**, avec trois choix limpides :
+**Les volumes par utilisateur sont désormais propres à chaque serveur.** Certains ont remarqué des personnes à des volumes étranges — trop fortes ou trop faibles — sans y avoir jamais touché. La raison : un niveau réglé pour un nom de compte était réutilisé pour quiconque portait ce même nom, y compris sur des serveurs totalement différents. (Les serveurs publics partagent souvent des identifiants génériques comme `guest`.) Le volume, la balance stéréo et le panoramique sont maintenant rattachés au serveur où vous les avez réglés : un niveau défini sur un serveur y reste.
 
-- **Aucun** — le son passe tel quel, sans traitement.
-- **Réduction de bruit** — atténue le souffle, le ventilateur, le bruit de la pièce. Sans annulation d'écho, donc rien d'autre ne vient s'en mêler.
-- **Annulation d'écho + réduction de bruit** — le traitement complet, idéal lorsque vous êtes sur haut-parleurs plutôt qu'au casque (l'annulation d'écho conserve toujours la réduction de bruit, car elle en a besoin pour bien fonctionner).
+**Choisissez comment ces volumes sont mémorisés.** Préférences › Audio comporte un nouveau réglage **Mémorisation des volumes par utilisateur**, avec trois choix :
 
-Passez de l'un à l'autre quand vous voulez — même en pleine conversation — et le changement prend effet aussitôt. Plus besoin d'arrêter puis de relancer votre microphone.
+- **Désactivé** — rien n'est retenu ; à la reconnexion, tout le monde revient à 50 %, comme dans le client officiel.
+- **Session en cours seulement** — vos réglages durent tant que l'app est ouverte, puis repartent à zéro à la fermeture.
+- **Toujours** (par défaut) — vos réglages sont conservés d'un lancement à l'autre, par serveur.
 
-**Vous entendez les médias que vous diffusez.** Lorsque vous diffusiez un fichier audio ou musical dans un canal, tout le monde l'entendait… sauf vous. C'est corrigé : vous entendez maintenant votre propre lecture, fluide, en même temps que les personnes de votre canal. Les commandes de lecture (lecture, pause, volume) fonctionnent comme avant, et le curseur de volume de diffusion règle toujours le niveau que les autres entendent.
+Vous pouvez changer de mode à tout moment, l'effet est immédiat.
 
 ### Bon à savoir
-Ces deux nouveautés s'appuient sur le moteur audio entièrement repensé dans la bêta 7. Il est stable à l'usage quotidien, mais c'est précisément à cela que sert une bêta : mettez-la à l'épreuve et dites-nous comment elle tient le coup.
+À cause du correctif ci-dessus, les volumes par utilisateur que vous aviez enregistrés sont remis à zéro une fois lors de cette mise à jour et repartent à 50 % — ces anciennes valeurs étaient justement les données mêlées entre serveurs que l'on nettoie. Il vous suffira de régler à nouveau les quelques personnes qui comptent pour vous.
 
 ## Installation
 
@@ -27,6 +27,6 @@ Si vous avez activé les mises à jour bêta, tt-Accessible installera cette mis
 
 Installation manuelle :
 
-1. Téléchargez `ttaccessible-1.7.0-beta.8-39.zip` ci-dessous.
+1. Téléchargez `ttaccessible-1.7.0-beta.9-40.zip` ci-dessous.
 2. Décompressez l'archive et glissez `ttaccessible.app` dans votre dossier `/Applications`, en remplaçant la version précédente.
 3. Double-cliquez — aucun avertissement Gatekeeper grâce à la notarisation.
