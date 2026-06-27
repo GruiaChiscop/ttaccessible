@@ -429,6 +429,12 @@
 "preferences.audio.pushToTalk.key.label" = "Raccourci";
 "preferences.audio.pushToTalk.beep.label" = "Jouer un son au début et à la fin de la transmission";
 "preferences.audio.pushToTalk.warning.noShortcut" = "Aucun raccourci configuré — le push-to-talk est inactif et le microphone reste ouvert comme en mode « toujours actif ». Cliquez sur l'enregistreur ci-dessus pour définir une touche.";
+"preferences.audio.volumeMemory.section" = "Mémorisation des volumes par utilisateur";
+"preferences.audio.volumeMemory.label" = "Mémoriser les réglages de volume par utilisateur";
+"preferences.audio.volumeMemory.off" = "Désactivé — tout revient à 50 % à la reconnexion";
+"preferences.audio.volumeMemory.session" = "Session en cours seulement — oublié à la fermeture";
+"preferences.audio.volumeMemory.persistent" = "Toujours — mémorisé d'un lancement à l'autre";
+"preferences.audio.volumeMemory.help" = "Détermine si le volume, la balance et la position panoramique que vous réglez pour chaque utilisateur sont mémorisés. Les réglages sont propres à chaque serveur : un niveau défini sur un serveur ne se reporte jamais sur un autre.";
 "preferences.accessibility.title" = "Accessibilité";
 "preferences.accessibility.channelAnnouncements" = "Annoncer les messages de canal";
 "preferences.accessibility.privateAnnouncements" = "Annoncer les messages privés";

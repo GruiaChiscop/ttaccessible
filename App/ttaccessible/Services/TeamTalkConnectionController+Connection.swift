@@ -40,6 +40,7 @@ extension TeamTalkConnectionController {
                 self.instance = instance
                 self.connectedRecord = record
                 self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
+                self.userVolumeStore.setMemoryMode(self.preferencesStore.preferences.userVolumeMemoryMode)
                 self.autoJoinAfterLoginLocked(instance: instance, options: options)
                 try self.applyPostLoginOptionsLocked(instance: instance, options: options)
                 self.applyDefaultSubscriptionPreferencesLocked(instance: instance, preferences: self.preferencesStore.preferences)
@@ -215,6 +216,7 @@ extension TeamTalkConnectionController {
             self.instance = instance
             self.connectedRecord = record
             self.userVolumeStore.setServerScope(Self.serverVolumeScope(for: record))
+            self.userVolumeStore.setMemoryMode(self.preferencesStore.preferences.userVolumeMemoryMode)
 
             // Rejoindre le dernier canal si possible
             let shouldRejoinLastChannel = preferencesStore.preferences.rejoinLastChannelOnReconnect

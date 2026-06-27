@@ -236,6 +236,14 @@ final class TeamTalkConnectionController {
     init(preferencesStore: AppPreferencesStore) {
         self.preferencesStore = preferencesStore
         queue.setSpecific(key: queueKey, value: ())
+        userVolumeStore.setMemoryMode(preferencesStore.preferences.userVolumeMemoryMode)
+    }
+
+    /// Push the per-user volume memory mode (off / session / persistent) to the store.
+    /// Thread-safe; call it live when the preference changes so the mode takes effect
+    /// without needing a reconnect.
+    func updateUserVolumeMemoryMode(_ mode: AppPreferences.UserVolumeMemoryMode) {
+        userVolumeStore.setMemoryMode(mode)
     }
 
     func passwordForChannel(_ channelID: Int32) -> String {

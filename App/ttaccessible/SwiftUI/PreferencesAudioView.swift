@@ -118,6 +118,8 @@ struct PreferencesAudioView: View {
 
                 pushToTalkSection
 
+                volumeMemorySection
+
                 if let feedbackMessage = store.state.advancedFeedbackMessage, feedbackMessage.isEmpty == false {
                     Text(feedbackMessage)
                         .font(.caption)
@@ -164,6 +166,41 @@ struct PreferencesAudioView: View {
 
     private func persistAndApply() {
         store.updateSelectedDevices(inputID: selectedInputID, outputID: selectedOutputID)
+    }
+
+    @ViewBuilder
+    private var volumeMemorySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L10n.text("preferences.audio.volumeMemory.section"))
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.text("preferences.audio.volumeMemory.label"))
+                    .accessibilityHidden(true)
+                Picker(
+                    "",
+                    selection: Binding(
+                        get: { store.userVolumeMemoryMode },
+                        set: { store.updateUserVolumeMemoryMode($0) }
+                    )
+                ) {
+                    Text(L10n.text("preferences.audio.volumeMemory.off"))
+                        .tag(AppPreferences.UserVolumeMemoryMode.off)
+                    Text(L10n.text("preferences.audio.volumeMemory.session"))
+                        .tag(AppPreferences.UserVolumeMemoryMode.session)
+                    Text(L10n.text("preferences.audio.volumeMemory.persistent"))
+                        .tag(AppPreferences.UserVolumeMemoryMode.persistent)
+                }
+                .labelsHidden()
+                .pickerStyle(.radioGroup)
+                .accessibilityLabel(L10n.text("preferences.audio.volumeMemory.label"))
+            }
+
+            Text(L10n.text("preferences.audio.volumeMemory.help"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     @ViewBuilder

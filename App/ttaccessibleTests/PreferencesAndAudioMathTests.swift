@@ -302,4 +302,91 @@ final class UserVolumeStoreScopingTests: XCTestCase {
         store.setVolume(louder, forUsername: "")
         XCTAssertNil(store.volume(forUsername: ""))
     }
+
+    // MARK: Memory mode (off / session / persistent)
+
+    func testOffModeNeverRemembers() {
+        let store = UserVolumeStore(defaults: defaults)
+        store.setServerScope("serverA:10333")
+        store.setMemoryMode(.off)
+        store.setVolume(louder, forUsername: "guest")
+        XCTAssertNil(store.volume(forUsername: "guest"))
+        // Nothing was written to the persistent backing either.
+        let other = UserVolumeStore(defaults: defaults)
+        other.setServerScope("serverA:10333")
+        XCTAssertNil(other.volume(forUsername: "guest"))
+    }
+
+    func testSessionModeRemembersInMemoryButNotPersisted() {
+        let store = UserVolumeStore(defaults: defaults)
+        store.setServerScope("serverA:10333")
+        store.setMemoryMode(.session)
+        store.setVolume(louder, forUsername: "guest")
+        // Same store instance (same app run) remembers it.
+        XCTAssertEqual(store.volume(forUsername: "guest"), louder)
+        // A fresh instance (simulating a relaunch) does NOT — nothing hit UserDefaults.
+        let relaunched = UserVolumeStore(defaults: defaults)
+        relaunched.setServerScope("serverA:10333")
+        relaunched.setMemoryMode(.session)
+        XCTAssertNil(relaunched.volume(forUsername: "guest"))
+    }
+
+    func testPersistentModeSurvivesNewInstance() {
+        let store = UserVolumeStore(defaults: defaults)
+        store.setServerScope("serverA:10333")
+        store.setMemoryMode(.persistent)
+        store.setVolume(louder, forUsername: "guest")
+
+        let relaunched = UserVolumeStore(defaults: defaults)
+        relaunched.setServerScope("serverA:10333")
+        relaunched.setMemoryMode(.persistent)
+        XCTAssertEqual(relaunched.volume(forUsername: "guest"), louder)
+    }
+
+    func testSwitchingToOffStopsReadingPersistedValue() {
+        let store = UserVolumeStore(defaults: defaults)
+        store.setServerScope("serverA:10333")
+        store.setMemoryMode(.persistent)
+        store.setVolume(louder, forUsername: "guest")
+        XCTAssertEqual(store.volume(forUsername: "guest"), louder)
+
+        store.setMemoryMode(.off)
+        XCTAssertNil(store.volume(forUsername: "guest"))
+
+        // Switching back exposes the still-persisted value (off doesn't erase).
+        store.setMemoryMode(.persistent)
+        XCTAssertEqual(store.volume(forUsername: "guest"), louder)
+    }
+}
+
+// MARK: - AppPreferences userVolumeMemoryMode migration
+
+final class UserVolumeMemoryModePreferenceTests: XCTestCase {
+
+    private func decode(_ json: String) throws -> AppPreferences {
+        try JSONDecoder().decode(AppPreferences.self, from: Data(json.utf8))
+    }
+
+    func testDefaultsToPersistentWhenKeyAbsent() throws {
+        // A preferences blob saved before this feature existed.
+        let prefs = try decode("{}")
+        XCTAssertEqual(prefs.userVolumeMemoryMode, .persistent)
+    }
+
+    func testDecodesExplicitMode() throws {
+        for mode in AppPreferences.UserVolumeMemoryMode.allCases {
+            let prefs = try decode("{\"userVolumeMemoryMode\": \"\(mode.rawValue)\"}")
+            XCTAssertEqual(prefs.userVolumeMemoryMode, mode)
+        }
+    }
+
+    func testRoundTrips() throws {
+        for mode in AppPreferences.UserVolumeMemoryMode.allCases {
+            var prefs = AppPreferences()
+            prefs.userVolumeMemoryMode = mode
+            let data = try JSONEncoder().encode(prefs)
+            let decoded = try JSONDecoder().decode(AppPreferences.self, from: data)
+            XCTAssertEqual(decoded.userVolumeMemoryMode, mode)
+        }
+    }
 }

@@ -429,6 +429,12 @@
 "preferences.audio.pushToTalk.key.label" = "Hotkey";
 "preferences.audio.pushToTalk.beep.label" = "Play a sound when transmission starts and stops";
 "preferences.audio.pushToTalk.warning.noShortcut" = "No hotkey configured — push-to-talk is inactive and the microphone keeps transmitting as in always-on mode. Click the recorder above to set a key.";
+"preferences.audio.volumeMemory.section" = "Per-user volume memory";
+"preferences.audio.volumeMemory.label" = "Remember per-user volume adjustments";
+"preferences.audio.volumeMemory.off" = "Off — always reset to 50% on reconnect";
+"preferences.audio.volumeMemory.session" = "This session only — forget on quit";
+"preferences.audio.volumeMemory.persistent" = "Always — remember across launches";
+"preferences.audio.volumeMemory.help" = "Controls whether the volume, balance and pan you set for individual users are remembered. Adjustments are scoped per server, so a level you set on one server never carries over to another.";
 "preferences.accessibility.title" = "Accessibility";
 "preferences.accessibility.channelAnnouncements" = "Announce channel messages";
 "preferences.accessibility.privateAnnouncements" = "Announce private messages";
