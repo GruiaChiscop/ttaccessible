@@ -153,6 +153,16 @@ private final class PerUserMixSource {
     private let primeFrames: Int
     private let maxFrames: Int
     private var isPrimed = false
+    /// Largest single block (in frames) this source has received. The channel
+    /// codec's tx interval sets the block size (20–120+ ms), and the buffer's
+    /// ceiling must scale with it — see `append`.
+    private(set) var maxBlockFrames = 0
+
+    // Diagnostics (read/reset by the engine's periodic mix report).
+    var statBlocksIn = 0
+    var statUnderruns = 0
+    var statCeilingDrops = 0
+    var statDroppedFrames = 0
 
     init(channels: Int, primeFrames: Int, maxFrames: Int, settings: OutputUserMixSettings) {
         self.channels = max(1, channels)
@@ -164,15 +174,34 @@ private final class PerUserMixSource {
     var availableFrames: Int { (buffer.count - head) / channels }
 
     func append(_ samples: [Int16]) {
+        let blockFrames = samples.count / channels
+        if blockFrames > maxBlockFrames { maxBlockFrames = blockFrames }
+        statBlocksIn += 1
         buffer.append(contentsOf: samples)
-        // Catch-up: never let this source get more than `maxFrames` ahead of the
-        // device clock — that is pure added latency. If it does (the SDK delivered
-        // a burst, or the source clock ran fast), drop the oldest audio down to the
-        // `primeFrames` jitter target so latency stays bounded, instead of pinning
-        // at the cap forever (which caused ~225 ms backlog + constant dropouts).
+        // Catch-up ceiling: never let this source run more than one normal swing
+        // ahead of the device clock — beyond that is pure added latency, so drop
+        // down to a healthy level instead of pinning at the cap forever.
+        //
+        // The ceiling MUST scale with the observed block size: the level swings by
+        // a whole block per arrival, on top of the small cushion the source
+        // self-builds against delivery jitter (each early underrun shifts the
+        // consume phase later, so arrivals land "earlier" next time). A fixed
+        // ceiling tuned for 40 ms blocks sat exactly at that swing's peak for the
+        // 60 ms tx-interval channels used by busy community servers — every trip
+        // gutted the cushion, re-underrunning and re-tripping in a permanent chop
+        // cycle ("buffery, barely understandable"). Scaled headroom costs nothing
+        // for 20/40 ms channels (the configured max still applies as the floor)
+        // and steady-state latency is set by arrivals, not by the ceiling.
+        let margin = primeFrames / 2
+        let effectiveMax = max(maxFrames, primeFrames + 2 * maxBlockFrames + margin)
         let availFrames = (buffer.count - head) / channels
-        if availFrames > maxFrames {
-            head += (availFrames - primeFrames) * channels
+        if availFrames > effectiveMax {
+            // Keep prime + one block after a trip (not bare prime): enough to
+            // bridge to the next arrival without an immediate re-underrun.
+            let dropTo = primeFrames + maxBlockFrames
+            statCeilingDrops += 1
+            statDroppedFrames += availFrames - dropTo
+            head += (availFrames - dropTo) * channels
         }
         if head > 16_384 {
             buffer.removeFirst(head)
@@ -186,24 +215,30 @@ private final class PerUserMixSource {
     func prepareForMix() -> Bool {
         if settings.muted { return false }
         if isPrimed {
-            if availableFrames == 0 { isPrimed = false; return false }
+            if availableFrames == 0 {
+                isPrimed = false
+                statUnderruns += 1
+                return false
+            }
             return true
         }
         if availableFrames >= primeFrames { isPrimed = true; return true }
         return false
     }
 
-    /// Pop the next frame as (left, right) source samples (mono is duplicated).
-    /// Returns false if empty.
-    func popFrameLR() -> (Int16, Int16)? {
-        guard buffer.count - head >= channels else { return nil }
-        let base = head
-        head += channels
-        if channels == 1 {
-            let s = buffer[base]
-            return (s, s)
+    /// Accumulate up to `frames` frames into the stereo Int32 accumulator with
+    /// the given per-side gains. The per-sample work happens in the C hot loop
+    /// (`ttac_mix_add`) so it stays real-time-fast even in unoptimized builds.
+    /// Returns the number of frames consumed (short when the source runs dry).
+    func mixInto(_ acc: UnsafeMutablePointer<Int32>, frames: Int, leftGain: Float, rightGain: Float) -> Int {
+        let n = min(frames, availableFrames)
+        guard n > 0 else { return 0 }
+        buffer.withUnsafeBufferPointer { buf in
+            guard let base = buf.baseAddress else { return }
+            ttac_mix_add(acc, base + head, Int32(n), Int32(channels), leftGain, rightGain)
         }
-        return (buffer[base], buffer[base + 1])
+        head += n * channels
+        return n
     }
 }
 
@@ -233,6 +268,8 @@ final class OutputAudioRenderEngine {
     private var userSources: [Int32: PerUserMixSource] = [:]
     private var defaultUserSettings: [Int32: OutputUserMixSettings] = [:]
     private var mixScratch: [Int16] = []
+    /// Stereo Int32 accumulator the C mix loop sums sources into.
+    private var accScratch: [Int32] = []
     private var perUserPrimeFrames: Int = 0   // per-user jitter-buffer target
     private var perUserMaxFrames: Int = 0      // per-user catch-up ceiling
 
@@ -246,7 +283,10 @@ final class OutputAudioRenderEngine {
     private var rtDeviceChannels = 0
     private var rtPull: UnsafeMutablePointer<Int16>?
     private var rtPullCapacity = 0
-    private var rtPlanePtrs: [UnsafeMutablePointer<Float>?] = []
+    /// C array of plane pointers handed to `ttac_render_planes` (no Swift
+    /// array machinery on the render thread).
+    private var rtPlanesC: UnsafeMutablePointer<UnsafeMutablePointer<Float>?>?
+    private var rtPlanesCapacity = 0
     private var currentGain: Float = 1
     private var gainSmoothCoeff: Float = 0.01
 
@@ -258,6 +298,10 @@ final class OutputAudioRenderEngine {
     /// Fine timer on `engineQueue` that drives `pumpMix` (replaces the 20 ms message-loop tick).
     private var mixTimer: DispatchSourceTimer?
     private let pumpIntervalMS = 5
+    /// Pump ticks since the last per-source diagnostics report (engineQueue only).
+    private var ticksSinceMixReport = 0
+    /// ~5 s at the 5 ms pump interval.
+    private let mixReportEveryTicks = 1000
 
     init() {
         gainCell.initialize(to: 1)
@@ -390,7 +434,10 @@ final class OutputAudioRenderEngine {
         self.rtDeviceChannels = devChannels
         self.rtPull = pull
         self.rtPullCapacity = pullCapacity
-        self.rtPlanePtrs = [UnsafeMutablePointer<Float>?](repeating: nil, count: max(devChannels, 1))
+        rtPlanesC?.deallocate()
+        self.rtPlanesCapacity = max(devChannels, 1)
+        self.rtPlanesC = UnsafeMutablePointer<UnsafeMutablePointer<Float>?>.allocate(capacity: rtPlanesCapacity)
+        self.rtPlanesC?.initialize(repeating: nil, count: rtPlanesCapacity)
         self.currentGain = gainCell.pointee
         self.gainSmoothCoeff = Float(1.0 - exp(-1.0 / (0.008 * devRate)))
         self.underflowCount = 0
@@ -437,7 +484,7 @@ final class OutputAudioRenderEngine {
         rtPull?.deallocate(); rtPull = nil; rtPullCapacity = 0
         ring?.free(); ring = nil
         rtDeviceChannels = 0; deviceChannels = 0; deviceSampleRate = 0
-        rtPlanePtrs = []
+        rtPlanesC?.deallocate(); rtPlanesC = nil; rtPlanesCapacity = 0
     }
 
     func stop() {
@@ -454,7 +501,7 @@ final class OutputAudioRenderEngine {
 
         let drained = underflowCount
         rtPull?.deallocate(); rtPull = nil; rtPullCapacity = 0
-        rtPlanePtrs = []
+        rtPlanesC?.deallocate(); rtPlanesC = nil; rtPlanesCapacity = 0
         ring?.free(); ring = nil
         userSources.removeAll()
         deviceChannels = 0; deviceSampleRate = 0; rtDeviceChannels = 0
@@ -576,29 +623,64 @@ final class OutputAudioRenderEngine {
         if mixScratch.count < needed {
             mixScratch = [Int16](repeating: 0, count: needed)
         }
+        if accScratch.count < needed {
+            accScratch = [Int32](repeating: 0, count: needed)
+        }
 
         // Only mix sources that are primed (have buffered past their jitter target);
-        // this gate also drops a source mid-tick once it underruns.
+        // this gate also drops a source mid-tick once it underruns. The per-sample
+        // summing/clamping runs in the C hot loops so it holds up in -Onone builds.
         let active = userSources.values.filter { $0.prepareForMix() }
-        mixScratch.withUnsafeMutableBufferPointer { out in
-            guard let outBase = out.baseAddress else { return }
-            for f in 0..<produce {
-                var left = 0
-                var right = 0
-                for src in active {
-                    guard let (sl, sr) = src.popFrameLR() else { continue }
-                    let (lg, rg) = Self.panGains(volume: src.settings.volume, pan: src.settings.pan)
-                    left += Int(Float(sl) * lg)
-                    right += Int(Float(sr) * rg)
-                }
-                outBase[f * 2] = Int16(clamping: left)
-                outBase[f * 2 + 1] = Int16(clamping: right)
+        accScratch.withUnsafeMutableBufferPointer { accBuf in
+            guard let acc = accBuf.baseAddress else { return }
+            ttac_mix_clear(acc, Int32(needed))
+            for src in active {
+                let (lg, rg) = Self.panGains(volume: src.settings.volume, pan: src.settings.pan)
+                _ = src.mixInto(acc, frames: produce, leftGain: lg, rightGain: rg)
             }
-            ring.write(outBase, count: needed)
+            mixScratch.withUnsafeMutableBufferPointer { out in
+                guard let outBase = out.baseAddress else { return }
+                ttac_mix_clamp(outBase, acc, Int32(needed))
+                ring.write(outBase, count: needed)
+            }
         }
 
         if primedCell.pointee == 0, ring.fillCount() / mixChannels >= targetFillFrames {
             primedCell.pointee = 1
+        }
+
+        reportMixHealthIfDue()
+    }
+
+    /// Every ~5 s, log per-source stats — but only when a source actually
+    /// underran or hit its catch-up ceiling, so a healthy session stays silent.
+    /// This is what distinguishes "blocks arrive gappy" (delivery/network/server)
+    /// from "blocks arrive fine but we mishandle them" (buffer tuning) in the field.
+    private func reportMixHealthIfDue() {
+        ticksSinceMixReport += 1
+        guard ticksSinceMixReport >= mixReportEveryTicks else { return }
+        ticksSinceMixReport = 0
+        guard deviceSampleRate > 0, userSources.isEmpty == false else { return }
+
+        let msPerFrame = 1000.0 / deviceSampleRate
+        var troubled: [String] = []
+        for (key, src) in userSources {
+            if src.statUnderruns > 0 || src.statCeilingDrops > 0 {
+                troubled.append(String(
+                    format: "key=%d blocks=%d maxBlock=%.0fms avail=%.0fms underruns=%d drops=%d dropped=%.0fms",
+                    key, src.statBlocksIn, Double(src.maxBlockFrames) * msPerFrame,
+                    Double(src.availableFrames) * msPerFrame,
+                    src.statUnderruns, src.statCeilingDrops,
+                    Double(src.statDroppedFrames) * msPerFrame
+                ))
+            }
+            src.statBlocksIn = 0
+            src.statUnderruns = 0
+            src.statCeilingDrops = 0
+            src.statDroppedFrames = 0
+        }
+        if troubled.isEmpty == false {
+            AudioLogger.log("mix diag: %d sources, troubled: %@", userSources.count, troubled.joined(separator: " | "))
         }
     }
 
@@ -621,16 +703,22 @@ final class OutputAudioRenderEngine {
     ) -> OSStatus {
         guard let ioData else { return noErr }
         // Acquire the RT render state published by startImpl's release fence before
-        // reading rtDeviceChannels / rtPlanePtrs / rtPullCapacity / rtPull / currentGain.
+        // reading rtDeviceChannels / rtPlanesC / rtPullCapacity / rtPull / currentGain.
         ttac_atomic_fence_acquire()
         let abl = UnsafeMutableAudioBufferListPointer(ioData)
         let devCh = rtDeviceChannels
         let frameCount = Int(inNumberFrames)
         let srcCh = mixChannels
-        guard devCh > 0, frameCount > 0, devCh <= rtPlanePtrs.count else { return noErr }
+        guard devCh > 0, frameCount > 0, devCh <= rtPlanesCapacity, let planes = rtPlanesC else { return noErr }
 
-        for ch in 0..<devCh {
+        var allPlanesValid = true
+        var ch = 0
+        while ch < devCh {
             abl[ch].mDataByteSize = UInt32(frameCount * MemoryLayout<Float>.size)
+            let p = abl[ch].mData?.assumingMemoryBound(to: Float.self)
+            planes[ch] = p
+            if p == nil { allPlanesValid = false }
+            ch += 1
         }
 
         let ready = primedCell.pointee != 0
@@ -638,55 +726,27 @@ final class OutputAudioRenderEngine {
             && ring != nil
             && rtPull != nil
 
-        let target: Float = (muteCell.pointee != 0) ? 0 : gainCell.pointee
-        let coeff = gainSmoothCoeff
-        let invScale: Float = 1.0 / 32_768.0
-
-        rtPlanePtrs.withUnsafeMutableBufferPointer { planesBuf in
-            guard let planes = planesBuf.baseAddress else { return }
-            var allPlanesValid = true
-            for ch in 0..<devCh {
-                let p = abl[ch].mData?.assumingMemoryBound(to: Float.self)
-                planes[ch] = p
-                if p == nil { allPlanesValid = false }
+        guard ready, allPlanesValid, let ring, let pull = rtPull else {
+            ch = 0
+            while ch < devCh {
+                if let plane = planes[ch] { plane.update(repeating: 0, count: frameCount) }
+                ch += 1
             }
-
-            guard ready, allPlanesValid, let ring, let pull = rtPull else {
-                for ch in 0..<devCh {
-                    if let plane = planes[ch] { plane.update(repeating: 0, count: frameCount) }
-                }
-                return
-            }
-
-            let pulled = ring.read(into: pull, maxSamples: frameCount * srcCh)
-            let framesAvailable = pulled / srcCh
-            if framesAvailable < frameCount { underflowCount += 1 }
-
-            var g = currentGain
-            for f in 0..<frameCount {
-                g += (target - g) * coeff
-                if f < framesAvailable {
-                    let base = f * srcCh   // stereo source: [L, R]
-                    for ch in 0..<devCh {
-                        guard let plane = planes[ch] else { continue }
-                        let sample: Int16
-                        if devCh == 1 {
-                            sample = Int16(clamping: (Int(pull[base]) + Int(pull[base + 1])) / 2)
-                        } else if ch <= 1 {
-                            sample = pull[base + ch]
-                        } else {
-                            sample = 0   // extra device channels (>2) get silence
-                        }
-                        plane[f] = Float(sample) * invScale * g
-                    }
-                } else {
-                    for ch in 0..<devCh {
-                        if let plane = planes[ch] { plane[f] = 0 }
-                    }
-                }
-            }
-            currentGain = g
+            return noErr
         }
+
+        let pulled = ring.read(into: pull, maxSamples: frameCount * srcCh)
+        let framesAvailable = pulled / srcCh
+        if framesAvailable < frameCount { underflowCount += 1 }
+
+        // Per-frame conversion + gain smoothing in the C hot loop (RT-safe in
+        // every build configuration; -Onone Swift measurably missed deadlines).
+        let target: Float = (muteCell.pointee != 0) ? 0 : gainCell.pointee
+        currentGain = ttac_render_planes(
+            planes, Int32(devCh), pull,
+            Int32(framesAvailable), Int32(frameCount),
+            currentGain, target, gainSmoothCoeff
+        )
 
         return noErr
     }
