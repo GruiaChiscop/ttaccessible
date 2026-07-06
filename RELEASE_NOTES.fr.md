@@ -1,4 +1,4 @@
-## v1.7.0-beta.9 (build 40) — 2026-06-28
+## v1.7.0-beta.9 (build 40) — 2026-07-06
 
 Ceci est une version **bêta**, destinée à tester les nouveautés avant leur diffusion à tout le monde. Pour recevoir les mises à jour bêta, activez **Inclure les versions bêta** dans Préférences › Général.
 

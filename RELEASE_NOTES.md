@@ -1,4 +1,4 @@
-## v1.7.0-beta.9 (build 40) — 2026-06-28
+## v1.7.0-beta.9 (build 40) — 2026-07-06
 
 This is a **beta** release, for testing new changes before they ship to everyone. To receive beta updates, turn on **Include beta versions** in Preferences › General.
 
