@@ -38,6 +38,24 @@
 		};
 /* End PBXCopyFilesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		94A4A5FA3B941A8E00C01234 /* Patch TeamTalk SDK (PortAudio probe) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Patch TeamTalk SDK (PortAudio probe)";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Ensure the vendored TeamTalk dylib has PortAudio's slow startup device probe\n# patched out before it is linked and embedded. libTeamTalk5.dylib is a gitignored\n# download, so a build machine with an unpatched cached copy would otherwise ship\n# the ~13s-slow-connect build. The patcher is idempotent and fails loudly, so it is\n# safe to run on every build. See scripts/patch-sdk-portaudio.py for the rationale.\nset -e\nDYLIB=\"${SRCROOT}/../Vendor/TeamTalk/libTeamTalk5.dylib\"\nif [ ! -f \"$DYLIB\" ]; then\n  echo \"error: $DYLIB not found - run scripts/download-sdk.sh first\" >&2\n  exit 1\nfi\npython3 \"${SRCROOT}/../scripts/patch-sdk-portaudio.py\" \"$DYLIB\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXFileReference section */
 		941A588C2FE8718F00C08287 /* ttaccessibleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ttaccessibleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		943281C62F68C35A00682D6B /* ttaccessible.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ttaccessible.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -138,6 +156,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 943281D12F68C35A00682D6B /* Build configuration list for PBXNativeTarget "ttaccessible" */;
 			buildPhases = (
+				94A4A5FA3B941A8E00C01234 /* Patch TeamTalk SDK (PortAudio probe) */,
 				943281C22F68C35A00682D6B /* Sources */,
 				943281C32F68C35A00682D6B /* Frameworks */,
 				94A4A5F83B941A8E00C01234 /* Embed TeamTalk */,
