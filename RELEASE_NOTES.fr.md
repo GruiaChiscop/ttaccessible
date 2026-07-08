@@ -33,6 +33,9 @@ Voici la version stable qui met entre toutes les mains ce qui a été mis au poi
 - **Un pseudo laissé vide** revient maintenant à votre pseudo par défaut au lieu d'empêcher la connexion.
 - L'application **démarre plus vite**.
 
+### Remerciements
+Un grand merci à **Rocco Fiorentino**, qui a conçu et réalisé la refonte audio et la table de mixage, les améliorations d'accessibilité et VoiceOver, ainsi que la connexion plus rapide et plus stable de cette version. Merci à **Matthew Whitaker** pour la suggestion du Commande+5 — et à toutes les personnes qui ont testé les bêtas et fait remonter leurs retours.
+
 ### Installation
 
 tt-Accessible installe cette mise à jour pour vous automatiquement. Pour l'installer à la main :

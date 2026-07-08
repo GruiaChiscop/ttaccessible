@@ -33,6 +33,9 @@ This is the stable release that brings everything from the 1.7.0 beta line to ev
 - **An empty nickname** now falls back to your default instead of failing to connect.
 - The app **launches faster**.
 
+### Thanks
+Huge thanks to **Rocco Fiorentino**, who designed and built the audio rewrite and the Channel Mixer, the accessibility and VoiceOver improvements, and the faster, steadier connecting in this release. Thanks to **Matthew Whitaker** for the Command+5 suggestion — and to everyone who tested the betas and sent feedback.
+
 ### Install
 
 tt-Accessible will install this update for you automatically. To install by hand:
