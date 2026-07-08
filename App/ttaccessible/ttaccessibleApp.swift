@@ -336,6 +336,12 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("4", modifiers: [.command])
                 .disabled(menuState.mode != .connectedServer)
 
+                Button(L10n.text("mixer.menu.open")) {
+                    appDelegate.focusChannelMixerArea()
+                }
+                .keyboardShortcut("5", modifiers: [.command])
+                .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
+
                 Divider()
 
                 Button(L10n.text("connectedServer.menu.join")) {

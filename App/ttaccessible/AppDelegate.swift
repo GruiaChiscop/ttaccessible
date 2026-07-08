@@ -1130,6 +1130,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         connectedServerViewController?.focusHistory()
     }
 
+    func focusChannelMixerArea() {
+        guard menuState.mode == .connectedServer else {
+            return
+        }
+        restoreMainWindow()
+        connectedServerViewController?.focusChannelMixer()
+    }
+
     func joinSelectedChannel() {
         guard menuState.mode == .connectedServer else {
             return
