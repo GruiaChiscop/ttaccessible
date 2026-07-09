@@ -729,6 +729,9 @@
 "connectedServer.menu.unmuteMediaFile" = "Rétablir le flux média localement";
 "connectedServer.menu.kickUser" = "Expulser du canal";
 "connectedServer.menu.moveUser" = "Déplacer vers un canal…";
+"connectedServer.menu.markForMove" = "Marquer pour déplacement";
+"connectedServer.menu.unmarkForMove" = "Retirer le marquage pour déplacement";
+"connectedServer.menu.moveMarkedUsersHere" = "Déplacer les utilisateurs marqués ici";
 "connectedServer.kick.title" = "Expulser %@ ?";
 "connectedServer.kick.message" = "L'utilisateur sera retiré de son canal actuel.";
 "connectedServer.kick.confirm" = "Expulser";
@@ -736,6 +739,13 @@
 "connectedServer.move.title.multiple" = "Déplacer %ld utilisateurs";
 "connectedServer.move.confirm" = "Déplacer";
 "connectedServer.move.noChannel" = "Aucun autre canal disponible";
+"connectedServer.move.noMarkedUsers" = "Aucun utilisateur marqué pour déplacement";
+"connectedServer.move.marked" = "%@ marqué pour déplacement.";
+"connectedServer.move.marked.multiple" = "%ld utilisateurs marqués pour déplacement.";
+"connectedServer.move.unmarked" = "%@ n’est plus marqué pour déplacement.";
+"connectedServer.move.unmarked.multiple" = "%ld utilisateurs ne sont plus marqués pour déplacement.";
+"connectedServer.move.selectedForMove.accessibilityPrefix" = "sélectionné pour déplacement";
+"connectedServer.move.movedToChannel" = "Utilisateurs marqués déplacés vers %@.";
 
 // VoiceOver custom actions
 "connectedServer.voAction.join" = "Rejoindre";

@@ -31,7 +31,9 @@ private final class ConnectedUsersTableView: NSTableView {
         guard row >= 0 else {
             return nil
         }
-        selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        if selectedRowIndexes.contains(row) == false {
+            selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        }
         return contextMenuProvider?(row)
     }
 
@@ -173,7 +175,9 @@ final class ConnectedUsersViewController: NSViewController {
     func pushMenuState() {
         guard view.window?.isKeyWindow == true else { return }
         let menuState = SavedServersMenuState.shared
-        guard let user = selectedUser() else {
+        let selectedUsers = selectedUsers()
+        let selectedOtherUsers = selectedUsers.filter { !$0.isCurrentUser }
+        guard let user = selectedUsers.first else {
             menuState.setSelectedUsersState(
                 hasSelectedUsers: false,
                 hasSingleSelectedUser: false,
@@ -186,20 +190,22 @@ final class ConnectedUsersViewController: NSViewController {
             )
             return
         }
-        let isOther = !user.isCurrentUser
-        let muted = serverViewController?.localMuteState[user.id] ?? user.isMuted
-        let mediaMuted = serverViewController?.localMediaFileMuteState[user.id] ?? user.isMediaFileMuted
+        let hasSingleSelectedUser = selectedUsers.count == 1
+        let hasSingleSelectedOtherUser = selectedOtherUsers.count == 1
+        let stateUser = selectedOtherUsers.first ?? user
+        let muted = serverViewController?.localMuteState[stateUser.id] ?? stateUser.isMuted
+        let mediaMuted = serverViewController?.localMediaFileMuteState[stateUser.id] ?? stateUser.isMediaFileMuted
         menuState.setSelectedUsersState(
-            hasSelectedUsers: isOther,
-            hasSingleSelectedUser: true,
-            hasSingleSelectedOtherUser: isOther,
-            canMoveSelectedUsers: serverViewController?.session.canMoveUsers == true,
-            isSelectedUserMuted: isOther ? muted : false,
-            isSelectedUserMediaFileMuted: isOther ? mediaMuted : false,
-            isSelectedUserChannelOperator: isOther ? user.isChannelOperator : false,
+            hasSelectedUsers: selectedOtherUsers.isEmpty == false,
+            hasSingleSelectedUser: hasSingleSelectedUser,
+            hasSingleSelectedOtherUser: hasSingleSelectedOtherUser,
+            canMoveSelectedUsers: selectedOtherUsers.isEmpty == false && serverViewController?.session.canMoveUsers == true,
+            isSelectedUserMuted: hasSingleSelectedOtherUser ? muted : false,
+            isSelectedUserMediaFileMuted: hasSingleSelectedOtherUser ? mediaMuted : false,
+            isSelectedUserChannelOperator: hasSingleSelectedOtherUser ? stateUser.isChannelOperator : false,
             states: Dictionary(
                 uniqueKeysWithValues: UserSubscriptionOption.allCases.map { option in
-                    (option, isOther && user.isSubscriptionEnabled(option))
+                    (option, hasSingleSelectedOtherUser && stateUser.isSubscriptionEnabled(option))
                 }
             )
         )
@@ -247,8 +253,9 @@ final class ConnectedUsersViewController: NSViewController {
     }
 
     func keyMoveSelectedUser() {
-        guard let user = selectedUser(), serverViewController?.session.canMoveUsers == true else { return }
-        serverViewController?.performMove([user], presentingWindow: presentingWindow)
+        let users = selectedUsers().filter { !$0.isCurrentUser }
+        guard users.isEmpty == false, serverViewController?.session.canMoveUsers == true else { return }
+        serverViewController?.performMove(users, presentingWindow: presentingWindow)
     }
 
     func keySetSubscription(_ option: UserSubscriptionOption, enabled: Bool) {
@@ -263,7 +270,7 @@ final class ConnectedUsersViewController: NSViewController {
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.setAccessibilityLabel(L10n.text("connectedUsers.table.accessibilityLabel"))
         tableView.usesAlternatingRowBackgroundColors = true
-        tableView.allowsMultipleSelection = false
+        tableView.allowsMultipleSelection = true
         tableView.delegate = self
         tableView.dataSource = self
         tableView.onEnter = { [weak self] in self?.openInfoForSelected() }
@@ -323,13 +330,14 @@ final class ConnectedUsersViewController: NSViewController {
         let countChanged = sorted.count != users.count
         lastSignature = signature
 
-        let previousID = selectedUser()?.id
+        let previousIDs = Set(selectedUsers().map(\.id))
         self.users = sorted
         tableView.reloadData()
         refreshCountLabel(announce: countChanged && hasPopulated)
         hasPopulated = true
-        if let previousID, let index = users.firstIndex(where: { $0.id == previousID }) {
-            tableView.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
+        let restoredIndexes = IndexSet(users.indices.filter { previousIDs.contains(users[$0].id) })
+        if restoredIndexes.isEmpty == false {
+            tableView.selectRowIndexes(restoredIndexes, byExtendingSelection: false)
         }
     }
 
@@ -354,6 +362,13 @@ final class ConnectedUsersViewController: NSViewController {
         let row = tableView.selectedRow
         guard row >= 0, row < users.count else { return nil }
         return users[row]
+    }
+
+    func selectedUsers() -> [ConnectedServerUser] {
+        tableView.selectedRowIndexes.compactMap { row in
+            guard row >= 0, row < users.count else { return nil }
+            return users[row]
+        }
     }
 
     @discardableResult
@@ -438,7 +453,11 @@ final class ConnectedUsersViewController: NSViewController {
 
         if rights.canMoveUsers {
             actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedUsers.action.move")) { [weak self] in
-                self?.perform(user) { ctrl, u in ctrl.presentingWindow.map { ctrl.serverViewController?.performMove([u], presentingWindow: $0) } }
+                self?.perform(user) { ctrl, u in
+                    guard let window = ctrl.presentingWindow else { return }
+                    let selected = ctrl.selectedUsers().filter { !$0.isCurrentUser }
+                    ctrl.serverViewController?.performMove(selected.isEmpty ? [u] : selected, presentingWindow: window)
+                }
                 return true
             })
         }
@@ -538,8 +557,9 @@ final class ConnectedUsersViewController: NSViewController {
         serverViewController?.performToggleOperator(user, presentingWindow: window)
     }
     @objc private func menuMove() {
-        guard let user = selectedUser(), serverViewController?.session.canMoveUsers == true, let window = presentingWindow else { return }
-        serverViewController?.performMove([user], presentingWindow: window)
+        let users = selectedUsers().filter { !$0.isCurrentUser }
+        guard users.isEmpty == false, serverViewController?.session.canMoveUsers == true, let window = presentingWindow else { return }
+        serverViewController?.performMove(users, presentingWindow: window)
     }
     @objc private func menuKickChannel() {
         guard let user = selectedUser(), serverViewController?.session.canKickUsers == true, let window = presentingWindow else { return }

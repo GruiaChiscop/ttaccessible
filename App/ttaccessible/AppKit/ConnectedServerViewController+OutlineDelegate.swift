@@ -28,7 +28,7 @@ extension ConnectedServerViewController {
             }
             return parts.joined(separator: ", ")
         case .user(let user):
-            return visualUserText(for: user)
+            return userAccessibilityText(for: user)
         }
     }
 
@@ -56,6 +56,32 @@ extension ConnectedServerViewController {
     }
 
     func visualUserText(for user: ConnectedServerUser) -> String {
+        userTextParts(for: user).joined(separator: ", ")
+    }
+
+    func userAccessibilityText(for user: ConnectedServerUser) -> String {
+        var parts = userTextParts(for: user)
+        if isMarkedForMove(user) {
+            parts.insert(L10n.text("connectedServer.move.selectedForMove.accessibilityPrefix"), at: 0)
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    func markedUserAttributedText(for user: ConnectedServerUser, font: NSFont) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        if let image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil) {
+            let attachment = NSTextAttachment()
+            attachment.image = image
+            let baselineOffset = (font.capHeight - image.size.height) / 2
+            attachment.bounds = NSRect(x: 0, y: baselineOffset, width: image.size.width, height: image.size.height)
+            result.append(NSAttributedString(attachment: attachment))
+            result.append(NSAttributedString(string: " "))
+        }
+        result.append(NSAttributedString(string: visualUserText(for: user), attributes: [.font: font]))
+        return result
+    }
+
+    private func userTextParts(for user: ConnectedServerUser) -> [String] {
         var parts = [user.displayName]
         parts.append(L10n.text(user.statusMode.localizationKey))
         if user.isCurrentUser {
@@ -74,7 +100,7 @@ extension ConnectedServerViewController {
         if user.statusMessage.isEmpty == false {
             parts.append(user.statusMessage)
         }
-        return parts.joined(separator: ", ")
+        return parts
     }
 }
 
@@ -95,7 +121,11 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
     }
 
     func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
-        ServerTreeRowView()
+        let rowView = ServerTreeRowView()
+        if let node = item as? ServerTreeNode {
+            rowView.voiceOverLabel = accessibilityText(for: node)
+        }
+        return rowView
     }
 
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
@@ -121,6 +151,7 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
 
         let accessLabel = accessibilityText(for: node)
         textField.toolTip = accessLabel
+        textField.voiceOverLabel = accessLabel
         textField.setAccessibilityLabel(accessLabel)
 
         switch node {
@@ -151,16 +182,27 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
             let joinActionName = channel.isCurrentChannel
                 ? L10n.text("connectedServer.voAction.leave")
                 : L10n.text("connectedServer.voAction.join")
-            textField.setAccessibilityCustomActions([
+            var actions = [
                 NSAccessibilityCustomAction(name: joinActionName) { [weak self] in
                     self?.performDefaultAction(); return true
                 }
-            ])
+            ]
+            if session.canMoveUsers && markedUserIDsForMove.isEmpty == false {
+                actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.menu.moveMarkedUsersHere")) { [weak self] in
+                    self?.moveMarkedUsers(to: channel); return true
+                })
+            }
+            textField.setAccessibilityCustomActions(actions)
         case .user(let user):
             textField.font = user.isTalking
                 ? .boldSystemFont(ofSize: NSFont.systemFontSize)
                 : .systemFont(ofSize: NSFont.systemFontSize)
-            textField.stringValue = visualUserText(for: user)
+            let userFont = textField.font ?? .systemFont(ofSize: NSFont.systemFontSize)
+            if isMarkedForMove(user) {
+                textField.attributedStringValue = markedUserAttributedText(for: user, font: userFont)
+            } else {
+                textField.stringValue = visualUserText(for: user)
+            }
             textField.maximumNumberOfLines = 1
             var actions: [NSAccessibilityCustomAction] = []
             if !user.isCurrentUser, session.canTextMessageUser {
@@ -188,11 +230,18 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
                         self?.kickUserAction(nil); return true
                     })
                 }
-                if session.canMoveUsers {
-                    actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.menu.moveUser")) { [weak self] in
-                        self?.moveUserAction(nil); return true
-                    })
-                }
+            }
+            if session.canMoveUsers {
+                actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.menu.moveUser")) { [weak self] in
+                    let selectedUsers = self?.selectedUserNodes() ?? []
+                    self?.performMove(selectedUsers.isEmpty ? [user] : selectedUsers, presentingWindow: self?.view.window)
+                    return true
+                })
+                let markTargets = moveMarkTargets(selectedUsers: selectedUserNodes(), fallbackUser: user)
+                actions.append(NSAccessibilityCustomAction(name: markActionName(for: markTargets)) { [weak self] in
+                    self?.performMarkForMove(self?.selectedUserNodes() ?? [], fallbackUser: user)
+                    return true
+                })
             }
             textField.setAccessibilityCustomActions(actions)
         }

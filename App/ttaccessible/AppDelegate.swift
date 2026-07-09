@@ -384,7 +384,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
-        if NSApp.windows.contains(where: { $0.isVisible }) == false {
+        if NSApp.windows.contains(where: { $0.isVisible && !$0.isMiniaturized }) == false {
             restoreMainWindow()
         }
     }
@@ -393,6 +393,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let shouldActivateWindow = savedServersWindowController == nil
             || savedServersWindowController?.window?.contentViewController is SavedServersViewController == false
             || savedServersWindowController?.window?.isVisible == false
+            || savedServersWindowController?.window?.isMiniaturized == true
 
         if savedServersWindowController == nil {
             let windowController = SavedServersWindowController(contentViewController: makeSavedServersViewController())
@@ -413,9 +414,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         closePrivateMessagesWindow()
         closeChannelFilesWindow()
         if shouldActivateWindow {
-            savedServersWindowController?.showWindow(nil)
-            savedServersWindowController?.window?.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            activateMainWindow()
         }
     }
 
@@ -436,9 +435,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let shouldActivateWindow = savedServersWindowController == nil
             || savedServersWindowController?.window?.contentViewController is ConnectedServerViewController == false
             || savedServersWindowController?.window?.isVisible == false
+            || savedServersWindowController?.window?.isMiniaturized == true
 
         if savedServersWindowController == nil {
             let windowController = SavedServersWindowController(contentViewController: NSViewController())
+            windowController.window?.delegate = self
             savedServersWindowController = windowController
         }
 
@@ -465,9 +466,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuState.setMode(.connectedServer)
         menuState.setHasSelection(false)
         if shouldActivateWindow {
-            savedServersWindowController?.showWindow(nil)
-            savedServersWindowController?.window?.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            activateMainWindow()
         }
     }
 
@@ -478,8 +477,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showSavedServersWindow()
         }
 
-        savedServersWindowController?.showWindow(nil)
-        savedServersWindowController?.window?.makeKeyAndOrderFront(nil)
+        activateMainWindow()
+    }
+
+    private func activateMainWindow() {
+        guard let windowController = savedServersWindowController else { return }
+        windowController.showWindow(nil)
+        if windowController.window?.isMiniaturized == true {
+            windowController.window?.deminiaturize(nil)
+        }
+        windowController.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func showPrivateMessagesWindow(session: ConnectedServerSession, select userID: Int32?, activate: Bool) {
