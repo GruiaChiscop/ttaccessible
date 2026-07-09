@@ -33,7 +33,12 @@ if [ -f "$VENDOR_DIR/libTeamTalk5.dylib" ]; then
     echo "libTeamTalk5.dylib already exists in Vendor/TeamTalk/."
     read -p "Overwrite? [y/N] " answer
     if [[ ! "$answer" =~ ^[Yy]$ ]]; then
-        echo "Aborted."
+        # Don't re-download, but STILL make sure the existing dylib is patched.
+        # The patch must never be coupled to a fresh download: a cached, unpatched
+        # copy is exactly how a ~13 s-slow-connect build ships. The patcher is
+        # idempotent, so this is a no-op when the dylib is already patched.
+        echo "Keeping existing dylib. Ensuring PortAudio probe is patched..."
+        python3 "$(dirname "$0")/patch-sdk-portaudio.py" "$VENDOR_DIR/libTeamTalk5.dylib"
         exit 0
     fi
 fi

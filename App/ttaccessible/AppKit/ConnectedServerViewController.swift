@@ -185,6 +185,17 @@ final class ConnectedServerViewController: NSViewController {
         view.window?.makeFirstResponder(historyTableView)
     }
 
+    func focusChannelMixer() {
+        // Unlike the other focus areas, a plain makeFirstResponder does not move the
+        // VoiceOver cursor onto the mixer's virtual accessibility tree. Target the first
+        // user strip (or the Mixer group itself when the channel has no other users) and
+        // post an accessibility focus notification to move VO there.
+        let overlay = channelMixerCoordinator.overlay
+        let target: NSView = overlay.virtualStrips.first ?? overlay
+        view.window?.makeFirstResponder(target)
+        NSAccessibility.post(element: target, notification: .focusedUIElementChanged)
+    }
+
     func focusMessageInput() {
         guard messageField.isEnabled else {
             return

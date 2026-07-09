@@ -293,6 +293,10 @@ final class A11yVirtualGridOverlayView: NSView {
     override init(frame: NSRect) { super.init(frame: frame) }
     required init?(coder: NSCoder) { nil }
     override var isFlipped: Bool { true }
+    // First-responder-capable so focusChannelMixer() can land here as a fallback when the
+    // channel has no user strips (the strips themselves are already first-responder-capable).
+    override var acceptsFirstResponder: Bool { true }
+    override var canBecomeKeyView: Bool { true }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override func isAccessibilityElement() -> Bool { true }
