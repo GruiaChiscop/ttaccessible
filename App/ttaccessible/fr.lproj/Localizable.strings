@@ -85,12 +85,14 @@
 "savedServer.form.initialChannelPassword" = "Mot de passe du canal";
 "savedServer.form.webLogin" = "Utiliser la connexion web BearWare";
 "savedServer.form.webLogin.help" = "Ce serveur utilisera votre compte BearWare pour se connecter. Configurez-le dans Préférences > BearWare.";
+"savedServer.form.showPassword" = "Afficher le mot de passe";
 "common.cancel" = "Annuler";
 "common.close" = "Fermer";
 "common.ok" = "OK";
 "common.save" = "Enregistrer";
 "common.yes" = "Oui";
 "common.no" = "Non";
+"common.showPassword" = "Afficher le mot de passe";
 "common.state.on" = "Activé";
 "common.state.off" = "Désactivé";
 "keychain.error.invalidPasswordData" = "Le mot de passe enregistré est invalide.";

@@ -85,7 +85,7 @@ struct PreferencesRecordingView: View {
                     Text(L10n.text("preferences.recording.autoRestart"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.recording.autoRestart"))
 
                 Text(L10n.text("preferences.recording.help"))

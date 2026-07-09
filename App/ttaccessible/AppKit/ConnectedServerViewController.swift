@@ -628,6 +628,19 @@ final class ConnectedServerViewController: NSViewController {
             inputAudioReady: update.inputAudioReady,
             voiceTransmissionEnabled: update.voiceTransmissionEnabled,
             canSendBroadcast: session.canSendBroadcast,
+            canCreateTemporaryChannel: session.canCreateTemporaryChannel,
+            canModifyChannels: session.canModifyChannels,
+            canKickUsers: session.canKickUsers,
+            canBanUsers: session.canBanUsers,
+            canMoveUsers: session.canMoveUsers,
+            canUploadFiles: session.canUploadFiles,
+            canDownloadFiles: session.canDownloadFiles,
+            canUpdateServerProperties: session.canUpdateServerProperties,
+            canTransmitVoice: session.canTransmitVoice,
+            canTransmitMediaFileAudio: session.canTransmitMediaFileAudio,
+            canTransmitMediaFileVideo: session.canTransmitMediaFileVideo,
+            canTextMessageUser: session.canTextMessageUser,
+            canTextMessageChannel: session.canTextMessageChannel,
             isNicknameLocked: session.isNicknameLocked,
             isStatusLocked: session.isStatusLocked,
             audioStatusText: update.audioStatusText,
@@ -680,7 +693,10 @@ final class ConnectedServerViewController: NSViewController {
             hasSelectedChannel: selectedChannel != nil,
             isInChannel: session.currentChannelID > 0
         )
+        menuState.setConnectedPermissions(from: session)
+        menuState.setVoiceTransmissionEnabled(session.voiceTransmissionEnabled)
         let singleOtherUser = selectedUsers.count == 1 ? selectedUsers.first : nil
+        let canMoveSelectedUsers = allSelectedUsers.isEmpty == false && session.canMoveUsers
         let currentMuted: Bool = {
             guard let userID = singleOtherUser?.id else { return false }
             return localMuteState[userID] ?? singleOtherUser?.isMuted ?? false
@@ -693,6 +709,7 @@ final class ConnectedServerViewController: NSViewController {
             hasSelectedUsers: selectedUsers.isEmpty == false,
             hasSingleSelectedUser: allSelectedUsers.count == 1,
             hasSingleSelectedOtherUser: singleOtherUser != nil,
+            canMoveSelectedUsers: canMoveSelectedUsers,
             isSelectedUserMuted: currentMuted,
             isSelectedUserMediaFileMuted: currentMediaFileMuted,
             isSelectedUserChannelOperator: singleOtherUser?.isChannelOperator ?? false,
@@ -708,10 +725,10 @@ final class ConnectedServerViewController: NSViewController {
     }
 
     func updateChatInputState() {
-        let isInChannel = session.currentChannelID > 0
-        messageField.isEnabled = isInChannel
-        sendButton.isEnabled = isInChannel && messageField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-        if isInChannel == false {
+        let canSendChannelMessage = session.currentChannelID > 0 && session.canTextMessageChannel
+        messageField.isEnabled = canSendChannelMessage
+        sendButton.isEnabled = canSendChannelMessage && messageField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        if canSendChannelMessage == false {
             messageField.stringValue = ""
         }
     }
@@ -720,7 +737,7 @@ final class ConnectedServerViewController: NSViewController {
         microphoneButton.title = session.voiceTransmissionEnabled
             ? L10n.text("connectedServer.audio.microphone.disable")
             : L10n.text("connectedServer.audio.microphone.enable")
-        microphoneButton.isEnabled = session.currentChannelID > 0 || session.voiceTransmissionEnabled
+        microphoneButton.isEnabled = session.voiceTransmissionEnabled || (session.currentChannelID > 0 && session.canTransmitVoice)
         microphoneButton.setAccessibilityLabel(L10n.text("connectedServer.audio.microphone.accessibilityLabel"))
         microphoneButton.setAccessibilityValue(session.audioStatusText)
         // Announce the new transmission status only when it actually changes, so VoiceOver
@@ -858,6 +875,19 @@ final class ConnectedServerViewController: NSViewController {
             inputAudioReady: session.inputAudioReady,
             voiceTransmissionEnabled: session.voiceTransmissionEnabled,
             canSendBroadcast: session.canSendBroadcast,
+            canCreateTemporaryChannel: session.canCreateTemporaryChannel,
+            canModifyChannels: session.canModifyChannels,
+            canKickUsers: session.canKickUsers,
+            canBanUsers: session.canBanUsers,
+            canMoveUsers: session.canMoveUsers,
+            canUploadFiles: session.canUploadFiles,
+            canDownloadFiles: session.canDownloadFiles,
+            canUpdateServerProperties: session.canUpdateServerProperties,
+            canTransmitVoice: session.canTransmitVoice,
+            canTransmitMediaFileAudio: session.canTransmitMediaFileAudio,
+            canTransmitMediaFileVideo: session.canTransmitMediaFileVideo,
+            canTextMessageUser: session.canTextMessageUser,
+            canTextMessageChannel: session.canTextMessageChannel,
             isNicknameLocked: session.isNicknameLocked,
             isStatusLocked: session.isStatusLocked,
             audioStatusText: session.audioStatusText,
@@ -897,6 +927,19 @@ final class ConnectedServerViewController: NSViewController {
             inputAudioReady: session.inputAudioReady,
             voiceTransmissionEnabled: session.voiceTransmissionEnabled,
             canSendBroadcast: session.canSendBroadcast,
+            canCreateTemporaryChannel: session.canCreateTemporaryChannel,
+            canModifyChannels: session.canModifyChannels,
+            canKickUsers: session.canKickUsers,
+            canBanUsers: session.canBanUsers,
+            canMoveUsers: session.canMoveUsers,
+            canUploadFiles: session.canUploadFiles,
+            canDownloadFiles: session.canDownloadFiles,
+            canUpdateServerProperties: session.canUpdateServerProperties,
+            canTransmitVoice: session.canTransmitVoice,
+            canTransmitMediaFileAudio: session.canTransmitMediaFileAudio,
+            canTransmitMediaFileVideo: session.canTransmitMediaFileVideo,
+            canTextMessageUser: session.canTextMessageUser,
+            canTextMessageChannel: session.canTextMessageChannel,
             isNicknameLocked: session.isNicknameLocked,
             isStatusLocked: session.isStatusLocked,
             audioStatusText: session.audioStatusText,
@@ -1029,7 +1072,7 @@ final class ConnectedServerViewController: NSViewController {
 
         let privateMessageItem = NSMenuItem(
             title: L10n.text("connectedServer.menu.privateMessage"),
-            action: #selector(openPrivateConversation),
+            action: #selector(openPrivateConversation(_:)),
             keyEquivalent: ""
         )
         privateMessageItem.target = self
@@ -1134,10 +1177,6 @@ final class ConnectedServerViewController: NSViewController {
         let isUser = { if case .user? = self.selectedNode { return true }; return false }()
         let selectedUser: ConnectedServerUser? = { if case .user(let u) = self.selectedNode { return u }; return nil }()
         let isOther = isUser && selectedUser?.isCurrentUser == false
-        let canModerate: Bool = {
-            guard let me = session.currentUser else { return false }
-            return me.isAdministrator || me.isChannelOperator
-        }()
         switch menuItem.action {
         case #selector(toggleMuteUserAction):
             let muted = selectedUser.map { localMuteState[$0.id] ?? $0.isMuted } == true
@@ -1155,17 +1194,21 @@ final class ConnectedServerViewController: NSViewController {
             }
             return isOther
         case #selector(kickUserAction):
-            return isOther && canModerate
+            return isOther && session.canKickUsers
         case #selector(kickUserFromServerAction):
-            return isOther && session.isAdministrator
+            return isOther && session.canKickUsers
         case #selector(kickBanUserAction):
-            return isOther && session.isAdministrator
+            return isOther && session.canBanUsers
         case #selector(moveUserAction):
-            // Current user can move themselves; otherwise admin/op required
             let selectedUsers = selectedUserNodes()
             guard !selectedUsers.isEmpty else { return false }
-            let hasOthers = selectedUsers.contains { !$0.isCurrentUser }
-            return !hasOthers || canModerate
+            return session.canMoveUsers
+        case #selector(createChannelAction):
+            return session.canCreateAnyChannel && (selectedChannel != nil || session.currentChannelID > 0 || session.rootChannels.isEmpty == false)
+        case #selector(editChannelAction), #selector(deleteChannelAction):
+            return selectedChannel != nil && session.canModifyChannels
+        case #selector(openPrivateConversation(_:)):
+            return isOther && session.canTextMessageUser
         default:
             return true
         }
@@ -1341,6 +1384,9 @@ final class ConnectedServerViewController: NSViewController {
 
     @objc
     func sendCurrentMessage(_ sender: Any? = nil) {
+        guard session.currentChannelID > 0, session.canTextMessageChannel else {
+            return
+        }
         let message = messageField.stringValue
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else {
@@ -1389,6 +1435,9 @@ final class ConnectedServerViewController: NSViewController {
                     self.presentActionError(error.localizedDescription)
                 }
             }
+            return
+        }
+        guard session.currentChannelID > 0, session.canTransmitVoice else {
             return
         }
 
@@ -1500,8 +1549,8 @@ extension ConnectedServerViewController: NSUserInterfaceValidations {
         case #selector(leaveCurrentChannel(_:)):
             return session.currentChannelID > 0
         case #selector(openPrivateConversation(_:)):
-            if case .user = selectedNode {
-                return true
+            if case .user(let user) = selectedNode {
+                return !user.isCurrentUser && session.canTextMessageUser
             }
             return false
         default:

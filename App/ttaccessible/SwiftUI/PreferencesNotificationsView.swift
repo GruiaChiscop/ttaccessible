@@ -224,7 +224,7 @@ struct PreferencesNotificationsView: View {
                         set: { store.updateSoundNotificationsEnabled($0) }
                     )
                 )
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
 
                 Picker(
                     L10n.text("preferences.notifications.soundPack"),
@@ -253,7 +253,7 @@ struct PreferencesNotificationsView: View {
                                 set: { store.setSoundEventEnabled(sound, enabled: $0) }
                             )
                         )
-                        .toggleStyle(.switch)
+                        .toggleStyle(.checkbox)
                     }
                 }
 

@@ -382,7 +382,7 @@ final class PrivateMessagesViewController: NSViewController {
     }
 
     private func updateInputState() {
-        let enabled = selectedConversation != nil
+        let enabled = selectedConversation != nil && session.canTextMessageUser
         messageField.isEnabled = enabled
         sendButton.isEnabled = enabled && messageField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         if enabled == false {
@@ -494,7 +494,7 @@ final class PrivateMessagesViewController: NSViewController {
 
     @objc
     private func sendCurrentMessage() {
-        guard let conversation = selectedConversation else {
+        guard session.canTextMessageUser, let conversation = selectedConversation else {
             return
         }
 

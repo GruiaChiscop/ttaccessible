@@ -591,14 +591,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func openChannelFiles() {
         guard menuState.mode == .connectedServer,
               let session = connectionController.sessionSnapshot,
-              session.currentChannelID > 0 else { return }
+              session.currentChannelID > 0,
+              session.canDownloadFiles || session.canUploadFiles else { return }
         showChannelFilesWindow(session: session, activate: true)
     }
 
     func uploadFile() {
         guard menuState.mode == .connectedServer,
               let session = connectionController.sessionSnapshot,
-              session.currentChannelID > 0 else { return }
+              session.currentChannelID > 0,
+              session.canUploadFiles else { return }
         showChannelFilesWindow(session: session, activate: true)
         channelFilesViewController?.performUpload()
     }
@@ -828,39 +830,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             parentWindow: savedServersWindowController?.window
         )
 
-        guard let result = editor.runModal(),
-              let record = result.makeRecord(id: UUID()) else {
-            return
-        }
-
-        let existingRecord = store.load().first { $0.matchesEndpoint(of: record) }
-        if let existingRecord,
-           confirmImportReplacingExistingServer(
-                existingRecord: existingRecord,
-                importedRecord: record,
-                sourceName: L10n.text("teamTalkImport.link.sourceName")
-           ) == false {
-            return
-        }
-
-        let savedRecord = existingRecord.map { record.withID($0.id) } ?? record
-
-        do {
-            try passwordStore.setPassword(result.password, for: savedRecord.id)
-            try passwordStore.setChannelPassword(result.initialChannelPassword, for: savedRecord.id)
-            if existingRecord == nil {
-                store.add(savedRecord)
-            } else {
-                store.update(savedRecord)
+        editor.present { [weak self] result in
+            guard let self,
+                  let result,
+                  let record = result.makeRecord(id: UUID()) else {
+                return
             }
-            store.setSelectedServer(id: savedRecord.id)
-            store.flushPendingChanges()
-            savedServersViewController?.refreshSavedServers(selecting: savedRecord.id)
-        } catch {
-            presentErrorAlert(
-                title: L10n.text("savedServers.alert.error.title"),
-                message: error.localizedDescription
-            )
+
+            let existingRecord = self.store.load().first { $0.matchesEndpoint(of: record) }
+            if let existingRecord,
+               self.confirmImportReplacingExistingServer(
+                    existingRecord: existingRecord,
+                    importedRecord: record,
+                    sourceName: L10n.text("teamTalkImport.link.sourceName")
+               ) == false {
+                return
+            }
+
+            let savedRecord = existingRecord.map { record.withID($0.id) } ?? record
+
+            do {
+                try self.passwordStore.setPassword(result.password, for: savedRecord.id)
+                try self.passwordStore.setChannelPassword(result.initialChannelPassword, for: savedRecord.id)
+                if existingRecord == nil {
+                    self.store.add(savedRecord)
+                } else {
+                    self.store.update(savedRecord)
+                }
+                self.store.setSelectedServer(id: savedRecord.id)
+                self.store.flushPendingChanges()
+                self.savedServersViewController?.refreshSavedServers(selecting: savedRecord.id)
+            } catch {
+                self.presentErrorAlert(
+                    title: L10n.text("savedServers.alert.error.title"),
+                    message: error.localizedDescription
+                )
+            }
         }
     }
 
@@ -1183,7 +1188,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        guard menuState.mode == .connectedServer else {
+        guard menuState.mode == .connectedServer,
+              menuState.isInChannel,
+              menuState.canTextMessageChannel else {
             return
         }
         restoreMainWindow()
@@ -1236,7 +1243,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // announcement is suppressed to avoid saying "Microphone" twice. The keyboard
     // shortcut / menu path (focus elsewhere) keeps the announcement.
     func toggleMicrophone(fromControl: Bool = false) {
-        guard menuState.mode == .connectedServer else {
+        guard menuState.mode == .connectedServer,
+              let session = connectionController.sessionSnapshot,
+              session.voiceTransmissionEnabled || (session.currentChannelID > 0 && session.canTransmitVoice) else {
             return
         }
         restoreMainWindow()
@@ -1479,12 +1488,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func startStreamingMediaFromFile() {
-        guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
+        guard menuState.mode == .connectedServer,
+              menuState.isInChannel,
+              menuState.canTransmitMediaFile,
+              !menuState.isMediaStreamingActive else { return }
         promptMediaStreamFile()
     }
 
     func startStreamingMediaFromURL() {
-        guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
+        guard menuState.mode == .connectedServer,
+              menuState.isInChannel,
+              menuState.canTransmitMediaFile,
+              !menuState.isMediaStreamingActive else { return }
         promptMediaStreamURL()
     }
 
@@ -1723,13 +1738,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func createChannel() {
-        guard menuState.mode == .connectedServer else { return }
+        guard menuState.mode == .connectedServer, menuState.canCreateAnyChannel else { return }
         restoreMainWindow()
         connectedServerViewController?.promptCreateChannel()
     }
 
     func broadcastMessage() {
-        guard menuState.mode == .connectedServer else { return }
+        guard menuState.mode == .connectedServer, menuState.canSendBroadcast else { return }
         restoreMainWindow()
         connectedServerViewController?.promptBroadcastMessage()
     }
@@ -1757,17 +1772,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             draft: editableDraft,
             parentWindow: connectedServerViewController?.view.window
         )
-        guard let result = editor.runModal() else { return }
-        guard let resultRecord = result.makeRecord(id: UUID()) else { return }
+        editor.present { [weak self] result in
+            guard let self,
+                  let result,
+                  let resultRecord = result.makeRecord(id: UUID()) else { return }
 
-        let link = resultRecord.generateLink(
-            password: result.password,
-            channelPath: result.sanitizedInitialChannelPath.isEmpty ? nil : result.sanitizedInitialChannelPath,
-            channelPassword: result.initialChannelPassword.isEmpty ? nil : result.initialChannelPassword
-        )
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(link, forType: .string)
-        connectedServerViewController?.announce(L10n.text("connectedServer.serverLink.copied"))
+            let link = resultRecord.generateLink(
+                password: result.password,
+                channelPath: result.sanitizedInitialChannelPath.isEmpty ? nil : result.sanitizedInitialChannelPath,
+                channelPassword: result.initialChannelPassword.isEmpty ? nil : result.initialChannelPassword
+            )
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(link, forType: .string)
+            self.connectedServerViewController?.announce(L10n.text("connectedServer.serverLink.copied"))
+        }
     }
 
     func setSelectedUsersSubscription(_ option: UserSubscriptionOption, enabled: Bool) {
@@ -1778,13 +1796,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func updateChannel() {
-        guard menuState.mode == .connectedServer else { return }
+        guard menuState.mode == .connectedServer, menuState.canModifyChannels else { return }
         restoreMainWindow()
         connectedServerViewController?.promptUpdateChannel()
     }
 
     func deleteChannel() {
-        guard menuState.mode == .connectedServer else { return }
+        guard menuState.mode == .connectedServer, menuState.canModifyChannels else { return }
         restoreMainWindow()
         connectedServerViewController?.promptDeleteChannel()
     }
@@ -1802,6 +1820,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func openPrivateConversation(userID: Int32, displayName: String) {
+        guard menuState.canTextMessageUser else { return }
         connectionController.openPrivateConversation(withUserID: userID, displayName: displayName, activate: true)
     }
 
@@ -1814,17 +1833,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func focusPrivateMessagesMessageArea() {
+        guard menuState.canTextMessageUser else { return }
         privateMessagesViewController?.focusMessageInput()
     }
 
     func openServerProperties() {
-        guard menuState.mode == .connectedServer, menuState.isAdministrator else { return }
+        guard menuState.mode == .connectedServer, menuState.canUpdateServerProperties else { return }
         restoreMainWindow()
         connectedServerViewController?.promptServerProperties()
     }
 
     func saveServerConfig() {
-        guard menuState.mode == .connectedServer, menuState.isAdministrator else { return }
+        guard menuState.mode == .connectedServer, menuState.canUpdateServerProperties else { return }
         connectionController.saveServerConfig { result in
             switch result {
             case .success:
@@ -1883,7 +1903,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func openBannedUsers() {
-        guard menuState.mode == .connectedServer, menuState.isAdministrator else { return }
+        guard menuState.mode == .connectedServer, menuState.canBanUsers else { return }
         if bannedUsersWindowController == nil {
             let vc = BannedUsersViewController(connectionController: connectionController)
             bannedUsersViewController = vc
@@ -2331,6 +2351,8 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
         lastObservedSessionHistory = session.sessionHistory
         menuState.setAdministrator(session.isAdministrator)
         menuState.setCanSendBroadcast(session.canSendBroadcast)
+        menuState.setConnectedPermissions(from: session)
+        menuState.setVoiceTransmissionEnabled(session.voiceTransmissionEnabled)
         menuState.setNicknameLocked(session.isNicknameLocked)
         menuState.setStatusLocked(session.isStatusLocked)
         showConnectedServerWindow(session: session)

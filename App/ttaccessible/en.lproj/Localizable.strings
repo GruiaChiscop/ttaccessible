@@ -85,12 +85,14 @@
 "savedServer.form.initialChannelPassword" = "Channel password";
 "savedServer.form.webLogin" = "Use BearWare web login";
 "savedServer.form.webLogin.help" = "This server will sign in with your BearWare account. Set it up in Preferences > BearWare.";
+"savedServer.form.showPassword" = "Show password";
 "common.cancel" = "Cancel";
 "common.close" = "Close";
 "common.ok" = "OK";
 "common.save" = "Save";
 "common.yes" = "Yes";
 "common.no" = "No";
+"common.showPassword" = "Show password";
 "common.state.on" = "On";
 "common.state.off" = "Off";
 "keychain.error.invalidPasswordData" = "The saved password is invalid.";

@@ -650,16 +650,16 @@ extension TeamTalkConnectionController {
                     }
                 }
             case CLIENTEVENT_CMD_FILE_NEW:
-                if connectedRecord != nil {
+                if let connectedRecord {
                     if isSuppressingFileHistoryLocked == false {
-                        appendFileHistoryLocked(message.remotefile, isAdded: true, instance: instance, record: connectedRecord!)
+                        appendFileHistoryLocked(message.remotefile, isAdded: true, instance: instance, record: connectedRecord)
                     }
                     publishInvalidation.formUnion([.channelFiles, .history])
                 }
             case CLIENTEVENT_CMD_FILE_REMOVE:
-                if connectedRecord != nil {
+                if let connectedRecord {
                     if isSuppressingFileHistoryLocked == false {
-                        appendFileHistoryLocked(message.remotefile, isAdded: false, instance: instance, record: connectedRecord!)
+                        appendFileHistoryLocked(message.remotefile, isAdded: false, instance: instance, record: connectedRecord)
                     }
                     publishInvalidation.formUnion([.channelFiles, .history])
                 }
@@ -835,8 +835,10 @@ extension TeamTalkConnectionController {
                     case CLIENTEVENT_CMD_USER_JOINED:
                         if isSuppressingLoginHistoryLocked == false {
                             appendUserJoinedChannelHistoryLocked(message.user, currentUserID: currentUserID, instance: instance)
+                            let myChannel = TT_GetMyChannelID(instance)
                             if message.user.nUserID != currentUserID,
-                               message.user.nChannelID == TT_GetMyChannelID(instance) {
+                               myChannel > 0,
+                               message.user.nChannelID == myChannel {
                                 SoundPlayer.shared.play(.newUser)
                             }
                         }
@@ -894,7 +896,7 @@ extension TeamTalkConnectionController {
                         }
                         if message.user.nUserID != currentUserID {
                             let myChannel = TT_GetMyChannelID(instance)
-                            if message.user.nChannelID == myChannel || message.user.nChannelID == 0 {
+                            if myChannel > 0, message.user.nChannelID == myChannel {
                                 SoundPlayer.shared.play(.removeUser)
                             }
                         }

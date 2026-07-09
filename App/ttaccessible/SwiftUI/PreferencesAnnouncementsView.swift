@@ -55,6 +55,7 @@ struct PreferencesAnnouncementsView: View {
                         Text(L10n.text("preferences.notifications.useGlobalMode"))
                             .accessibilityHidden(true)
                     }
+                    .toggleStyle(.checkbox)
                     .accessibilityLabel(L10n.text("preferences.notifications.useGlobalMode"))
 
                     if notificationsStore.state.useGlobalAnnouncementMode {
@@ -190,7 +191,7 @@ struct PreferencesAnnouncementsView: View {
                         Text(L10n.text("preferences.accessibility.channelAnnouncements"))
                             .accessibilityHidden(true)
                     }
-                    .toggleStyle(.switch)
+                    .toggleStyle(.checkbox)
                     .accessibilityLabel(L10n.text("preferences.accessibility.channelAnnouncements"))
 
                     Toggle(isOn: Binding(
@@ -200,7 +201,7 @@ struct PreferencesAnnouncementsView: View {
                         Text(L10n.text("preferences.accessibility.privateAnnouncements"))
                             .accessibilityHidden(true)
                     }
-                    .toggleStyle(.switch)
+                    .toggleStyle(.checkbox)
                     .accessibilityLabel(L10n.text("preferences.accessibility.privateAnnouncements"))
 
                     Toggle(isOn: Binding(
@@ -210,7 +211,7 @@ struct PreferencesAnnouncementsView: View {
                         Text(L10n.text("preferences.accessibility.broadcastAnnouncements"))
                             .accessibilityHidden(true)
                     }
-                    .toggleStyle(.switch)
+                    .toggleStyle(.checkbox)
                     .accessibilityLabel(L10n.text("preferences.accessibility.broadcastAnnouncements"))
 
                     DisclosureGroup(L10n.text("preferences.accessibility.historyAnnouncements")) {
@@ -239,7 +240,7 @@ struct PreferencesAnnouncementsView: View {
                                     Text(L10n.text(kind.localizationKey))
                                         .accessibilityHidden(true)
                                 }
-                                .toggleStyle(.switch)
+                                .toggleStyle(.checkbox)
                                 .accessibilityLabel(L10n.text(kind.localizationKey))
                             }
                         }

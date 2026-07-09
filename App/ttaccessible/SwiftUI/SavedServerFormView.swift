@@ -26,6 +26,8 @@ enum SavedServerEditorMode {
 
 struct SavedServerFormView: View {
     @State private var draft: SavedServerDraft
+    @State private var showPassword = false
+    @State private var showInitialChannelPassword = false
 
     private let mode: SavedServerEditorMode
     private let onCancel: () -> Void
@@ -96,6 +98,7 @@ struct SavedServerFormView: View {
 
                 Toggle(L10n.text("savedServer.form.encrypted"), isOn: $draft.encrypted)
                     .focused($focusedField, equals: .encrypted)
+                    .toggleStyle(.checkbox)
                     .accessibilityLabel(L10n.text("savedServer.form.encrypted"))
 
                 fieldRow(title: L10n.text("savedServer.form.nickname")) {
@@ -106,6 +109,7 @@ struct SavedServerFormView: View {
                 }
 
                 Toggle(L10n.text("savedServer.form.webLogin"), isOn: $draft.useWebLogin)
+                    .toggleStyle(.checkbox)
                     .accessibilityLabel(L10n.text("savedServer.form.webLogin"))
 
                 if draft.useWebLogin {
@@ -121,10 +125,23 @@ struct SavedServerFormView: View {
                     }
 
                     fieldRow(title: L10n.text("savedServer.form.password")) {
-                        SecureField("", text: $draft.password)
-                            .focused($focusedField, equals: .password)
-                            .textFieldStyle(.roundedBorder)
-                            .accessibilityLabel(L10n.text("savedServer.form.password"))
+                        if showPassword {
+                            TextField("", text: $draft.password)
+                                .focused($focusedField, equals: .password)
+                                .textFieldStyle(.roundedBorder)
+                                .accessibilityLabel(L10n.text("savedServer.form.password"))
+                        } else {
+                            SecureField("", text: $draft.password)
+                                .focused($focusedField, equals: .password)
+                                .textFieldStyle(.roundedBorder)
+                                .accessibilityLabel(L10n.text("savedServer.form.password"))
+                        }
+                    }
+
+                    indentedControlRow {
+                        Toggle(L10n.text("common.showPassword"), isOn: $showPassword)
+                            .toggleStyle(.checkbox)
+                            .accessibilityLabel(L10n.text("common.showPassword"))
                     }
                 }
 
@@ -136,10 +153,23 @@ struct SavedServerFormView: View {
                 }
 
                 fieldRow(title: L10n.text("savedServer.form.initialChannelPassword")) {
-                    SecureField("", text: $draft.initialChannelPassword)
-                        .focused($focusedField, equals: .initialChannelPassword)
-                        .textFieldStyle(.roundedBorder)
-                        .accessibilityLabel(L10n.text("savedServer.form.initialChannelPassword"))
+                    if showInitialChannelPassword {
+                        TextField("", text: $draft.initialChannelPassword)
+                            .focused($focusedField, equals: .initialChannelPassword)
+                            .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel(L10n.text("savedServer.form.initialChannelPassword"))
+                    } else {
+                        SecureField("", text: $draft.initialChannelPassword)
+                            .focused($focusedField, equals: .initialChannelPassword)
+                            .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel(L10n.text("savedServer.form.initialChannelPassword"))
+                    }
+                }
+
+                indentedControlRow {
+                    Toggle(L10n.text("common.showPassword"), isOn: $showInitialChannelPassword)
+                        .toggleStyle(.checkbox)
+                        .accessibilityLabel(L10n.text("common.showPassword"))
                 }
             }
 
@@ -172,6 +202,17 @@ struct SavedServerFormView: View {
 
             content()
                 .frame(maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func indentedControlRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Spacer()
+                .frame(width: 120)
+
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

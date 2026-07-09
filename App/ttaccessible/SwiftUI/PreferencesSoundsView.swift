@@ -27,7 +27,7 @@ struct PreferencesSoundsView: View {
                     Text(L10n.text("preferences.general.soundNotifications"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.general.soundNotifications"))
 
                 HStack(spacing: 12) {
@@ -110,7 +110,7 @@ struct PreferencesSoundsView: View {
                             Text(L10n.text(sound.localizationKey))
                                 .accessibilityHidden(true)
                         }
-                        .toggleStyle(.switch)
+                        .toggleStyle(.checkbox)
                         .accessibilityLabel(L10n.text(sound.localizationKey))
                     }
                 }

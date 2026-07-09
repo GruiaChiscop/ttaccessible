@@ -18,7 +18,7 @@ struct PreferencesConnectionView: View {
                     Text(L10n.text("preferences.general.autoJoinRootChannel"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.general.autoJoinRootChannel"))
 
                 Toggle(isOn: Binding(
@@ -28,7 +28,7 @@ struct PreferencesConnectionView: View {
                     Text(L10n.text("preferences.general.autoReconnect"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.general.autoReconnect"))
 
                 Toggle(isOn: Binding(
@@ -38,7 +38,7 @@ struct PreferencesConnectionView: View {
                     Text(L10n.text("preferences.general.rejoinLastChannelOnReconnect"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.general.rejoinLastChannelOnReconnect"))
 
                 Toggle(isOn: Binding(
@@ -48,7 +48,7 @@ struct PreferencesConnectionView: View {
                     Text(L10n.text("preferences.general.connectToLastServerOnLaunch"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.general.connectToLastServerOnLaunch"))
 
                 Toggle(isOn: Binding(
@@ -58,7 +58,7 @@ struct PreferencesConnectionView: View {
                     Text(L10n.text("preferences.connection.skipKickConfirmation"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.connection.skipKickConfirmation"))
 
                 Toggle(isOn: Binding(
@@ -68,7 +68,7 @@ struct PreferencesConnectionView: View {
                     Text(L10n.text("preferences.connection.adaptiveJitterBuffer"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.connection.adaptiveJitterBuffer"))
 
                 Picker(
@@ -100,7 +100,7 @@ struct PreferencesConnectionView: View {
                             Text(L10n.text(option.preferencesKey))
                                 .accessibilityHidden(true)
                         }
-                        .toggleStyle(.switch)
+                        .toggleStyle(.checkbox)
                         .accessibilityLabel(L10n.text(option.preferencesKey))
                     }
                 }
@@ -118,7 +118,7 @@ struct PreferencesConnectionView: View {
                             Text(L10n.text(option.preferencesKey))
                                 .accessibilityHidden(true)
                         }
-                        .toggleStyle(.switch)
+                        .toggleStyle(.checkbox)
                         .accessibilityLabel(L10n.text(option.preferencesKey))
                     }
                 }

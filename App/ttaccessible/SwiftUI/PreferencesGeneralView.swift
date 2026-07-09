@@ -112,7 +112,7 @@ struct PreferencesGeneralView: View {
                     Text(L10n.text("preferences.general.relativeTimestamps"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.general.relativeTimestamps"))
 
                 Toggle(isOn: Binding(
@@ -122,7 +122,7 @@ struct PreferencesGeneralView: View {
                     Text(L10n.text("preferences.general.autoDetectImport"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.general.autoDetectImport"))
 
                 Divider()
@@ -162,7 +162,7 @@ struct PreferencesGeneralView: View {
                     Text(L10n.text("preferences.updates.autoCheck"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.updates.autoCheck"))
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -173,7 +173,7 @@ struct PreferencesGeneralView: View {
                         Text(L10n.text("preferences.updates.includeBeta"))
                             .accessibilityHidden(true)
                     }
-                    .toggleStyle(.switch)
+                    .toggleStyle(.checkbox)
                     .accessibilityLabel(L10n.text("preferences.updates.includeBeta"))
 
                     Text(L10n.text("preferences.updates.includeBeta.help"))

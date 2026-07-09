@@ -186,6 +186,19 @@ struct ConnectedServerSession: Equatable {
     let inputAudioReady: Bool
     let voiceTransmissionEnabled: Bool
     let canSendBroadcast: Bool
+    let canCreateTemporaryChannel: Bool
+    let canModifyChannels: Bool
+    let canKickUsers: Bool
+    let canBanUsers: Bool
+    let canMoveUsers: Bool
+    let canUploadFiles: Bool
+    let canDownloadFiles: Bool
+    let canUpdateServerProperties: Bool
+    let canTransmitVoice: Bool
+    let canTransmitMediaFileAudio: Bool
+    let canTransmitMediaFileVideo: Bool
+    let canTextMessageUser: Bool
+    let canTextMessageChannel: Bool
     let isNicknameLocked: Bool
     let isStatusLocked: Bool
     let audioStatusText: String
@@ -195,6 +208,14 @@ struct ConnectedServerSession: Equatable {
     let mediaStreamingActive: Bool
     let mediaStreamingFileName: String?
     let mediaStreamingHasVideo: Bool
+
+    var canTransmitMediaFile: Bool {
+        canTransmitMediaFileAudio || canTransmitMediaFileVideo
+    }
+
+    var canCreateAnyChannel: Bool {
+        canCreateTemporaryChannel || canModifyChannels
+    }
 }
 
 struct ConnectedUserAudioState: Equatable {
