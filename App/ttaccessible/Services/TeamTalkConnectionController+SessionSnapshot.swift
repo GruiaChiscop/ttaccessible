@@ -300,8 +300,11 @@ extension TeamTalkConnectionController {
         let hasMyAccount = TT_GetMyUserAccount(instance, &myAccount) != 0
         let myIsAdmin = hasMyAccount
             && (myAccount.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0
-        let canSendBroadcast = hasMyAccount
-            && (myAccount.uUserRights & UInt32(USERRIGHT_TEXTMESSAGE_BROADCAST.rawValue)) != 0
+        let userRights = hasMyAccount ? myAccount.uUserRights : 0
+        func hasRight<T: RawRepresentable>(_ right: T) -> Bool where T.RawValue: BinaryInteger {
+            (userRights & UInt32(right.rawValue)) != 0
+        }
+        let canSendBroadcast = hasRight(USERRIGHT_TEXTMESSAGE_BROADCAST)
         let isNicknameLocked = hasMyAccount
             && (myAccount.uUserRights & UInt32(USERRIGHT_LOCKED_NICKNAME.rawValue)) != 0
         let isStatusLocked = hasMyAccount
@@ -338,6 +341,19 @@ extension TeamTalkConnectionController {
             inputAudioReady: inputAudioReady,
             voiceTransmissionEnabled: voiceTransmissionEnabled,
             canSendBroadcast: canSendBroadcast,
+            canCreateTemporaryChannel: hasRight(USERRIGHT_CREATE_TEMPORARY_CHANNEL),
+            canModifyChannels: hasRight(USERRIGHT_MODIFY_CHANNELS),
+            canKickUsers: hasRight(USERRIGHT_KICK_USERS),
+            canBanUsers: hasRight(USERRIGHT_BAN_USERS),
+            canMoveUsers: hasRight(USERRIGHT_MOVE_USERS),
+            canUploadFiles: hasRight(USERRIGHT_UPLOAD_FILES),
+            canDownloadFiles: hasRight(USERRIGHT_DOWNLOAD_FILES),
+            canUpdateServerProperties: hasRight(USERRIGHT_UPDATE_SERVERPROPERTIES),
+            canTransmitVoice: hasRight(USERRIGHT_TRANSMIT_VOICE),
+            canTransmitMediaFileAudio: hasRight(USERRIGHT_TRANSMIT_MEDIAFILE_AUDIO),
+            canTransmitMediaFileVideo: hasRight(USERRIGHT_TRANSMIT_MEDIAFILE_VIDEO),
+            canTextMessageUser: hasRight(USERRIGHT_TEXTMESSAGE_USER),
+            canTextMessageChannel: hasRight(USERRIGHT_TEXTMESSAGE_CHANNEL),
             isNicknameLocked: isNicknameLocked,
             isStatusLocked: isStatusLocked,
             audioStatusText: makeAudioStatusText(),

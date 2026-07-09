@@ -157,7 +157,9 @@ final class BannedUsersViewController: NSViewController {
         alert.addButton(withTitle: L10n.text("common.cancel"))
         alert.alertStyle = .warning
 
-        alert.beginSheetModal(for: view.window!) { [weak self] response in
+        guard let window = view.window else { return }
+
+        alert.beginSheetModal(for: window) { [weak self] response in
             guard response == .alertFirstButtonReturn, let self else { return }
             let group = DispatchGroup()
             for ban in selectedBans {

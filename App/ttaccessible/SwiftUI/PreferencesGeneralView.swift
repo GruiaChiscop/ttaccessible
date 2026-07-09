@@ -112,7 +112,7 @@ struct PreferencesGeneralView: View {
                     Text(L10n.text("preferences.general.relativeTimestamps"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.general.relativeTimestamps"))
 
                 Toggle(isOn: Binding(
@@ -122,8 +122,32 @@ struct PreferencesGeneralView: View {
                     Text(L10n.text("preferences.general.autoDetectImport"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.general.autoDetectImport"))
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.text("preferences.general.language.label"))
+                        .accessibilityHidden(true)
+                    Picker(
+                        L10n.text("preferences.general.language.label"),
+                        selection: Binding(
+                            get: { rootStore.preferences.languagePreference },
+                            set: { rootStore.updateLanguagePreference($0) }
+                        )
+                    ) {
+                        ForEach(AppLanguagePreference.allCases, id: \.self) { languagePreference in
+                            Text(L10n.text(languagePreference.localizationKey)).tag(languagePreference)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityLabel(L10n.text("preferences.general.language.label"))
+
+                    Text(L10n.text("preferences.general.language.help"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Divider()
 
@@ -138,7 +162,7 @@ struct PreferencesGeneralView: View {
                     Text(L10n.text("preferences.updates.autoCheck"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.updates.autoCheck"))
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -149,7 +173,7 @@ struct PreferencesGeneralView: View {
                         Text(L10n.text("preferences.updates.includeBeta"))
                             .accessibilityHidden(true)
                     }
-                    .toggleStyle(.switch)
+                    .toggleStyle(.checkbox)
                     .accessibilityLabel(L10n.text("preferences.updates.includeBeta"))
 
                     Text(L10n.text("preferences.updates.includeBeta.help"))

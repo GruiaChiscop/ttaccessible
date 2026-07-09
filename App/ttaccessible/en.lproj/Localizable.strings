@@ -85,12 +85,14 @@
 "savedServer.form.initialChannelPassword" = "Channel password";
 "savedServer.form.webLogin" = "Use BearWare web login";
 "savedServer.form.webLogin.help" = "This server will sign in with your BearWare account. Set it up in Preferences > BearWare.";
+"savedServer.form.showPassword" = "Show password";
 "common.cancel" = "Cancel";
 "common.close" = "Close";
 "common.ok" = "OK";
 "common.save" = "Save";
 "common.yes" = "Yes";
 "common.no" = "No";
+"common.showPassword" = "Show password";
 "common.state.on" = "On";
 "common.state.off" = "Off";
 "keychain.error.invalidPasswordData" = "The saved password is invalid.";
@@ -366,6 +368,11 @@
 "preferences.connection.autoAwayStatusMessage" = "Away message";
 "preferences.general.relativeTimestamps" = "Use relative timestamps (e.g. \"2 min ago\")";
 "preferences.general.autoDetectImport" = "Automatically detect the TeamTalk file format during import";
+"preferences.general.language.label" = "Language";
+"preferences.general.language.system" = "System Default";
+"preferences.general.language.english" = "English";
+"preferences.general.language.french" = "French";
+"preferences.general.language.help" = "The app keeps using the system language unless you choose another one. Restart ttaccessible to apply the change everywhere.";
 "preferences.general.autoJoinRootChannel" = "Automatically join the main channel on connect";
 "preferences.general.autoReconnect" = "Automatically reconnect on connection loss";
 "preferences.general.rejoinLastChannelOnReconnect" = "Automatically rejoin the last channel after reconnecting";

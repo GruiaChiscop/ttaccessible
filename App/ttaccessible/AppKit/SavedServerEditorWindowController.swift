@@ -11,13 +11,34 @@ import SwiftUI
 final class SavedServerEditorWindowController: NSWindowController {
     private final class Coordinator: NSObject, NSWindowDelegate {
         var result: SavedServerDraft?
+        var onClose: ((SavedServerDraft?) -> Void)?
+
+        func windowShouldClose(_ sender: NSWindow) -> Bool {
+            if let parent = sender.sheetParent {
+                parent.endSheet(sender)
+                return false
+            }
+            return true
+        }
+
+        func sheetDidEnd() {
+            finish()
+        }
 
         func windowWillClose(_ notification: Notification) {
-            NSApp.stopModal()
+            finish()
+        }
+
+        private func finish() {
+            let completion = onClose
+            onClose = nil
+            completion?(result)
         }
     }
 
     private let coordinator = Coordinator()
+    private weak var parentWindow: NSWindow?
+    private var presentationRetainer: SavedServerEditorWindowController?
 
     init(mode: SavedServerEditorMode, draft: SavedServerDraft, parentWindow: NSWindow?) {
         let window = NSWindow(
@@ -29,6 +50,8 @@ final class SavedServerEditorWindowController: NSWindowController {
         window.title = mode.title
         window.isReleasedWhenClosed = false
         window.center()
+
+        self.parentWindow = parentWindow
 
         if let parentFrame = parentWindow?.frame {
             let origin = NSPoint(
@@ -60,20 +83,41 @@ final class SavedServerEditorWindowController: NSWindowController {
         nil
     }
 
-    func runModal() -> SavedServerDraft? {
+    func present(completion: @escaping (SavedServerDraft?) -> Void) {
         guard let window else {
-            return nil
+            completion(nil)
+            return
         }
 
-        showWindow(nil)
-        window.layoutIfNeeded()
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.runModal(for: window)
-        return coordinator.result
+        coordinator.result = nil
+        presentationRetainer = self
+        coordinator.onClose = { [weak self] result in
+            self?.presentationRetainer = nil
+            completion(result)
+        }
+
+        if let parentWindow {
+            parentWindow.beginSheet(window) { [weak self] _ in
+                self?.coordinator.sheetDidEnd()
+            }
+        } else {
+            showWindow(nil)
+            window.layoutIfNeeded()
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     private func closeWithResult(_ result: SavedServerDraft?) {
         coordinator.result = result
-        close()
+        guard let window else {
+            coordinator.sheetDidEnd()
+            return
+        }
+
+        if let parent = window.sheetParent {
+            parent.endSheet(window)
+        } else {
+            close()
+        }
     }
 }

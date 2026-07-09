@@ -410,20 +410,23 @@ final class SavedServersViewController: NSViewController {
         )
         let controller = SavedServerEditorWindowController(mode: .edit, draft: draft, parentWindow: view.window)
 
-        guard let result = controller.runModal(),
-              let updatedRecord = result.makeRecord(id: record.id) else {
-            return
-        }
+        controller.present { [weak self] result in
+            guard let self,
+                  let result,
+                  let updatedRecord = result.makeRecord(id: record.id) else {
+                return
+            }
 
-        do {
-            try passwordStore.setPassword(result.password, for: record.id)
-            try passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
-            store.update(updatedRecord)
-            store.setSelectedServer(id: record.id)
-            reloadRecords(selecting: record.id)
-            connectSelectedServer()
-        } catch {
-            presentErrorAlert(message: error.localizedDescription)
+            do {
+                try self.passwordStore.setPassword(result.password, for: record.id)
+                try self.passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
+                self.store.update(updatedRecord)
+                self.store.setSelectedServer(id: record.id)
+                self.reloadRecords(selecting: record.id)
+                self.connectSelectedServer()
+            } catch {
+                self.presentErrorAlert(message: error.localizedDescription)
+            }
         }
     }
 
@@ -567,19 +570,22 @@ final class SavedServersViewController: NSViewController {
         let draft = SavedServerDraft(nickname: preferencesStore.preferences.defaultNickname)
         let controller = SavedServerEditorWindowController(mode: .add, draft: draft, parentWindow: view.window)
 
-        guard let result = controller.runModal(),
-              let record = result.makeRecord(id: UUID()) else {
-            return
-        }
+        controller.present { [weak self] result in
+            guard let self,
+                  let result,
+                  let record = result.makeRecord(id: UUID()) else {
+                return
+            }
 
-        do {
-            try passwordStore.setPassword(result.password, for: record.id)
-            try passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
-            store.add(record)
-            store.setSelectedServer(id: record.id)
-            reloadRecords(selecting: record.id)
-        } catch {
-            presentErrorAlert(message: error.localizedDescription)
+            do {
+                try self.passwordStore.setPassword(result.password, for: record.id)
+                try self.passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
+                self.store.add(record)
+                self.store.setSelectedServer(id: record.id)
+                self.reloadRecords(selecting: record.id)
+            } catch {
+                self.presentErrorAlert(message: error.localizedDescription)
+            }
         }
     }
 
@@ -600,19 +606,22 @@ final class SavedServersViewController: NSViewController {
         let draft = SavedServerDraft(record: record, password: password, initialChannelPassword: initialChannelPassword)
         let controller = SavedServerEditorWindowController(mode: .edit, draft: draft, parentWindow: view.window)
 
-        guard let result = controller.runModal(),
-              let updatedRecord = result.makeRecord(id: record.id) else {
-            return
-        }
+        controller.present { [weak self] result in
+            guard let self,
+                  let result,
+                  let updatedRecord = result.makeRecord(id: record.id) else {
+                return
+            }
 
-        do {
-            try passwordStore.setPassword(result.password, for: record.id)
-            try passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
-            store.update(updatedRecord)
-            store.setSelectedServer(id: record.id)
-            reloadRecords(selecting: record.id)
-        } catch {
-            presentErrorAlert(message: error.localizedDescription)
+            do {
+                try self.passwordStore.setPassword(result.password, for: record.id)
+                try self.passwordStore.setChannelPassword(result.initialChannelPassword, for: record.id)
+                self.store.update(updatedRecord)
+                self.store.setSelectedServer(id: record.id)
+                self.reloadRecords(selecting: record.id)
+            } catch {
+                self.presentErrorAlert(message: error.localizedDescription)
+            }
         }
     }
 

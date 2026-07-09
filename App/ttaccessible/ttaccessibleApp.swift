@@ -123,13 +123,13 @@ struct ttaccessibleApp: App {
                         appDelegate.openChannelFiles()
                     }
                     .keyboardShortcut("f", modifiers: [.command, .shift])
-                    .disabled(menuState.isInChannel == false)
+                    .disabled(menuState.isInChannel == false || (menuState.canDownloadFiles == false && menuState.canUploadFiles == false))
 
                     Button(L10n.text("files.menu.upload")) {
                         appDelegate.uploadFile()
                     }
                     .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF5FunctionKey)!)), modifiers: [.shift])
-                    .disabled(menuState.isInChannel == false)
+                    .disabled(menuState.isInChannel == false || menuState.canUploadFiles == false)
 
                     Divider()
 
@@ -137,19 +137,19 @@ struct ttaccessibleApp: App {
                         appDelegate.createChannel()
                     }
                     .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF7FunctionKey)!)), modifiers: [])
-                    .disabled(menuState.hasSelectedChannel == false && menuState.isInChannel == false)
+                    .disabled(menuState.canCreateAnyChannel == false || (menuState.hasSelectedChannel == false && menuState.isInChannel == false))
 
                     Button(L10n.text("connectedServer.menu.editChannel")) {
                         appDelegate.updateChannel()
                     }
                     .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF7FunctionKey)!)), modifiers: [.shift])
-                    .disabled(menuState.hasSelectedChannel == false)
+                    .disabled(menuState.hasSelectedChannel == false || menuState.canModifyChannels == false)
 
                     Button(L10n.text("connectedServer.menu.deleteChannel")) {
                         appDelegate.deleteChannel()
                     }
                     .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF8FunctionKey)!)), modifiers: [])
-                    .disabled(menuState.hasSelectedChannel == false)
+                    .disabled(menuState.hasSelectedChannel == false || menuState.canModifyChannels == false)
 
                     Divider()
 
@@ -169,18 +169,18 @@ struct ttaccessibleApp: App {
                         appDelegate.openBannedUsers()
                     }
                     .keyboardShortcut("b", modifiers: [.command, .shift])
-                    .disabled(menuState.mode != .connectedServer || menuState.isAdministrator == false)
+                    .disabled(menuState.mode != .connectedServer || menuState.canBanUsers == false)
 
                     Button(L10n.text("serverProperties.menu.open")) {
                         appDelegate.openServerProperties()
                     }
                     .keyboardShortcut("p", modifiers: [.command, .shift])
-                    .disabled(menuState.mode != .connectedServer || menuState.isAdministrator == false)
+                    .disabled(menuState.mode != .connectedServer || menuState.canUpdateServerProperties == false)
 
                     Button(L10n.text("serverConfig.menu.save")) {
                         appDelegate.saveServerConfig()
                     }
-                    .disabled(menuState.mode != .connectedServer || menuState.isAdministrator == false)
+                    .disabled(menuState.mode != .connectedServer || menuState.canUpdateServerProperties == false)
 
                     Button(L10n.text("stats.menu.open")) {
                         appDelegate.openStats()
@@ -260,24 +260,24 @@ struct ttaccessibleApp: App {
                         appDelegate.kickSelectedUser()
                     }
                     .keyboardShortcut("k", modifiers: [.command])
-                    .disabled(menuState.hasSingleSelectedOtherUser == false)
+                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.canKickUsers == false)
 
                     Button(L10n.text("user.menu.kickServer")) {
                         appDelegate.kickSelectedUserFromServer()
                     }
                     .keyboardShortcut("k", modifiers: [.command, .shift])
-                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.isAdministrator == false)
+                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.canKickUsers == false)
 
                     Button(L10n.text("user.menu.kickBan")) {
                         appDelegate.kickBanSelectedUser()
                     }
-                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.isAdministrator == false)
+                    .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.canBanUsers == false)
 
                     Button(L10n.text("user.menu.move")) {
                         appDelegate.moveSelectedUser()
                     }
                     .keyboardShortcut("x", modifiers: [.command, .option])
-                    .disabled(menuState.hasSingleSelectedOtherUser == false)
+                    .disabled(menuState.canMoveSelectedUsers == false)
 
                     Divider()
 
@@ -328,7 +328,7 @@ struct ttaccessibleApp: App {
                     appDelegate.focusMessageArea()
                 }
                 .keyboardShortcut("3", modifiers: [.command])
-                .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
+                .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false || menuState.canTextMessageChannel == false)
 
                 Button(L10n.text("shortcuts.focus.history")) {
                     appDelegate.focusHistoryArea()
@@ -354,13 +354,17 @@ struct ttaccessibleApp: App {
                     appDelegate.openMessages()
                 }
                 .keyboardShortcut("e", modifiers: [.command])
-                .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
+                .disabled(menuState.mode != .connectedServer)
 
                 Button(L10n.text("shortcuts.microphone")) {
                     appDelegate.toggleMicrophone()
                 }
                 .keyboardShortcut("a", modifiers: [.command, .shift])
-                .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
+                .disabled(
+                    menuState.mode != .connectedServer
+                        || (menuState.voiceTransmissionEnabled == false
+                            && (menuState.isInChannel == false || menuState.canTransmitVoice == false))
+                )
 
                 Button(menuState.isMasterMuted
                        ? L10n.text("shortcuts.masterUnmute")
@@ -384,13 +388,13 @@ struct ttaccessibleApp: App {
                     appDelegate.startStreamingMediaFromFile()
                 }
                 .keyboardShortcut("s", modifiers: [.command, .option])
-                .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
+                .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false || menuState.canTransmitMediaFile == false)
 
                 Button(L10n.text("shortcuts.mediaStream.startURL")) {
                     appDelegate.startStreamingMediaFromURL()
                 }
                 .keyboardShortcut("u", modifiers: [.command, .option])
-                .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
+                .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false || menuState.canTransmitMediaFile == false)
 
                 Button(L10n.text("shortcuts.mediaStream.stop")) {
                     appDelegate.stopMediaStreaming()

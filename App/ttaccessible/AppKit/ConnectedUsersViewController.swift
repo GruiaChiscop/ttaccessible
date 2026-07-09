@@ -178,6 +178,7 @@ final class ConnectedUsersViewController: NSViewController {
                 hasSelectedUsers: false,
                 hasSingleSelectedUser: false,
                 hasSingleSelectedOtherUser: false,
+                canMoveSelectedUsers: false,
                 isSelectedUserMuted: false,
                 isSelectedUserMediaFileMuted: false,
                 isSelectedUserChannelOperator: false,
@@ -192,6 +193,7 @@ final class ConnectedUsersViewController: NSViewController {
             hasSelectedUsers: isOther,
             hasSingleSelectedUser: true,
             hasSingleSelectedOtherUser: isOther,
+            canMoveSelectedUsers: serverViewController?.session.canMoveUsers == true,
             isSelectedUserMuted: isOther ? muted : false,
             isSelectedUserMediaFileMuted: isOther ? mediaMuted : false,
             isSelectedUserChannelOperator: isOther ? user.isChannelOperator : false,
@@ -230,22 +232,22 @@ final class ConnectedUsersViewController: NSViewController {
     }
 
     func keyKickSelectedUser() {
-        guard let user = selectedUser() else { return }
+        guard let user = selectedUser(), serverViewController?.session.canKickUsers == true else { return }
         serverViewController?.performKick(user, fromServer: false, presentingWindow: presentingWindow)
     }
 
     func keyKickFromServerSelectedUser() {
-        guard let user = selectedUser() else { return }
+        guard let user = selectedUser(), serverViewController?.session.canKickUsers == true else { return }
         serverViewController?.performKick(user, fromServer: true, presentingWindow: presentingWindow)
     }
 
     func keyKickBanSelectedUser() {
-        guard let user = selectedUser() else { return }
+        guard let user = selectedUser(), serverViewController?.session.canBanUsers == true else { return }
         serverViewController?.performKickBan(user, presentingWindow: presentingWindow)
     }
 
     func keyMoveSelectedUser() {
-        guard let user = selectedUser() else { return }
+        guard let user = selectedUser(), serverViewController?.session.canMoveUsers == true else { return }
         serverViewController?.performMove([user], presentingWindow: presentingWindow)
     }
 
@@ -363,11 +365,17 @@ final class ConnectedUsersViewController: NSViewController {
 
     private var presentingWindow: NSWindow? { view.window }
 
-    /// Mirrors the gating in `ConnectedServerViewController.validateMenuItem` /
-    /// `+OutlineDelegate`: moderation actions require the right privileges.
-    private var currentUserRights: (canModerate: Bool, isAdmin: Bool) {
-        guard let me = serverViewController?.session.currentUser else { return (false, false) }
-        return (me.isAdministrator || me.isChannelOperator, me.isAdministrator)
+    /// Mirrors the permission gating in `ConnectedServerViewController`.
+    private var currentUserRights: (canTextMessageUser: Bool, canKickUsers: Bool, canBanUsers: Bool, canMoveUsers: Bool) {
+        guard let session = serverViewController?.session else {
+            return (false, false, false, false)
+        }
+        return (
+            session.canTextMessageUser,
+            session.canKickUsers,
+            session.canBanUsers,
+            session.canMoveUsers
+        )
     }
 
     // MARK: - Actions
@@ -378,7 +386,7 @@ final class ConnectedUsersViewController: NSViewController {
     }
 
     private func openPrivateMessage(_ user: ConnectedServerUser) {
-        guard !user.isCurrentUser else { return }
+        guard !user.isCurrentUser, serverViewController?.session.canTextMessageUser == true else { return }
         appDelegate?.openPrivateConversation(userID: user.id, displayName: user.displayName)
     }
 
@@ -410,10 +418,12 @@ final class ConnectedUsersViewController: NSViewController {
         guard !user.isCurrentUser else { return actions }
         let rights = currentUserRights
 
-        actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedUsers.action.message")) { [weak self] in
-            self?.perform(user) { $0.openPrivateMessage($1) }
-            return true
-        })
+        if rights.canTextMessageUser {
+            actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedUsers.action.message")) { [weak self] in
+                self?.perform(user) { $0.openPrivateMessage($1) }
+                return true
+            })
+        }
 
         // Operator toggle is offered for any other user (matching validateMenuItem's
         // `isOther`-only gate): performToggleOperator falls back to a channel-op
@@ -426,21 +436,23 @@ final class ConnectedUsersViewController: NSViewController {
             return true
         })
 
-        if rights.canModerate {
+        if rights.canMoveUsers {
             actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedUsers.action.move")) { [weak self] in
                 self?.perform(user) { ctrl, u in ctrl.presentingWindow.map { ctrl.serverViewController?.performMove([u], presentingWindow: $0) } }
                 return true
             })
+        }
+        if rights.canKickUsers {
             actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedUsers.action.kickChannel")) { [weak self] in
                 self?.perform(user) { ctrl, u in ctrl.presentingWindow.map { ctrl.serverViewController?.performKick(u, fromServer: false, presentingWindow: $0) } }
                 return true
             })
-        }
-        if rights.isAdmin {
             actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedUsers.action.kickServer")) { [weak self] in
                 self?.perform(user) { ctrl, u in ctrl.presentingWindow.map { ctrl.serverViewController?.performKick(u, fromServer: true, presentingWindow: $0) } }
                 return true
             })
+        }
+        if rights.canBanUsers {
             actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedUsers.action.kickBan")) { [weak self] in
                 self?.perform(user) { ctrl, u in ctrl.presentingWindow.map { ctrl.serverViewController?.performKickBan(u, presentingWindow: $0) } }
                 return true
@@ -475,9 +487,11 @@ final class ConnectedUsersViewController: NSViewController {
 
         menu.addItem(.separator())
 
-        let messageItem = NSMenuItem(title: L10n.text("connectedUsers.action.message"), action: #selector(menuMessage), keyEquivalent: "")
-        messageItem.target = self
-        menu.addItem(messageItem)
+        if rights.canTextMessageUser {
+            let messageItem = NSMenuItem(title: L10n.text("connectedUsers.action.message"), action: #selector(menuMessage), keyEquivalent: "")
+            messageItem.target = self
+            menu.addItem(messageItem)
+        }
 
         // Operator toggle is offered for any other user (matching validateMenuItem);
         // performToggleOperator falls back to a channel-op password prompt.
@@ -488,23 +502,26 @@ final class ConnectedUsersViewController: NSViewController {
         opItem.target = self
         menu.addItem(opItem)
 
-        if rights.canModerate || rights.isAdmin {
+        if rights.canMoveUsers || rights.canKickUsers || rights.canBanUsers {
             menu.addItem(.separator())
         }
-        if rights.canModerate {
+        if rights.canMoveUsers {
             let moveItem = NSMenuItem(title: L10n.text("connectedUsers.action.move"), action: #selector(menuMove), keyEquivalent: "")
             moveItem.target = self
             menu.addItem(moveItem)
+        }
 
+        if rights.canKickUsers {
             let kickChannelItem = NSMenuItem(title: L10n.text("connectedUsers.action.kickChannel"), action: #selector(menuKickChannel), keyEquivalent: "")
             kickChannelItem.target = self
             menu.addItem(kickChannelItem)
-        }
-        if rights.isAdmin {
+
             let kickServerItem = NSMenuItem(title: L10n.text("connectedUsers.action.kickServer"), action: #selector(menuKickServer), keyEquivalent: "")
             kickServerItem.target = self
             menu.addItem(kickServerItem)
+        }
 
+        if rights.canBanUsers {
             let kickBanItem = NSMenuItem(title: L10n.text("connectedUsers.action.kickBan"), action: #selector(menuKickBan), keyEquivalent: "")
             kickBanItem.target = self
             menu.addItem(kickBanItem)
@@ -521,19 +538,19 @@ final class ConnectedUsersViewController: NSViewController {
         serverViewController?.performToggleOperator(user, presentingWindow: window)
     }
     @objc private func menuMove() {
-        guard let user = selectedUser(), let window = presentingWindow else { return }
+        guard let user = selectedUser(), serverViewController?.session.canMoveUsers == true, let window = presentingWindow else { return }
         serverViewController?.performMove([user], presentingWindow: window)
     }
     @objc private func menuKickChannel() {
-        guard let user = selectedUser(), let window = presentingWindow else { return }
+        guard let user = selectedUser(), serverViewController?.session.canKickUsers == true, let window = presentingWindow else { return }
         serverViewController?.performKick(user, fromServer: false, presentingWindow: window)
     }
     @objc private func menuKickServer() {
-        guard let user = selectedUser(), let window = presentingWindow else { return }
+        guard let user = selectedUser(), serverViewController?.session.canKickUsers == true, let window = presentingWindow else { return }
         serverViewController?.performKick(user, fromServer: true, presentingWindow: window)
     }
     @objc private func menuKickBan() {
-        guard let user = selectedUser(), let window = presentingWindow else { return }
+        guard let user = selectedUser(), serverViewController?.session.canBanUsers == true, let window = presentingWindow else { return }
         serverViewController?.performKickBan(user, presentingWindow: window)
     }
 

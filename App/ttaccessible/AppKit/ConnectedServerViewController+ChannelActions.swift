@@ -19,7 +19,7 @@ extension ConnectedServerViewController {
     }
 
     func promptCreateChannel() {
-        guard let window = view.window else { return }
+        guard session.canCreateAnyChannel, let window = view.window else { return }
 
         // Parent = selected channel, or current channel, or root
         let parentID: Int32
@@ -63,7 +63,8 @@ extension ConnectedServerViewController {
     }
 
     func promptUpdateChannel() {
-        guard let window = view.window,
+        guard session.canModifyChannels,
+              let window = view.window,
               let channel = selectedChannel else { return }
 
         guard let info = connectionController.channelInfo(forChannelID: channel.id) else { return }
@@ -95,7 +96,8 @@ extension ConnectedServerViewController {
     }
 
     func promptDeleteChannel() {
-        guard let window = view.window,
+        guard session.canModifyChannels,
+              let window = view.window,
               let channel = selectedChannel else { return }
 
         let alert = NSAlert()
@@ -146,10 +148,10 @@ extension ConnectedServerViewController {
         topicField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.topic"))
 
         let passwordLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.password"))
-        let passwordField = NSSecureTextField(frame: .zero)
+        let passwordField = PasswordVisibilityField(width: 320)
         passwordField.stringValue = properties.password
         passwordField.placeholderString = L10n.text("connectedServer.channel.form.password")
-        passwordField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.password"))
+        passwordField.setFieldAccessibilityLabel(L10n.text("connectedServer.channel.form.password"))
 
         let maxUsersLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.maxUsers"))
         let maxUsersField = NSTextField(frame: .zero)
@@ -159,6 +161,7 @@ extension ConnectedServerViewController {
 
         let permanentCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.permanent"), target: nil, action: nil)
         permanentCheck.state = properties.isPermanent ? .on : .off
+        permanentCheck.isEnabled = session.canModifyChannels
         permanentCheck.setAccessibilityLabel(L10n.text("connectedServer.channel.form.permanent"))
 
         let soloCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.soloTransmit"), target: nil, action: nil)
@@ -228,7 +231,7 @@ extension ConnectedServerViewController {
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 6
-        for item in [nameLabel, nameField, topicLabel, topicField, passwordLabel, passwordField, maxUsersLabel, maxUsersField] {
+        for item in [nameLabel, nameField, topicLabel, topicField, passwordLabel, passwordField, maxUsersLabel, maxUsersField] as [NSView] {
             item.translatesAutoresizingMaskIntoConstraints = false
             stack.addArrangedSubview(item)
             if item !== nameLabel, item !== topicLabel, item !== passwordLabel, item !== maxUsersLabel {
@@ -295,8 +298,7 @@ extension ConnectedServerViewController {
         alert.window.initialFirstResponder = nameField
 
         alert.beginSheetModal(for: window) { [weak self] response in
-            _ = self
-            guard response == .alertFirstButtonReturn else { return }
+            guard let self, response == .alertFirstButtonReturn else { return }
             let maxUsers = Int32(maxUsersField.stringValue) ?? 200
             let bitrateKbps = Int32(bitrateField.stringValue) ?? 64
             let codec = OpusCodecSettings(
@@ -310,7 +312,7 @@ extension ConnectedServerViewController {
                 topic: topicField.stringValue,
                 password: passwordField.stringValue,
                 maxUsers: max(1, maxUsers),
-                isPermanent: permanentCheck.state == .on,
+                isPermanent: self.session.canModifyChannels && permanentCheck.state == .on,
                 isSoloTransmit: soloCheck.state == .on,
                 isNoVoiceActivation: noVoxCheck.state == .on,
                 isNoRecording: noRecCheck.state == .on,
@@ -406,11 +408,12 @@ extension ConnectedServerViewController {
         alert.addButton(withTitle: L10n.text("connectedServer.channelPassword.join"))
         alert.addButton(withTitle: L10n.text("common.cancel"))
 
-        let passwordField = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        let passwordField = PasswordVisibilityField(width: 260)
         passwordField.placeholderString = L10n.text("connectedServer.channelPassword.placeholder")
         passwordField.stringValue = initialPassword
-        passwordField.setAccessibilityLabel(L10n.text("connectedServer.channelPassword.accessibilityLabel"))
+        passwordField.setFieldAccessibilityLabel(L10n.text("connectedServer.channelPassword.accessibilityLabel"))
         alert.accessoryView = passwordField
+        alert.window.initialFirstResponder = passwordField.initialFirstResponder
 
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
@@ -442,6 +445,7 @@ extension ConnectedServerViewController {
                 join(channel)
             }
         case .user(let user):
+            guard !user.isCurrentUser, session.canTextMessageUser else { return }
             appDelegate.openPrivateConversation(userID: user.id, displayName: user.displayName)
         }
     }
@@ -449,6 +453,9 @@ extension ConnectedServerViewController {
     @objc
     func openPrivateConversation(_ sender: Any? = nil) {
         guard case .user(let user)? = selectedNode else {
+            return
+        }
+        guard !user.isCurrentUser, session.canTextMessageUser else {
             return
         }
 

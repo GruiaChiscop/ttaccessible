@@ -20,7 +20,7 @@ struct PreferencesAccessibilityView: View {
                         set: { store.updateVoiceOverChannelMessagesEnabled($0) }
                     )
                 )
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
 
                 Toggle(
                     L10n.text("preferences.accessibility.privateAnnouncements"),
@@ -29,7 +29,7 @@ struct PreferencesAccessibilityView: View {
                         set: { store.updateVoiceOverPrivateMessagesEnabled($0) }
                     )
                 )
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
 
                 Toggle(
                     L10n.text("preferences.accessibility.broadcastAnnouncements"),
@@ -38,7 +38,7 @@ struct PreferencesAccessibilityView: View {
                         set: { store.updateVoiceOverBroadcastMessagesEnabled($0) }
                     )
                 )
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
 
                 DisclosureGroup(L10n.text("preferences.accessibility.historyAnnouncements")) {
                     HStack(spacing: 12) {
@@ -66,7 +66,7 @@ struct PreferencesAccessibilityView: View {
                                     set: { store.updateSessionHistoryKindEnabled(kind, $0) }
                                 )
                             )
-                            .toggleStyle(.switch)
+                            .toggleStyle(.checkbox)
                         }
                     }
                 }

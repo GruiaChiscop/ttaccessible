@@ -81,6 +81,7 @@ private struct FeedbackView: View {
 
             if contactType == .bug {
                 Toggle(L10n.text("feedback.attachLog.toggle"), isOn: $attachAudioLog)
+                    .toggleStyle(.checkbox)
                 Text(L10n.text("feedback.diagnostics.note"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)

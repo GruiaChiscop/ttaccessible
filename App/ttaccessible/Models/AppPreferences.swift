@@ -125,6 +125,7 @@ struct AppPreferences: Codable, Equatable {
         case pushToTalkBeepEnabled
         case videoPanelExpanded
         case userVolumeMemoryMode
+        case languagePreference
     }
 
     var defaultNickname: String
@@ -187,6 +188,7 @@ struct AppPreferences: Codable, Equatable {
     var pushToTalkBeepEnabled: Bool
     var videoPanelExpanded: Bool
     var userVolumeMemoryMode: UserVolumeMemoryMode
+    var languagePreference: AppLanguagePreference
     init(
         defaultNickname: String = AppPreferences.defaultNicknameFromAccount(),
         defaultStatusMessage: String = "",
@@ -244,7 +246,8 @@ struct AppPreferences: Codable, Equatable {
         microphoneMode: MicrophoneMode = .alwaysOn,
         pushToTalkBeepEnabled: Bool = true,
         videoPanelExpanded: Bool = true,
-        userVolumeMemoryMode: UserVolumeMemoryMode = .persistent
+        userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
+        languagePreference: AppLanguagePreference = .system
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -303,6 +306,7 @@ struct AppPreferences: Codable, Equatable {
         self.pushToTalkBeepEnabled = pushToTalkBeepEnabled
         self.videoPanelExpanded = videoPanelExpanded
         self.userVolumeMemoryMode = userVolumeMemoryMode
+        self.languagePreference = languagePreference
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -416,6 +420,7 @@ struct AppPreferences: Codable, Equatable {
         pushToTalkBeepEnabled = try container.decodeIfPresent(Bool.self, forKey: .pushToTalkBeepEnabled) ?? true
         videoPanelExpanded = try container.decodeIfPresent(Bool.self, forKey: .videoPanelExpanded) ?? true
         userVolumeMemoryMode = try container.decodeIfPresent(UserVolumeMemoryMode.self, forKey: .userVolumeMemoryMode) ?? .persistent
+        languagePreference = try container.decodeIfPresent(AppLanguagePreference.self, forKey: .languagePreference) ?? .system
     }
 
     func encode(to encoder: Encoder) throws {
@@ -477,6 +482,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(pushToTalkBeepEnabled, forKey: .pushToTalkBeepEnabled)
         try container.encode(videoPanelExpanded, forKey: .videoPanelExpanded)
         try container.encode(userVolumeMemoryMode, forKey: .userVolumeMemoryMode)
+        try container.encode(languagePreference, forKey: .languagePreference)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

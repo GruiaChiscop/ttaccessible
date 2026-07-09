@@ -67,7 +67,9 @@ final class SavedServersWindowController: NSWindowController {
             menuState.$isMasterMuted.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isRecordingActive.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isHearMyselfEnabled.map { _ in () }.eraseToAnyPublisher(),
-            menuState.$isInChannel.map { _ in () }.eraseToAnyPublisher()
+            menuState.$isInChannel.map { _ in () }.eraseToAnyPublisher(),
+            menuState.$canTransmitVoice.map { _ in () }.eraseToAnyPublisher(),
+            menuState.$voiceTransmissionEnabled.map { _ in () }.eraseToAnyPublisher()
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in
@@ -103,7 +105,8 @@ final class SavedServersWindowController: NSWindowController {
             case .ttDisconnect:
                 item.isEnabled = menuState.mode == .connectedServer
             case .ttMicrophone:
-                item.isEnabled = menuState.mode == .connectedServer && menuState.isInChannel
+                item.isEnabled = menuState.mode == .connectedServer
+                    && (menuState.voiceTransmissionEnabled || (menuState.isInChannel && menuState.canTransmitVoice))
             case .ttMasterMute:
                 let muted = menuState.isMasterMuted
                 item.label = L10n.text(muted ? "toolbar.unmute" : "toolbar.mute")

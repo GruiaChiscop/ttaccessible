@@ -252,7 +252,7 @@ struct PreferencesAudioView: View {
                     Text(L10n.text("preferences.audio.pushToTalk.beep.label"))
                         .accessibilityHidden(true)
                 }
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
                 .accessibilityLabel(L10n.text("preferences.audio.pushToTalk.beep.label"))
             }
         }

@@ -13,6 +13,7 @@ struct PreferencesBearWareView: View {
     @State private var credential: BearWareCredential?
     @State private var username: String = ""
     @State private var password: String = ""
+    @State private var showPassword = false
     @State private var isBusy = false
     @State private var errorMessage: String?
 
@@ -46,9 +47,19 @@ struct PreferencesBearWareView: View {
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L10n.text("preferences.bearware.password"))
-                        SecureField("", text: $password)
-                            .textFieldStyle(.roundedBorder)
-                            .accessibilityLabel(L10n.text("preferences.bearware.password"))
+                        if showPassword {
+                            TextField("", text: $password)
+                                .textFieldStyle(.roundedBorder)
+                                .accessibilityLabel(L10n.text("preferences.bearware.password"))
+                        } else {
+                            SecureField("", text: $password)
+                                .textFieldStyle(.roundedBorder)
+                                .accessibilityLabel(L10n.text("preferences.bearware.password"))
+                        }
+
+                        Toggle(L10n.text("common.showPassword"), isOn: $showPassword)
+                            .toggleStyle(.checkbox)
+                            .accessibilityLabel(L10n.text("common.showPassword"))
                     }
 
                     HStack(spacing: 8) {

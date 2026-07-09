@@ -253,25 +253,26 @@ extension ConnectedServerViewController {
             alert.informativeText = L10n.text("connectedServer.op.passwordPrompt.message")
             alert.addButton(withTitle: L10n.text("connectedServer.volume.ok"))
             alert.addButton(withTitle: L10n.text("connectedServer.volume.cancel"))
-            let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
-            field.placeholderString = L10n.text("connectedServer.op.passwordPrompt.placeholder")
-            alert.accessoryView = field
-            alert.window.initialFirstResponder = field
+            let passwordField = PasswordVisibilityField(width: 280)
+            passwordField.placeholderString = L10n.text("connectedServer.op.passwordPrompt.placeholder")
+            passwordField.setFieldAccessibilityLabel(L10n.text("connectedServer.op.passwordPrompt.placeholder"))
+            alert.accessoryView = passwordField
+            alert.window.initialFirstResponder = passwordField.initialFirstResponder
             alert.beginSheetModal(for: host) { [weak self] response in
                 guard response == .alertFirstButtonReturn, let self else { return }
-                let password = field.stringValue
+                let password = passwordField.stringValue
                 self.connectionController.channelOpEx(userID: user.id, channelID: user.channelID, password: password, makeOperator: makeOp, completion: handleResult)
             }
         }
     }
 
     @objc func kickUserAction(_ sender: Any? = nil) {
-        guard case .user(let user)? = selectedNode, !user.isCurrentUser else { return }
+        guard case .user(let user)? = selectedNode, !user.isCurrentUser, session.canKickUsers else { return }
         performKick(user, fromServer: false, presentingWindow: view.window)
     }
 
     @objc func kickUserFromServerAction(_ sender: Any? = nil) {
-        guard case .user(let user)? = selectedNode, !user.isCurrentUser else { return }
+        guard case .user(let user)? = selectedNode, !user.isCurrentUser, session.canKickUsers else { return }
         performKick(user, fromServer: true, presentingWindow: view.window)
     }
 
@@ -279,7 +280,7 @@ extension ConnectedServerViewController {
     /// or the whole server (`fromServer: true`). Honors `skipKickConfirmation`.
     /// A nil window is allowed for the skip-confirmation branch.
     func performKick(_ user: ConnectedServerUser, fromServer: Bool, presentingWindow window: NSWindow?) {
-        guard !user.isCurrentUser else { return }
+        guard !user.isCurrentUser, session.canKickUsers else { return }
         let channelID: Int32 = fromServer ? 0 : user.channelID
 
         let doKick: () -> Void = { [weak self] in
@@ -313,13 +314,13 @@ extension ConnectedServerViewController {
     }
 
     @objc func kickBanUserAction(_ sender: Any? = nil) {
-        guard case .user(let user)? = selectedNode, !user.isCurrentUser else { return }
+        guard case .user(let user)? = selectedNode, !user.isCurrentUser, session.canBanUsers else { return }
         performKickBan(user, presentingWindow: view.window)
     }
 
     /// Parameterized core for kick & ban (always confirms, regardless of `skipKickConfirmation`).
     func performKickBan(_ user: ConnectedServerUser, presentingWindow window: NSWindow?) {
-        guard !user.isCurrentUser, let host = sheetHostWindow(window) else { return }
+        guard !user.isCurrentUser, session.canBanUsers, let host = sheetHostWindow(window) else { return }
 
         let alert = NSAlert()
         alert.messageText = L10n.format("bans.kickban.title", user.displayName)
@@ -353,7 +354,7 @@ extension ConnectedServerViewController {
 
     /// Parameterized core for moving one or more users to another channel.
     func performMove(_ users: [ConnectedServerUser], presentingWindow window: NSWindow?) {
-        guard !users.isEmpty, let host = sheetHostWindow(window) else { return }
+        guard !users.isEmpty, session.canMoveUsers, let host = sheetHostWindow(window) else { return }
 
         // Available channels: all except the common channel if all users are in the same one
         let commonChannelID = users.count == 1 ? users[0].channelID : nil
@@ -476,6 +477,86 @@ private final class PercentValueView: NSView {
         str.draw(at: NSPoint(x: bounds.width - size.width,            // right-aligned
                              y: (bounds.height - size.height) / 2),   // vertically centered
                  withAttributes: attributes)
+    }
+}
+
+final class PasswordVisibilityField: NSStackView {
+    private let secureField = NSSecureTextField(frame: .zero)
+    private let plainField = NSTextField(frame: .zero)
+    private let toggle = NSButton(checkboxWithTitle: L10n.text("common.showPassword"), target: nil, action: nil)
+    private var isShowingPassword = false
+
+    var initialFirstResponder: NSView {
+        secureField
+    }
+
+    var stringValue: String {
+        get { activeField.stringValue }
+        set {
+            secureField.stringValue = newValue
+            plainField.stringValue = newValue
+        }
+    }
+
+    var placeholderString: String? {
+        get { secureField.placeholderString }
+        set {
+            secureField.placeholderString = newValue
+            plainField.placeholderString = newValue
+        }
+    }
+
+    private var activeField: NSTextField {
+        isShowingPassword ? plainField : secureField
+    }
+
+    init(width: CGFloat) {
+        super.init(frame: .zero)
+        orientation = .vertical
+        alignment = .leading
+        spacing = 6
+
+        for field in [secureField, plainField] {
+            field.translatesAutoresizingMaskIntoConstraints = false
+            field.widthAnchor.constraint(equalToConstant: width).isActive = true
+        }
+
+        plainField.isHidden = true
+        toggle.target = self
+        toggle.action = #selector(togglePasswordVisibility)
+        toggle.setAccessibilityLabel(L10n.text("common.showPassword"))
+
+        addArrangedSubview(secureField)
+        addArrangedSubview(plainField)
+        addArrangedSubview(toggle)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    func setFieldAccessibilityLabel(_ accessibilityLabel: String?) {
+        secureField.setAccessibilityLabel(accessibilityLabel)
+        plainField.setAccessibilityLabel(accessibilityLabel)
+    }
+
+    @objc private func togglePasswordVisibility() {
+        let currentValue = activeField.stringValue
+        isShowingPassword = toggle.state == .on
+        secureField.stringValue = currentValue
+        plainField.stringValue = currentValue
+
+        let oldField = isShowingPassword ? secureField : plainField
+        let newField = activeField
+        let shouldKeepFocus = window?.firstResponder === oldField.currentEditor() || window?.firstResponder === oldField
+
+        secureField.isHidden = isShowingPassword
+        plainField.isHidden = isShowingPassword == false
+
+        if shouldKeepFocus {
+            window?.makeFirstResponder(newField)
+        }
     }
 }
 

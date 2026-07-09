@@ -148,6 +148,19 @@ final class ChannelFilesViewController: NSViewController {
             inputAudioReady: session.inputAudioReady,
             voiceTransmissionEnabled: session.voiceTransmissionEnabled,
             canSendBroadcast: session.canSendBroadcast,
+            canCreateTemporaryChannel: session.canCreateTemporaryChannel,
+            canModifyChannels: session.canModifyChannels,
+            canKickUsers: session.canKickUsers,
+            canBanUsers: session.canBanUsers,
+            canMoveUsers: session.canMoveUsers,
+            canUploadFiles: session.canUploadFiles,
+            canDownloadFiles: session.canDownloadFiles,
+            canUpdateServerProperties: session.canUpdateServerProperties,
+            canTransmitVoice: session.canTransmitVoice,
+            canTransmitMediaFileAudio: session.canTransmitMediaFileAudio,
+            canTransmitMediaFileVideo: session.canTransmitMediaFileVideo,
+            canTextMessageUser: session.canTextMessageUser,
+            canTextMessageChannel: session.canTextMessageChannel,
             isNicknameLocked: session.isNicknameLocked,
             isStatusLocked: session.isStatusLocked,
             audioStatusText: session.audioStatusText,
@@ -460,13 +473,14 @@ final class ChannelFilesViewController: NSViewController {
 
     private func updateButtonStates() {
         let file = selectedFile
-        uploadButton.isEnabled   = session.currentChannelID > 0
-        downloadButton.isEnabled = file != nil
-        if let file, let me = session.currentUser {
-            deleteButton.isEnabled = me.isAdministrator || me.isChannelOperator || file.uploader == me.username
-        } else {
-            deleteButton.isEnabled = false
-        }
+        uploadButton.isEnabled = session.currentChannelID > 0 && session.canUploadFiles
+        downloadButton.isEnabled = file != nil && session.canDownloadFiles
+        deleteButton.isEnabled = file.map(canDeleteFile) ?? false
+    }
+
+    private func canDeleteFile(_ file: ChannelFile) -> Bool {
+        guard let me = session.currentUser else { return false }
+        return me.isAdministrator || me.isChannelOperator || file.uploader == me.username
     }
 
     private var selectedFile: ChannelFile? {
@@ -479,7 +493,7 @@ final class ChannelFilesViewController: NSViewController {
     // MARK: - Actions
 
     @objc private func promptUpload() {
-        guard let window = view.window else { return }
+        guard session.currentChannelID > 0, session.canUploadFiles, let window = view.window else { return }
 
         let panel = NSOpenPanel()
         panel.title = L10n.text("files.upload.panelTitle")
@@ -500,7 +514,7 @@ final class ChannelFilesViewController: NSViewController {
     }
 
     @objc private func downloadSelectedFile() {
-        guard let file = selectedFile, let window = view.window else { return }
+        guard session.canDownloadFiles, let file = selectedFile, let window = view.window else { return }
 
         let panel = NSSavePanel()
         panel.title = L10n.text("files.download.panelTitle")
@@ -519,7 +533,7 @@ final class ChannelFilesViewController: NSViewController {
     }
 
     @objc private func deleteSelectedFile() {
-        guard let file = selectedFile else { return }
+        guard let file = selectedFile, canDeleteFile(file) else { return }
 
         let alert = NSAlert()
         alert.alertStyle = .critical

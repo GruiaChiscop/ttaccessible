@@ -18,7 +18,7 @@ struct PreferencesImportView: View {
                         set: { store.updatePrefersAutomaticTeamTalkConfigDetection($0) }
                     )
                 )
-                .toggleStyle(.switch)
+                .toggleStyle(.checkbox)
             }
         }
     }

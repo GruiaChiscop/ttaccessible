@@ -162,11 +162,12 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
                 : .systemFont(ofSize: NSFont.systemFontSize)
             textField.stringValue = visualUserText(for: user)
             textField.maximumNumberOfLines = 1
-            var actions: [NSAccessibilityCustomAction] = [
-                NSAccessibilityCustomAction(name: L10n.text("connectedServer.voAction.privateMessage")) { [weak self] in
+            var actions: [NSAccessibilityCustomAction] = []
+            if !user.isCurrentUser, session.canTextMessageUser {
+                actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.voAction.privateMessage")) { [weak self] in
                     self?.openPrivateConversation(nil); return true
-                }
-            ]
+                })
+            }
             if !user.isCurrentUser {
                 let isMuted = localMuteState[user.id] ?? user.isMuted
                 let muteTitle = isMuted
@@ -182,11 +183,12 @@ extension ConnectedServerViewController: NSOutlineViewDelegate {
                 actions.append(NSAccessibilityCustomAction(name: mediaFileMuteTitle) { [weak self] in
                     self?.toggleMuteUserMediaFileAction(); return true
                 })
-                let me = session.currentUser
-                if me?.isAdministrator == true || me?.isChannelOperator == true {
+                if session.canKickUsers {
                     actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.menu.kickUser")) { [weak self] in
                         self?.kickUserAction(nil); return true
                     })
+                }
+                if session.canMoveUsers {
                     actions.append(NSAccessibilityCustomAction(name: L10n.text("connectedServer.menu.moveUser")) { [weak self] in
                         self?.moveUserAction(nil); return true
                     })
