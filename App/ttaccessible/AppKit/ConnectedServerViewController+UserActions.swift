@@ -352,6 +352,99 @@ extension ConnectedServerViewController {
         performMove(selectedUserNodes(), presentingWindow: view.window)
     }
 
+    @objc func markUsersForMoveAction(_ sender: Any? = nil) {
+        performMarkForMove(selectedUserNodes())
+    }
+
+    func performMarkForMove(_ candidateUsers: [ConnectedServerUser], fallbackUser: ConnectedServerUser? = nil) {
+        let users = moveMarkTargets(selectedUsers: candidateUsers, fallbackUser: fallbackUser)
+        guard !users.isEmpty, session.canMoveUsers else { return }
+
+        let previousMarkedUserIDs = Set(markedUserIDsForMove)
+        let targetUserIDs = uniqueUserIDs(from: users)
+        let targetUserIDSet = Set(targetUserIDs)
+        let shouldUnmark = areMarkedForMove(targetUserIDs)
+
+        if shouldUnmark {
+            markedUserIDsForMove = markedUserIDsForMove.filter { targetUserIDSet.contains($0) == false }
+        } else {
+            markedUserIDsForMove = targetUserIDs
+        }
+        reloadVisibleUserRows(for: previousMarkedUserIDs.union(markedUserIDsForMove).union(targetUserIDSet))
+
+        let announcement: String
+        if shouldUnmark {
+            announcement = users.count == 1
+                ? L10n.format("connectedServer.move.unmarked", users[0].displayName)
+                : L10n.format("connectedServer.move.unmarked.multiple", users.count)
+        } else {
+            announcement = users.count == 1
+                ? L10n.format("connectedServer.move.marked", users[0].displayName)
+                : L10n.format("connectedServer.move.marked.multiple", users.count)
+        }
+        announceMoveAction(announcement)
+    }
+
+    func moveMarkTargets(selectedUsers: [ConnectedServerUser], fallbackUser: ConnectedServerUser? = nil) -> [ConnectedServerUser] {
+        selectedUsers.isEmpty ? fallbackUser.map { [$0] } ?? [] : selectedUsers
+    }
+
+    func isMarkedForMove(_ user: ConnectedServerUser) -> Bool {
+        markedUserIDsForMove.contains(user.id)
+    }
+
+    func areMarkedForMove(_ userIDs: [Int32]) -> Bool {
+        userIDs.isEmpty == false && Set(userIDs).isSubset(of: Set(markedUserIDsForMove))
+    }
+
+    func markActionName(for users: [ConnectedServerUser]) -> String {
+        areMarkedForMove(uniqueUserIDs(from: users))
+            ? L10n.text("connectedServer.menu.unmarkForMove")
+            : L10n.text("connectedServer.menu.markForMove")
+    }
+
+    private func uniqueUserIDs(from users: [ConnectedServerUser]) -> [Int32] {
+        var seen = Set<Int32>()
+        return users.compactMap { user in
+            guard seen.insert(user.id).inserted else { return nil }
+            return user.id
+        }
+    }
+
+    @objc func moveMarkedUsersToSelectedChannelAction(_ sender: Any? = nil) {
+        guard session.canMoveUsers, let target = selectedChannel else { return }
+        moveMarkedUsers(to: target)
+    }
+
+    func moveMarkedUsers(to target: ConnectedServerChannel) {
+        guard session.canMoveUsers else { return }
+        let usersByID = Dictionary(uniqueKeysWithValues: allUsers(in: session.rootChannels).map { ($0.id, $0) })
+        let userIDs = markedUserIDsForMove.filter { userID in
+            guard let user = usersByID[userID] else { return false }
+            return user.channelID != target.id
+        }
+
+        guard !userIDs.isEmpty else {
+            announceMoveAction(L10n.text("connectedServer.move.noMarkedUsers"))
+            let previousMarkedUserIDs = Set(markedUserIDsForMove)
+            markedUserIDsForMove.removeAll()
+            reloadVisibleUserRows(for: previousMarkedUserIDs)
+            return
+        }
+
+        for userID in userIDs {
+            connectionController.moveUser(userID: userID, toChannelID: target.id) { [weak self] result in
+                if case .failure(let error) = result {
+                    self?.presentError(error)
+                }
+            }
+        }
+        let previousMarkedUserIDs = Set(markedUserIDsForMove)
+        markedUserIDsForMove.removeAll()
+        reloadVisibleUserRows(for: previousMarkedUserIDs)
+        announceMoveAction(L10n.format("connectedServer.move.movedToChannel", target.name))
+    }
+
     /// Parameterized core for moving one or more users to another channel.
     func performMove(_ users: [ConnectedServerUser], presentingWindow window: NSWindow?) {
         guard !users.isEmpty, session.canMoveUsers, let host = sheetHostWindow(window) else { return }
@@ -407,6 +500,22 @@ extension ConnectedServerViewController {
             guard case .user(let user) = outlineView.item(atRow: row) as? ServerTreeNode else { return nil }
             return user
         }
+    }
+
+    private func allUsers(in channels: [ConnectedServerChannel]) -> [ConnectedServerUser] {
+        channels.flatMap { $0.users + allUsers(in: $0.children) }
+    }
+
+    private func announceMoveAction(_ message: String) {
+        let element: Any = view.window ?? view
+        NSAccessibility.post(
+            element: element,
+            notification: .announcementRequested,
+            userInfo: [
+                NSAccessibility.NotificationUserInfoKey.announcement: message,
+                NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
     }
 
     func flatChannels(from channels: [ConnectedServerChannel]) -> [ConnectedServerChannel] {

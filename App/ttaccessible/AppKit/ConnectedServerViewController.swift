@@ -12,6 +12,16 @@ import UniformTypeIdentifiers
 
 // Row view qui ne remonte pas les custom actions de ses enfants vers VoiceOver.
 final class ServerTreeRowView: NSTableRowView {
+    var voiceOverLabel: String?
+
+    override func accessibilityLabel() -> String? {
+        voiceOverLabel ?? super.accessibilityLabel()
+    }
+
+    override func accessibilityValue() -> Any? {
+        voiceOverLabel ?? super.accessibilityValue()
+    }
+
     override func accessibilityCustomActions() -> [NSAccessibilityCustomAction]? { nil }
 }
 
@@ -21,6 +31,15 @@ final class ServerTreeRowView: NSTableRowView {
 // rejoindre un serveur / un salon.
 final class PressActionTextField: NSTextField {
     var onPress: (() -> Void)?
+    var voiceOverLabel: String?
+
+    override func accessibilityLabel() -> String? {
+        voiceOverLabel ?? super.accessibilityLabel()
+    }
+
+    override func accessibilityValue() -> String? {
+        voiceOverLabel ?? super.accessibilityValue()
+    }
 
     override func accessibilityPerformPress() -> Bool {
         guard let onPress else { return super.accessibilityPerformPress() }
@@ -59,7 +78,6 @@ final class ConnectedServerViewController: NSViewController {
     let messageField = NSTextField(frame: .zero)
     let sendButton = NSButton(title: "", target: nil, action: nil)
     let microphoneButton = NSButton(title: "", target: nil, action: nil)
-    private var lastAnnouncedMicrophoneStatus: String?
     let collapsibleVideoPanel = CollapsibleVideoPanelView()
     lazy var channelMixerCoordinator = ChannelMixerCoordinator(controller: connectionController)
     lazy var channelMixerSectionView: NSView = buildChannelMixerSection()
@@ -93,6 +111,7 @@ final class ConnectedServerViewController: NSViewController {
     var localMuteState: [Int32: Bool] = [:]
     var localMediaFileMuteState: [Int32: Bool] = [:]
     var selectedKey: SelectionKey?
+    var markedUserIDsForMove: [Int32] = []
     var needsInitialFocus = true
     var lastAnnouncedChannelID: Int32 = 0
     var lastAnnouncedChannelMessageID: UUID?
@@ -188,10 +207,12 @@ final class ConnectedServerViewController: NSViewController {
     func focusChannelMixer() {
         // Unlike the other focus areas, a plain makeFirstResponder does not move the
         // VoiceOver cursor onto the mixer's virtual accessibility tree. Target the first
-        // user strip (or the Mixer group itself when the channel has no other users) and
-        // post an accessibility focus notification to move VO there.
+        // user strip and post an accessibility focus notification to move VO there.
         let overlay = channelMixerCoordinator.overlay
-        let target: NSView = overlay.virtualStrips.first ?? overlay
+        guard let target = overlay.virtualStrips.first else {
+            announce(L10n.text("mixer.empty"))
+            return
+        }
         // Prepend "Channel Mixer" to the landed element's label for this one read so VO
         // speaks the region name first — a plain focus change would otherwise announce only
         // the element (the strip/area), swallowing the region context.
@@ -738,14 +759,8 @@ final class ConnectedServerViewController: NSViewController {
             ? L10n.text("connectedServer.audio.microphone.disable")
             : L10n.text("connectedServer.audio.microphone.enable")
         microphoneButton.isEnabled = session.voiceTransmissionEnabled || (session.currentChannelID > 0 && session.canTransmitVoice)
-        microphoneButton.setAccessibilityLabel(L10n.text("connectedServer.audio.microphone.accessibilityLabel"))
-        microphoneButton.setAccessibilityValue(session.audioStatusText)
-        // Announce the new transmission status only when it actually changes, so VoiceOver
-        // doesn't re-read the value on every (frequent) updateAudioControls() call.
-        if lastAnnouncedMicrophoneStatus != session.audioStatusText {
-            lastAnnouncedMicrophoneStatus = session.audioStatusText
-            NSAccessibility.post(element: microphoneButton, notification: .valueChanged)
-        }
+        microphoneButton.setAccessibilityLabel(microphoneButton.title)
+        microphoneButton.setAccessibilityValue(nil)
         inputGainControl.setValue(session.inputGainDB)
         outputGainControl.setValue(session.outputGainDB)
         soundEffectsGainControl.setValue(preferencesStore.preferences.soundEffectsGainDB)
@@ -1142,6 +1157,22 @@ final class ConnectedServerViewController: NSViewController {
         moveItem.target = self
         menu.addItem(moveItem)
 
+        let markForMoveItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.markForMove"),
+            action: #selector(markUsersForMoveAction),
+            keyEquivalent: ""
+        )
+        markForMoveItem.target = self
+        menu.addItem(markForMoveItem)
+
+        let moveMarkedItem = NSMenuItem(
+            title: L10n.text("connectedServer.menu.moveMarkedUsersHere"),
+            action: #selector(moveMarkedUsersToSelectedChannelAction),
+            keyEquivalent: ""
+        )
+        moveMarkedItem.target = self
+        menu.addItem(moveMarkedItem)
+
         menu.addItem(.separator())
 
         let createItem = NSMenuItem(
@@ -1203,6 +1234,12 @@ final class ConnectedServerViewController: NSViewController {
             let selectedUsers = selectedUserNodes()
             guard !selectedUsers.isEmpty else { return false }
             return session.canMoveUsers
+        case #selector(markUsersForMoveAction):
+            let selectedUsers = selectedUserNodes()
+            menuItem.title = markActionName(for: selectedUsers)
+            return selectedUsers.isEmpty == false && session.canMoveUsers
+        case #selector(moveMarkedUsersToSelectedChannelAction):
+            return selectedChannel != nil && markedUserIDsForMove.isEmpty == false && session.canMoveUsers
         case #selector(createChannelAction):
             return session.canCreateAnyChannel && (selectedChannel != nil || session.currentChannelID > 0 || session.rootChannels.isEmpty == false)
         case #selector(editChannelAction), #selector(deleteChannelAction):
