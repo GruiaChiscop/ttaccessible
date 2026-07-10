@@ -48,6 +48,7 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var isRecordingActive = false
     @Published private(set) var isHearMyselfEnabled = false
     @Published private(set) var isMediaStreamingActive = false
+    @Published private(set) var keyBindingScheme: AppKeyBindingScheme = .ttaccessible
     @Published private(set) var selectedUserSubscriptionStates: [UserSubscriptionOption: Bool] = [:]
 
     private init() {
@@ -150,6 +151,10 @@ final class SavedServersMenuState: ObservableObject {
 
     func setMediaStreamingActive(_ value: Bool) {
         if isMediaStreamingActive != value { isMediaStreamingActive = value }
+    }
+
+    func setKeyBindingScheme(_ scheme: AppKeyBindingScheme) {
+        if keyBindingScheme != scheme { keyBindingScheme = scheme }
     }
 
     func setSelectedUsersState(hasSelectedUsers: Bool, hasSingleSelectedUser: Bool, hasSingleSelectedOtherUser: Bool, canMoveSelectedUsers: Bool, isSelectedUserMuted: Bool, isSelectedUserMediaFileMuted: Bool, isSelectedUserChannelOperator: Bool, states: [UserSubscriptionOption: Bool]) {

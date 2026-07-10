@@ -96,6 +96,17 @@ struct PreferencesAnnouncementsView: View {
                             }
                         }
                     }
+
+                    Toggle(isOn: Binding(
+                        get: { notificationsStore.state.useSelectedAnnouncementModeInForeground },
+                        set: { notificationsStore.updateUseSelectedAnnouncementModeInForeground($0) }
+                    )) {
+                        Text(L10n.text("preferences.notifications.useSelectedModeInForeground"))
+                            .accessibilityHidden(true)
+                    }
+                    .toggleStyle(.checkbox)
+                    .accessibilityLabel(L10n.text("preferences.notifications.useSelectedModeInForeground"))
+                    .help(L10n.text("preferences.notifications.useSelectedModeInForeground.help"))
                 }
 
                 Divider()

@@ -166,6 +166,10 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.languagePreference = languagePreference }
     }
 
+    func updateKeyBindingScheme(_ scheme: AppKeyBindingScheme) {
+        mutate { $0.keyBindingScheme = scheme }
+    }
+
     func updateLastRecordingWasActive(_ active: Bool) {
         mutate { $0.lastRecordingWasActive = active }
     }
@@ -224,6 +228,10 @@ final class AppPreferencesStore: ObservableObject {
 
     func updateVoiceOverSessionHistoryEnabled(_ enabled: Bool) {
         mutate { $0.voiceOverAnnouncements.sessionHistoryEnabled = enabled }
+    }
+
+    func updateVoiceOverAnnouncementsEnabled(_ enabled: Bool) {
+        mutate { $0.voiceOverAnnouncements.setAllAnnouncementsEnabled(enabled) }
     }
 
     func updateDisabledSessionHistoryKinds(_ kinds: Set<SessionHistoryEntry.Kind>) {
@@ -308,6 +316,10 @@ final class AppPreferencesStore: ObservableObject {
 
     func updateGlobalAnnouncementMode(_ mode: BackgroundMessageAnnouncementMode) {
         mutate { $0.globalAnnouncementMode = mode.normalizedForBackground }
+    }
+
+    func updateUseSelectedAnnouncementModeInForeground(_ enabled: Bool) {
+        mutate { $0.useSelectedAnnouncementModeInForeground = enabled }
     }
 
     func updateMacOSTTSVoiceIdentifier(_ identifier: String?) {
@@ -903,6 +915,7 @@ final class NotificationsPreferencesStore: ObservableObject {
         var modes: [BackgroundMessageAnnouncementType: BackgroundMessageAnnouncementMode]
         var useGlobalAnnouncementMode: Bool
         var globalAnnouncementMode: BackgroundMessageAnnouncementMode
+        var useSelectedAnnouncementModeInForeground: Bool
         var macOSTTSVoiceIdentifier: String?
         var macOSTTSSpeechRate: Double
         var macOSTTSVolume: Double
@@ -930,6 +943,7 @@ final class NotificationsPreferencesStore: ObservableObject {
                     || self.state.modes != nextState.modes
                     || self.state.useGlobalAnnouncementMode != nextState.useGlobalAnnouncementMode
                     || self.state.globalAnnouncementMode != nextState.globalAnnouncementMode
+                    || self.state.useSelectedAnnouncementModeInForeground != nextState.useSelectedAnnouncementModeInForeground
                     || self.state.macOSTTSVoiceIdentifier != nextState.macOSTTSVoiceIdentifier
                     || self.state.macOSTTSSpeechRate != nextState.macOSTTSSpeechRate
                     || self.state.macOSTTSVolume != nextState.macOSTTSVolume else {
@@ -941,6 +955,7 @@ final class NotificationsPreferencesStore: ObservableObject {
                 self.state.modes = nextState.modes
                 self.state.useGlobalAnnouncementMode = nextState.useGlobalAnnouncementMode
                 self.state.globalAnnouncementMode = nextState.globalAnnouncementMode
+                self.state.useSelectedAnnouncementModeInForeground = nextState.useSelectedAnnouncementModeInForeground
                 self.state.macOSTTSVoiceIdentifier = nextState.macOSTTSVoiceIdentifier
                 self.state.macOSTTSSpeechRate = nextState.macOSTTSSpeechRate
                 self.state.macOSTTSVolume = nextState.macOSTTSVolume
@@ -999,6 +1014,10 @@ final class NotificationsPreferencesStore: ObservableObject {
         rootStore.updateGlobalAnnouncementMode(mode)
     }
 
+    func updateUseSelectedAnnouncementModeInForeground(_ enabled: Bool) {
+        rootStore.updateUseSelectedAnnouncementModeInForeground(enabled)
+    }
+
     func updateMacOSTTSVoiceIdentifier(_ identifier: String?) {
         rootStore.updateMacOSTTSVoiceIdentifier(identifier)
     }
@@ -1023,6 +1042,7 @@ final class NotificationsPreferencesStore: ObservableObject {
             ),
             useGlobalAnnouncementMode: preferences.useGlobalAnnouncementMode,
             globalAnnouncementMode: preferences.globalAnnouncementMode,
+            useSelectedAnnouncementModeInForeground: preferences.useSelectedAnnouncementModeInForeground,
             macOSTTSVoiceIdentifier: preferences.macOSTTSVoiceIdentifier,
             macOSTTSSpeechRate: preferences.macOSTTSSpeechRate,
             macOSTTSVolume: preferences.macOSTTSVolume,

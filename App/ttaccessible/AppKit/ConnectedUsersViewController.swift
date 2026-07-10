@@ -258,6 +258,12 @@ final class ConnectedUsersViewController: NSViewController {
         serverViewController?.performMove(users, presentingWindow: presentingWindow)
     }
 
+    func keyMarkSelectedUsersForMove() {
+        let users = selectedUsers().filter { !$0.isCurrentUser }
+        guard users.isEmpty == false, serverViewController?.session.canMoveUsers == true else { return }
+        serverViewController?.performMarkForMove(users)
+    }
+
     func keySetSubscription(_ option: UserSubscriptionOption, enabled: Bool) {
         guard let user = selectedUser(), !user.isCurrentUser else { return }
         serverViewController?.setSubscription(option, enabled: enabled, forUserIDs: [user.id])

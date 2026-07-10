@@ -27,6 +27,20 @@ struct VoiceOverAnnouncementPreferences: Codable, Equatable {
         }
     }
 
+    var anyAnnouncementEnabled: Bool {
+        channelMessagesEnabled
+            || privateMessagesEnabled
+            || broadcastMessagesEnabled
+            || sessionHistoryEnabled
+    }
+
+    mutating func setAllAnnouncementsEnabled(_ enabled: Bool) {
+        channelMessagesEnabled = enabled
+        privateMessagesEnabled = enabled
+        broadcastMessagesEnabled = enabled
+        sessionHistoryEnabled = enabled
+    }
+
     init(
         channelMessagesEnabled: Bool = true,
         privateMessagesEnabled: Bool = true,

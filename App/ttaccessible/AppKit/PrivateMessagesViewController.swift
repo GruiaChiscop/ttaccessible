@@ -31,6 +31,7 @@ final class PrivateMessagesViewController: NSViewController {
     private var session: ConnectedServerSession
     private var selectedConversationUserID: Int32?
     private var knownPrivateMessageIDs = Set<UUID>()
+    var eventAnnouncementHandler: ((String, BackgroundMessageAnnouncementType) -> Void)?
     private let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
@@ -341,12 +342,13 @@ final class PrivateMessagesViewController: NSViewController {
             let announcementKey = isCurrentConversationOpen
                 ? "privateMessages.accessibility.messageSpoken"
                 : "privateMessages.accessibility.newMessage"
-            announce(
+            announceEvent(
                 L10n.format(
                     announcementKey,
                     latestIncomingMessage.senderDisplayName,
                     latestIncomingMessage.message
-                )
+                ),
+                type: .privateMessages
             )
         }
     }
@@ -460,6 +462,14 @@ final class PrivateMessagesViewController: NSViewController {
                 NSAccessibility.NotificationUserInfoKey.priority: NSAccessibilityPriorityLevel.high.rawValue
             ]
         )
+    }
+
+    private func announceEvent(_ message: String, type: BackgroundMessageAnnouncementType) {
+        if let eventAnnouncementHandler {
+            eventAnnouncementHandler(message, type)
+        } else {
+            announce(message)
+        }
     }
 
     private func publishConsultationState() {

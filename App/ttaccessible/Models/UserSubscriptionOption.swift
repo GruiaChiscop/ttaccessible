@@ -150,6 +150,29 @@ enum UserSubscriptionOption: String, CaseIterable, Hashable {
         isIntercept ? [.control, .shift] : [.control]
     }
 
+    func shortcut(in scheme: AppKeyBindingScheme) -> AppKeyboardShortcut {
+        switch scheme {
+        case .ttaccessible:
+            return AppKeyboardShortcut(key: shortcutKey, modifiers: shortcutModifiers)
+        case .qtTeamTalk:
+            let modifiers: EventModifiers = isIntercept ? [.command, .shift] : [.command]
+            switch self {
+            case .privateMessages, .interceptPrivateMessages:
+                return .character("1", modifiers: modifiers)
+            case .channelMessages, .interceptChannelMessages:
+                return .character("2", modifiers: modifiers)
+            case .broadcastMessages:
+                return .character("3", modifiers: modifiers)
+            case .voice, .interceptVoice:
+                return .character("4", modifiers: modifiers)
+            case .desktop, .interceptDesktop:
+                return .character("6", modifiers: modifiers)
+            case .mediaFile, .interceptMediaFile:
+                return .character("8", modifiers: modifiers)
+            }
+        }
+    }
+
     func isLocallyEnabled(for user: User) -> Bool {
         (user.uLocalSubscriptions & subscriptionMask) != 0
     }

@@ -345,6 +345,8 @@
 "preferences.notifications.backgroundMode.macOSTextToSpeech" = "Synthèse vocale macOS";
 "preferences.notifications.backgroundMode.voiceOverAppleScript" = "VoiceOver via AppleScript";
 "preferences.notifications.useGlobalMode" = "Utiliser le même mode pour tous les types d'événements";
+"preferences.notifications.useSelectedModeInForeground" = "Utiliser le mode d'annonce sélectionné lorsque ttaccessible est actif";
+"preferences.notifications.useSelectedModeInForeground.help" = "Lorsque cette option est activée, les annonces d'événements au premier plan utilisent le même système que celui sélectionné ci-dessus au lieu d'utiliser toujours les annonces VoiceOver natives.";
 "preferences.notifications.globalMode" = "Mode";
 "preferences.notifications.tts.title" = "Synthèse vocale macOS";
 "preferences.notifications.tts.voice" = "Voix";
@@ -373,6 +375,10 @@
 "preferences.general.language.english" = "Anglais";
 "preferences.general.language.french" = "Français";
 "preferences.general.language.help" = "L'application continue d'utiliser la langue du système sauf si vous en choisissez une autre. Redémarrez ttaccessible pour appliquer le changement partout.";
+"preferences.general.keyBindingScheme.label" = "Raccourcis clavier";
+"preferences.general.keyBindingScheme.ttaccessible" = "ttaccessible";
+"preferences.general.keyBindingScheme.qtTeamTalk" = "QT TeamTalk";
+"preferences.general.keyBindingScheme.help" = "Choisissez le jeu de raccourcis clavier utilisé par les menus de l'application.";
 "preferences.general.autoJoinRootChannel" = "Rejoindre automatiquement le canal principal à la connexion";
 "preferences.general.autoReconnect" = "Reconnexion automatique en cas de perte de connexion";
 "preferences.general.rejoinLastChannelOnReconnect" = "Rejoindre automatiquement le dernier canal après une reconnexion";
@@ -489,6 +495,12 @@
 "shortcuts.masterUnmute" = "Rétablir le volume principal";
 "shortcuts.masterMute.announced.muted" = "Volume principal coupé";
 "shortcuts.masterMute.announced.unmuted" = "Volume principal rétabli";
+"shortcuts.ttsEvents" = "Activer ou désactiver les événements TTS";
+"shortcuts.ttsEvents.announced.on" = "Événements TTS activés";
+"shortcuts.ttsEvents.announced.off" = "Événements TTS désactivés";
+"shortcuts.soundEvents" = "Activer ou désactiver les événements sonores";
+"shortcuts.soundEvents.announced.on" = "Événements sonores activés";
+"shortcuts.soundEvents.announced.off" = "Événements sonores désactivés";
 "shortcuts.hearMyself" = "S'entendre soi-même";
 "shortcuts.hearMyself.announced.on" = "Retour audio activé";
 "shortcuts.hearMyself.announced.off" = "Retour audio désactivé";
@@ -970,10 +982,13 @@
 
 // Notifications
 "notification.privateMessage.title" = "Message privé de %@";
+"notification.privateMessage.genericTitle" = "Message privé";
 "notification.privateMessage.body" = "Vous avez reçu un message privé.";
 "notification.privateMessage.unknownSender" = "quelqu'un";
 "notification.channelMessage.title" = "Message de canal de %@";
+"notification.channelMessage.genericTitle" = "Message de canal";
 "notification.broadcastMessage.title" = "Message général de %@";
+"notification.broadcastMessage.genericTitle" = "Message général";
 "notification.sessionHistory.title" = "Historique TeamTalk";
 "backgroundAnnouncement.privateMessage" = "Nouveau message privé de %@ : %@";
 "backgroundAnnouncement.channelMessage" = "Nouveau message de canal de %@ : %@";

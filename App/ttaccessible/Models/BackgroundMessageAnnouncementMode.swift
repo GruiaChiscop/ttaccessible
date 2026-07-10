@@ -87,6 +87,19 @@ enum BackgroundMessageAnnouncementType: CaseIterable, Identifiable {
         }
     }
 
+    var genericNotificationTitleLocalizationKey: String {
+        switch self {
+        case .privateMessages:
+            return "notification.privateMessage.genericTitle"
+        case .channelMessages:
+            return "notification.channelMessage.genericTitle"
+        case .broadcastMessages:
+            return "notification.broadcastMessage.genericTitle"
+        case .sessionHistory:
+            return "notification.sessionHistory.title"
+        }
+    }
+
     func mode(from preferences: AppPreferences) -> BackgroundMessageAnnouncementMode {
         switch self {
         case .privateMessages:
