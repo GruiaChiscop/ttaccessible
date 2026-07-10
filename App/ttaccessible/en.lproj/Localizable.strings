@@ -350,6 +350,8 @@
 "preferences.notifications.backgroundMode.macOSTextToSpeech" = "macOS text to speech";
 "preferences.notifications.backgroundMode.voiceOverAppleScript" = "VoiceOver via AppleScript";
 "preferences.notifications.useGlobalMode" = "Use the same mode for all event types";
+"preferences.notifications.useSelectedModeInForeground" = "Use the selected announcement mode while ttaccessible is active";
+"preferences.notifications.useSelectedModeInForeground.help" = "When enabled, foreground event announcements use the same system selected above instead of always using native VoiceOver announcements.";
 "preferences.notifications.globalMode" = "Mode";
 "preferences.notifications.tts.title" = "macOS text to speech";
 "preferences.notifications.tts.voice" = "Voice";
@@ -380,6 +382,10 @@
 "preferences.general.language.help" = "The app keeps using the system language unless you choose another one. Restart ttaccessible to apply the change everywhere.";
 "firstLaunch.language.title" = "Choose Your Language";
 "firstLaunch.language.message" = "Which language would you like ttaccessible to use? You can change this later in Preferences.";
+"preferences.general.keyBindingScheme.label" = "Key bindings";
+"preferences.general.keyBindingScheme.ttaccessible" = "ttaccessible";
+"preferences.general.keyBindingScheme.qtTeamTalk" = "QT TeamTalk";
+"preferences.general.keyBindingScheme.help" = "Choose which keyboard shortcut scheme the app menus should use.";
 "preferences.general.autoJoinRootChannel" = "Automatically join the main channel on connect";
 "preferences.general.autoReconnect" = "Automatically reconnect on connection loss";
 "preferences.general.rejoinLastChannelOnReconnect" = "Automatically rejoin the last channel after reconnecting";
@@ -496,6 +502,12 @@
 "shortcuts.masterUnmute" = "Unmute master volume";
 "shortcuts.masterMute.announced.muted" = "Master volume muted";
 "shortcuts.masterMute.announced.unmuted" = "Master volume unmuted";
+"shortcuts.ttsEvents" = "Toggle TTS events";
+"shortcuts.ttsEvents.announced.on" = "TTS events enabled";
+"shortcuts.ttsEvents.announced.off" = "TTS events disabled";
+"shortcuts.soundEvents" = "Toggle sound events";
+"shortcuts.soundEvents.announced.on" = "Sound events enabled";
+"shortcuts.soundEvents.announced.off" = "Sound events disabled";
 "shortcuts.hearMyself" = "Hear myself";
 "shortcuts.hearMyself.announced.on" = "Hear myself enabled";
 "shortcuts.hearMyself.announced.off" = "Hear myself disabled";
@@ -1000,10 +1012,13 @@
 
 // Notifications
 "notification.privateMessage.title" = "Private message from %@";
+"notification.privateMessage.genericTitle" = "Private message";
 "notification.privateMessage.body" = "You received a private message.";
 "notification.privateMessage.unknownSender" = "someone";
 "notification.channelMessage.title" = "Channel message from %@";
+"notification.channelMessage.genericTitle" = "Channel message";
 "notification.broadcastMessage.title" = "Broadcast from %@";
+"notification.broadcastMessage.genericTitle" = "Broadcast";
 "notification.sessionHistory.title" = "TeamTalk history";
 "backgroundAnnouncement.privateMessage" = "New private message from %@: %@";
 "backgroundAnnouncement.channelMessage" = "New channel message from %@: %@";

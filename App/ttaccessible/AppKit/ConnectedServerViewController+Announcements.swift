@@ -12,9 +12,9 @@ extension ConnectedServerViewController {
         }
 
         if newChannelID > 0 {
-            announce(L10n.text("connectedServer.accessibility.channelChanged"))
+            announceEvent(L10n.text("connectedServer.accessibility.channelChanged"), type: .sessionHistory)
         } else {
-            announce(L10n.text("connectedServer.accessibility.channelLeft"))
+            announceEvent(L10n.text("connectedServer.accessibility.channelLeft"), type: .sessionHistory)
         }
     }
 
@@ -61,12 +61,13 @@ extension ConnectedServerViewController {
             ? "connectedServer.chat.accessibility.messageSpoken"
             : "connectedServer.chat.accessibility.newMessage"
 
-        announce(
+        announceEvent(
             L10n.format(
                 announcementKey,
                 latestIncomingMessage.senderDisplayName,
                 latestIncomingMessage.message
-            )
+            ),
+            type: .channelMessages
         )
         lastAnnouncedChannelMessageID = latestIncomingMessage.id
     }
@@ -100,8 +101,12 @@ extension ConnectedServerViewController {
             return
         }
 
-        announce(latestEntry.message)
+        announceEvent(latestEntry.message, type: .sessionHistory)
         lastAnnouncedHistoryEntryID = latestEntry.id
+    }
+
+    func announceEvent(_ message: String, type: BackgroundMessageAnnouncementType) {
+        appDelegate.announceForegroundEvent(message, type: type)
     }
 
     func announce(_ message: String) {

@@ -109,6 +109,7 @@ struct AppPreferences: Codable, Equatable {
         case sessionHistoryBackgroundMode
         case useGlobalAnnouncementMode
         case globalAnnouncementMode
+        case useSelectedAnnouncementModeInForeground
         case macOSTTSVoiceIdentifier
         case macOSTTSSpeechRate
         case macOSTTSVolume
@@ -129,6 +130,7 @@ struct AppPreferences: Codable, Equatable {
         case deviceStreamLastDeviceUID
         case languagePreference
         case hasChosenInitialLanguage
+        case keyBindingScheme
     }
 
     var defaultNickname: String
@@ -169,6 +171,7 @@ struct AppPreferences: Codable, Equatable {
     var sessionHistoryBackgroundMode: BackgroundMessageAnnouncementMode
     var useGlobalAnnouncementMode: Bool
     var globalAnnouncementMode: BackgroundMessageAnnouncementMode
+    var useSelectedAnnouncementModeInForeground: Bool
     var macOSTTSVoiceIdentifier: String?
     var macOSTTSSpeechRate: Double
     var macOSTTSVolume: Double
@@ -202,6 +205,7 @@ struct AppPreferences: Codable, Equatable {
     var deviceStreamLastDeviceUID: String?
     var languagePreference: AppLanguagePreference
     var hasChosenInitialLanguage: Bool
+    var keyBindingScheme: AppKeyBindingScheme
     init(
         defaultNickname: String = AppPreferences.defaultNicknameFromAccount(),
         defaultStatusMessage: String = "",
@@ -244,6 +248,7 @@ struct AppPreferences: Codable, Equatable {
         sessionHistoryBackgroundMode: BackgroundMessageAnnouncementMode = .systemNotification,
         useGlobalAnnouncementMode: Bool = true,
         globalAnnouncementMode: BackgroundMessageAnnouncementMode = .systemNotification,
+        useSelectedAnnouncementModeInForeground: Bool = false,
         macOSTTSVoiceIdentifier: String? = nil,
         macOSTTSSpeechRate: Double = 0.5,
         macOSTTSVolume: Double = 1.0,
@@ -263,7 +268,8 @@ struct AppPreferences: Codable, Equatable {
         userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
         deviceStreamLastDeviceUID: String? = nil,
         languagePreference: AppLanguagePreference = .system,
-        hasChosenInitialLanguage: Bool = false
+        hasChosenInitialLanguage: Bool = false,
+        keyBindingScheme: AppKeyBindingScheme = .ttaccessible
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -306,6 +312,7 @@ struct AppPreferences: Codable, Equatable {
         self.sessionHistoryBackgroundMode = sessionHistoryBackgroundMode.normalizedForBackground
         self.useGlobalAnnouncementMode = useGlobalAnnouncementMode
         self.globalAnnouncementMode = globalAnnouncementMode.normalizedForBackground
+        self.useSelectedAnnouncementModeInForeground = useSelectedAnnouncementModeInForeground
         self.macOSTTSVoiceIdentifier = macOSTTSVoiceIdentifier?.isEmpty == true ? nil : macOSTTSVoiceIdentifier
         self.macOSTTSSpeechRate = Self.clampMacOSTTSSpeechRate(macOSTTSSpeechRate)
         self.macOSTTSVolume = Self.clampMacOSTTSVolume(macOSTTSVolume)
@@ -326,6 +333,7 @@ struct AppPreferences: Codable, Equatable {
         self.deviceStreamLastDeviceUID = deviceStreamLastDeviceUID
         self.languagePreference = languagePreference
         self.hasChosenInitialLanguage = hasChosenInitialLanguage
+        self.keyBindingScheme = keyBindingScheme
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -427,6 +435,7 @@ struct AppPreferences: Codable, Equatable {
             useGlobalAnnouncementMode = allEqual
             globalAnnouncementMode = storedGlobalMode ?? privateMessagesBackgroundMode
         }
+        useSelectedAnnouncementModeInForeground = try container.decodeIfPresent(Bool.self, forKey: .useSelectedAnnouncementModeInForeground) ?? false
         macOSTTSVoiceIdentifier = try container.decodeIfPresent(String.self, forKey: .macOSTTSVoiceIdentifier)
         macOSTTSSpeechRate = Self.clampMacOSTTSSpeechRate(try container.decodeIfPresent(Double.self, forKey: .macOSTTSSpeechRate) ?? 0.5)
         macOSTTSVolume = Self.clampMacOSTTSVolume(try container.decodeIfPresent(Double.self, forKey: .macOSTTSVolume) ?? 1.0)
@@ -447,6 +456,7 @@ struct AppPreferences: Codable, Equatable {
         deviceStreamLastDeviceUID = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastDeviceUID)
         languagePreference = try container.decodeIfPresent(AppLanguagePreference.self, forKey: .languagePreference) ?? .system
         hasChosenInitialLanguage = try container.decodeIfPresent(Bool.self, forKey: .hasChosenInitialLanguage) ?? false
+        keyBindingScheme = try container.decodeIfPresent(AppKeyBindingScheme.self, forKey: .keyBindingScheme) ?? .ttaccessible
     }
 
     func encode(to encoder: Encoder) throws {
@@ -492,6 +502,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(sessionHistoryBackgroundMode, forKey: .sessionHistoryBackgroundMode)
         try container.encode(useGlobalAnnouncementMode, forKey: .useGlobalAnnouncementMode)
         try container.encode(globalAnnouncementMode, forKey: .globalAnnouncementMode)
+        try container.encode(useSelectedAnnouncementModeInForeground, forKey: .useSelectedAnnouncementModeInForeground)
         try container.encodeIfPresent(macOSTTSVoiceIdentifier, forKey: .macOSTTSVoiceIdentifier)
         try container.encode(Self.clampMacOSTTSSpeechRate(macOSTTSSpeechRate), forKey: .macOSTTSSpeechRate)
         try container.encode(Self.clampMacOSTTSVolume(macOSTTSVolume), forKey: .macOSTTSVolume)
@@ -512,6 +523,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encodeIfPresent(deviceStreamLastDeviceUID, forKey: .deviceStreamLastDeviceUID)
         try container.encode(languagePreference, forKey: .languagePreference)
         try container.encode(hasChosenInitialLanguage, forKey: .hasChosenInitialLanguage)
+        try container.encode(keyBindingScheme, forKey: .keyBindingScheme)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {

@@ -117,6 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var nicknameCancellable: AnyCancellable?
     private var userMenuVisibilityCancellable: AnyCancellable?
     private var pushToTalkModeCancellable: AnyCancellable?
+    private var keyBindingSchemeCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         ProfileInstanceLock.acquire(for: ProfileContext.current)
@@ -155,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         processPendingTTFileURLsIfPossible()
         syncSparkleAutoCheckPreference()
         syncNicknamePreference()
+        syncKeyBindingSchemePreference()
         scheduleLaunchUpdateCheck()
         configurePushToTalkObservers()
         installRecordingStopKeyMonitor()
@@ -214,6 +216,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .dropFirst()
             .sink { [weak self] nickname in
                 self?.connectionController.changeNickname(to: nickname) { _ in }
+            }
+    }
+
+    private func syncKeyBindingSchemePreference() {
+        menuState.setKeyBindingScheme(preferencesStore.preferences.keyBindingScheme)
+        keyBindingSchemeCancellable = preferencesStore.$preferences
+            .map(\.keyBindingScheme)
+            .removeDuplicates()
+            .sink { [weak self] scheme in
+                self?.menuState.setKeyBindingScheme(scheme)
             }
     }
 
@@ -305,6 +317,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    func announceForegroundEvent(_ message: String, type: BackgroundMessageAnnouncementType) {
+        guard preferencesStore.preferences.useSelectedAnnouncementModeInForeground else {
+            announceWithVoiceOver(message)
+            return
+        }
+
+        deliverAnnouncement(
+            message,
+            type: type,
+            notificationTitle: L10n.text(type.genericNotificationTitleLocalizationKey),
+            notificationBody: message,
+            identifierPrefix: "fg-\(type.id)"
+        )
+    }
+
+    private func deliverAnnouncement(
+        _ message: String,
+        type: BackgroundMessageAnnouncementType,
+        notificationTitle: String,
+        notificationBody: String,
+        identifierPrefix: String
+    ) {
+        let mode = preferencesStore.preferences.backgroundAnnouncementMode(for: type)
+        switch mode {
+        case .nativeVoiceOver:
+            announceWithVoiceOver(message)
+        case .systemNotification:
+            sendNotification(
+                title: notificationTitle,
+                body: notificationBody,
+                identifier: "\(identifierPrefix)-\(Date().timeIntervalSince1970)"
+            )
+        case .macOSTextToSpeech:
+            macOSTextToSpeechAnnouncementService.announce(
+                message,
+                voiceIdentifier: preferencesStore.preferences.macOSTTSVoiceIdentifier,
+                speechRate: preferencesStore.preferences.macOSTTSSpeechRate,
+                volume: preferencesStore.preferences.macOSTTSVolume
+            )
+        case .voiceOverAppleScript:
+            voiceOverAppleScriptAnnouncementService.announce(message)
+        }
+    }
+
     private func handleBackgroundIncomingTextMessage(_ event: IncomingTextMessageEvent) {
         guard NSApp.isActive == false else {
             return
@@ -321,25 +377,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let message = L10n.format(type.nativeAnnouncementLocalizationKey, event.senderName, event.content)
-        let mode = preferencesStore.preferences.backgroundAnnouncementMode(for: type)
-        switch mode {
-        case .nativeVoiceOver, .systemNotification:
-            // Native VoiceOver announcements remain foreground-only.
-            sendNotification(
-                title: L10n.format(type.systemNotificationTitleLocalizationKey, event.senderName),
-                body: event.content,
-                identifier: "bgmsg-\(type.id)-\(Date().timeIntervalSince1970)"
-            )
-        case .macOSTextToSpeech:
-            macOSTextToSpeechAnnouncementService.announce(
-                message,
-                voiceIdentifier: preferencesStore.preferences.macOSTTSVoiceIdentifier,
-                speechRate: preferencesStore.preferences.macOSTTSSpeechRate,
-                volume: preferencesStore.preferences.macOSTTSVolume
-            )
-        case .voiceOverAppleScript:
-            voiceOverAppleScriptAnnouncementService.announce(message)
-        }
+        deliverAnnouncement(
+            message,
+            type: type,
+            notificationTitle: L10n.format(type.systemNotificationTitleLocalizationKey, event.senderName),
+            notificationBody: event.content,
+            identifierPrefix: "bgmsg-\(type.id)"
+        )
     }
 
     private func handleBackgroundSessionHistory(previousEntries: [SessionHistoryEntry], session: ConnectedServerSession) {
@@ -360,24 +404,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let type: BackgroundMessageAnnouncementType = .sessionHistory
-        let mode = preferencesStore.preferences.backgroundAnnouncementMode(for: type)
-        switch mode {
-        case .nativeVoiceOver, .systemNotification:
-            sendNotification(
-                title: L10n.text(type.systemNotificationTitleLocalizationKey),
-                body: latestEntry.message,
-                identifier: "bg-history-\(Date().timeIntervalSince1970)"
-            )
-        case .macOSTextToSpeech:
-            macOSTextToSpeechAnnouncementService.announce(
-                latestEntry.message,
-                voiceIdentifier: preferencesStore.preferences.macOSTTSVoiceIdentifier,
-                speechRate: preferencesStore.preferences.macOSTTSSpeechRate,
-                volume: preferencesStore.preferences.macOSTTSVolume
-            )
-        case .voiceOverAppleScript:
-            voiceOverAppleScriptAnnouncementService.announce(latestEntry.message)
-        }
+        deliverAnnouncement(
+            latestEntry.message,
+            type: type,
+            notificationTitle: L10n.text(type.systemNotificationTitleLocalizationKey),
+            notificationBody: latestEntry.message,
+            identifierPrefix: "bg-history"
+        )
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -542,6 +575,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let viewController: PrivateMessagesViewController
         if let existing = privateMessagesViewController {
             existing.preferencesStore = preferencesStore
+            existing.eventAnnouncementHandler = { [weak self] message, type in
+                self?.announceForegroundEvent(message, type: type)
+            }
             existing.update(session: session, markRead: activate)
             viewController = existing
         } else {
@@ -551,6 +587,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 preferencesStore: preferencesStore
             )
             viewController.preferencesStore = preferencesStore
+            viewController.eventAnnouncementHandler = { [weak self] message, type in
+                self?.announceForegroundEvent(message, type: type)
+            }
             privateMessagesViewController = viewController
         }
 
@@ -1333,6 +1372,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    func markSelectedUsersForMove() {
+        routeUserAction(
+            connectedUsers: { $0.keyMarkSelectedUsersForMove() },
+            mainWindow: { connectedServerViewController?.markUsersForMoveAction() }
+        )
+    }
+
     func toggleMuteSelectedUser() {
         routeUserAction(
             connectedUsers: { $0.keyMuteSelectedUser() },
@@ -1670,6 +1716,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 : "shortcuts.masterMute.announced.unmuted"
             self?.announceWithVoiceOver(L10n.text(key))
         }
+    }
+
+    func toggleTTSEvents() {
+        let currentlyEnabled = preferencesStore.preferences.voiceOverAnnouncements.anyAnnouncementEnabled
+        preferencesStore.updateVoiceOverAnnouncementsEnabled(!currentlyEnabled)
+        announceWithVoiceOver(
+            L10n.text(currentlyEnabled
+                      ? "shortcuts.ttsEvents.announced.off"
+                      : "shortcuts.ttsEvents.announced.on")
+        )
+    }
+
+    func toggleSoundEvents() {
+        let enabled = !preferencesStore.preferences.soundNotificationsEnabled
+        preferencesStore.updateSoundNotificationsEnabled(enabled)
+        announceWithVoiceOver(
+            L10n.text(enabled
+                      ? "shortcuts.soundEvents.announced.on"
+                      : "shortcuts.soundEvents.announced.off")
+        )
     }
 
     func openSelectedUserInfo() {

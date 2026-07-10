@@ -18,11 +18,13 @@ struct ttaccessibleApp: App {
             EmptyView()
         }
         .commands {
+            let keyBindings = menuState.keyBindingScheme
+
             CommandGroup(replacing: .appSettings) {
                 Button(L10n.text("preferences.menu.title")) {
                     appDelegate.openPreferences()
                 }
-                .keyboardShortcut(",", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.preferences))
             }
 
             CommandGroup(after: .appInfo) {
@@ -35,7 +37,7 @@ struct ttaccessibleApp: App {
                 Button(L10n.text("profile.menu.newInstance")) {
                     appDelegate.openProfilesWindow()
                 }
-                .keyboardShortcut("n", modifiers: [.command, .shift])
+                .appKeyboardShortcut(keyBindings.shortcut(.newClientInstance))
 
                 Button(L10n.text("profile.menu.manage")) {
                     appDelegate.openProfilesWindow()
@@ -64,18 +66,18 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("savedServers.menu.new")) {
                         appDelegate.addSavedServer()
                     }
-                    .keyboardShortcut("n", modifiers: [.command])
+                    .appKeyboardShortcut(keyBindings.shortcut(.savedServerNew))
 
                     Button(L10n.text("savedServers.menu.connect")) {
                         appDelegate.connectSelectedSavedServer()
                     }
-                    .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF2FunctionKey)!)), modifiers: [])
+                    .appKeyboardShortcut(keyBindings.shortcut(.savedServerConnect))
                     .disabled(menuState.hasSelection == false)
 
                     Button(L10n.text("savedServers.menu.import")) {
                         appDelegate.importTeamTalkServers()
                     }
-                    .keyboardShortcut("i", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.savedServerImport))
 
                     Button(L10n.text("serverExport.menu.title")) {
                         appDelegate.exportServer()
@@ -91,25 +93,25 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("savedServers.menu.edit")) {
                         appDelegate.editSelectedSavedServer()
                     }
-                    .keyboardShortcut("e", modifiers: [.command])
+                    .appKeyboardShortcut(keyBindings.shortcut(.savedServerEdit))
                     .disabled(menuState.hasSelection == false)
 
                     Button(L10n.text("savedServers.menu.delete")) {
                         appDelegate.deleteSelectedSavedServer()
                     }
-                    .keyboardShortcut(.delete, modifiers: [])
+                    .appKeyboardShortcut(keyBindings.shortcut(.savedServerDelete))
                     .disabled(menuState.hasSelection == false)
                 } else {
                     Button(L10n.text("connectedServer.identity.nickname.menu")) {
                         appDelegate.changeNickname()
                     }
-                    .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF5FunctionKey)!)), modifiers: [])
+                    .appKeyboardShortcut(keyBindings.shortcut(.changeNickname))
                     .disabled(menuState.isNicknameLocked)
 
                     Button(L10n.text("connectedServer.identity.status.menu")) {
                         appDelegate.changeStatus()
                     }
-                    .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF6FunctionKey)!)), modifiers: [])
+                    .appKeyboardShortcut(keyBindings.shortcut(.changeStatus))
                     .disabled(menuState.isStatusLocked)
 
                     Divider()
@@ -117,18 +119,18 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("privateMessages.menu.open")) {
                         appDelegate.openMessages()
                     }
-                    .keyboardShortcut("e", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.privateMessagesFromServerMenu))
 
                     Button(L10n.text("files.menu.open")) {
                         appDelegate.openChannelFiles()
                     }
-                    .keyboardShortcut("f", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.channelFiles))
                     .disabled(menuState.isInChannel == false || (menuState.canDownloadFiles == false && menuState.canUploadFiles == false))
 
                     Button(L10n.text("files.menu.upload")) {
                         appDelegate.uploadFile()
                     }
-                    .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF5FunctionKey)!)), modifiers: [.shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.uploadFile))
                     .disabled(menuState.isInChannel == false || menuState.canUploadFiles == false)
 
                     Divider()
@@ -136,19 +138,19 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("connectedServer.menu.createChannel")) {
                         appDelegate.createChannel()
                     }
-                    .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF7FunctionKey)!)), modifiers: [])
+                    .appKeyboardShortcut(keyBindings.shortcut(.createChannel))
                     .disabled(menuState.canCreateAnyChannel == false || (menuState.hasSelectedChannel == false && menuState.isInChannel == false))
 
                     Button(L10n.text("connectedServer.menu.editChannel")) {
                         appDelegate.updateChannel()
                     }
-                    .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF7FunctionKey)!)), modifiers: [.shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.editChannel))
                     .disabled(menuState.hasSelectedChannel == false || menuState.canModifyChannels == false)
 
                     Button(L10n.text("connectedServer.menu.deleteChannel")) {
                         appDelegate.deleteChannel()
                     }
-                    .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF8FunctionKey)!)), modifiers: [])
+                    .appKeyboardShortcut(keyBindings.shortcut(.deleteChannel))
                     .disabled(menuState.hasSelectedChannel == false || menuState.canModifyChannels == false)
 
                     Divider()
@@ -156,36 +158,37 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("connectedUsers.menu.open")) {
                         appDelegate.openConnectedUsers()
                     }
-                    .keyboardShortcut("w", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.connectedUsers))
                     .disabled(menuState.mode != .connectedServer)
 
                     Button(L10n.text("accounts.menu.open")) {
                         appDelegate.openUserAccounts()
                     }
-                    .keyboardShortcut("u", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.userAccounts))
                     .disabled(menuState.mode != .connectedServer || menuState.isAdministrator == false)
 
                     Button(L10n.text("bans.menu.open")) {
                         appDelegate.openBannedUsers()
                     }
-                    .keyboardShortcut("b", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.bannedUsers))
                     .disabled(menuState.mode != .connectedServer || menuState.canBanUsers == false)
 
                     Button(L10n.text("serverProperties.menu.open")) {
                         appDelegate.openServerProperties()
                     }
-                    .keyboardShortcut("p", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.serverProperties))
                     .disabled(menuState.mode != .connectedServer || menuState.canUpdateServerProperties == false)
 
                     Button(L10n.text("serverConfig.menu.save")) {
                         appDelegate.saveServerConfig()
                     }
+                    .appKeyboardShortcut(keyBindings.shortcut(.saveServerConfig))
                     .disabled(menuState.mode != .connectedServer || menuState.canUpdateServerProperties == false)
 
                     Button(L10n.text("stats.menu.open")) {
                         appDelegate.openStats()
                     }
-                    .keyboardShortcut("i", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.serverStatistics))
                     .disabled(menuState.mode != .connectedServer)
 
                     Divider()
@@ -193,7 +196,7 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("broadcast.menu.send")) {
                         appDelegate.broadcastMessage()
                     }
-                    .keyboardShortcut("b", modifiers: [.command])
+                    .appKeyboardShortcut(keyBindings.shortcut(.broadcastMessage))
                     .disabled(menuState.mode != .connectedServer || menuState.canSendBroadcast == false)
 
                     Divider()
@@ -201,7 +204,7 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("connectedServer.serverLink.copy")) {
                         appDelegate.copyServerLink()
                     }
-                    .keyboardShortcut("l", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.copyServerLink))
 
                     Button(L10n.text("serverExport.menu.title")) {
                         appDelegate.exportServer()
@@ -212,7 +215,7 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("connectedServer.menu.disconnect")) {
                         appDelegate.disconnectServer()
                     }
-                    .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF2FunctionKey)!)), modifiers: [])
+                    .appKeyboardShortcut(keyBindings.shortcut(.disconnect))
                 }
             }
 
@@ -224,7 +227,7 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("user.menu.info")) {
                         appDelegate.openSelectedUserInfo()
                     }
-                    .keyboardShortcut("i", modifiers: [.command])
+                    .appKeyboardShortcut(keyBindings.shortcut(.userInfo))
                     .disabled(menuState.hasSingleSelectedUser == false)
 
                     Button(menuState.isSelectedUserMuted
@@ -232,7 +235,7 @@ struct ttaccessibleApp: App {
                            : L10n.text("user.menu.mute")) {
                         appDelegate.toggleMuteSelectedUser()
                     }
-                    .keyboardShortcut("m", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.muteUser))
                     .disabled(menuState.hasSingleSelectedOtherUser == false)
 
                     Button(menuState.isSelectedUserMediaFileMuted
@@ -240,13 +243,13 @@ struct ttaccessibleApp: App {
                            : L10n.text("user.menu.muteMediaFile")) {
                         appDelegate.toggleMuteSelectedUserMediaFile()
                     }
-                    .keyboardShortcut("m", modifiers: [.command, .control, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.muteUserMediaFile))
                     .disabled(menuState.hasSingleSelectedOtherUser == false)
 
                     Button(L10n.text("user.menu.volume")) {
                         appDelegate.adjustSelectedUserVolume()
                     }
-                    .keyboardShortcut("u", modifiers: [.command])
+                    .appKeyboardShortcut(keyBindings.shortcut(.userVolume))
                     .disabled(menuState.hasSingleSelectedUser == false)
 
                     Button(menuState.isSelectedUserChannelOperator
@@ -254,7 +257,7 @@ struct ttaccessibleApp: App {
                            : L10n.text("user.menu.makeOperator")) {
                         appDelegate.toggleChannelOperator()
                     }
-                    .keyboardShortcut("o", modifiers: [.control, .command])
+                    .appKeyboardShortcut(keyBindings.shortcut(.toggleOperator))
                     .disabled(menuState.hasSingleSelectedOtherUser == false)
 
                     Divider()
@@ -262,24 +265,31 @@ struct ttaccessibleApp: App {
                     Button(L10n.text("user.menu.kick")) {
                         appDelegate.kickSelectedUser()
                     }
-                    .keyboardShortcut("k", modifiers: [.command])
+                    .appKeyboardShortcut(keyBindings.shortcut(.kickUser))
                     .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.canKickUsers == false)
 
                     Button(L10n.text("user.menu.kickServer")) {
                         appDelegate.kickSelectedUserFromServer()
                     }
-                    .keyboardShortcut("k", modifiers: [.command, .shift])
+                    .appKeyboardShortcut(keyBindings.shortcut(.kickUserFromServer))
                     .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.canKickUsers == false)
 
                     Button(L10n.text("user.menu.kickBan")) {
                         appDelegate.kickBanSelectedUser()
                     }
+                    .appKeyboardShortcut(keyBindings.shortcut(.kickBanUser))
                     .disabled(menuState.hasSingleSelectedOtherUser == false || menuState.canBanUsers == false)
 
                     Button(L10n.text("user.menu.move")) {
                         appDelegate.moveSelectedUser()
                     }
-                    .keyboardShortcut("x", modifiers: [.command, .option])
+                    .appKeyboardShortcut(keyBindings.shortcut(.moveUser))
+                    .disabled(menuState.canMoveSelectedUsers == false)
+
+                    Button(L10n.text("connectedServer.menu.markForMove")) {
+                        appDelegate.markSelectedUsersForMove()
+                    }
+                    .appKeyboardShortcut(keyBindings.shortcut(.markForMove))
                     .disabled(menuState.canMoveSelectedUsers == false)
 
                     Divider()
@@ -293,7 +303,7 @@ struct ttaccessibleApp: App {
                                     set: { appDelegate.setSelectedUsersSubscription(option, enabled: $0) }
                                 )
                             )
-                            .keyboardShortcut(option.shortcutKey, modifiers: option.shortcutModifiers)
+                            .appKeyboardShortcut(option.shortcut(in: keyBindings))
                             .disabled(menuState.hasSelectedUsers == false)
                         }
 
@@ -307,7 +317,7 @@ struct ttaccessibleApp: App {
                                     set: { appDelegate.setSelectedUsersSubscription(option, enabled: $0) }
                                 )
                             )
-                            .keyboardShortcut(option.shortcutKey, modifiers: option.shortcutModifiers)
+                            .appKeyboardShortcut(option.shortcut(in: keyBindings))
                             .disabled(menuState.hasSelectedUsers == false)
                         }
                     }
@@ -320,30 +330,30 @@ struct ttaccessibleApp: App {
                 Button(L10n.text("shortcuts.focus.primary")) {
                     appDelegate.focusPrimaryArea()
                 }
-                .keyboardShortcut("1", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.focusPrimary))
 
                 Button(L10n.text("shortcuts.focus.secondary")) {
                     appDelegate.focusSecondaryArea()
                 }
-                .keyboardShortcut("2", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.focusSecondary))
                 .disabled(menuState.mode != .connectedServer)
 
                 Button(L10n.text("shortcuts.focus.message")) {
                     appDelegate.focusMessageArea()
                 }
-                .keyboardShortcut("3", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.focusMessage))
                 .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false || menuState.canTextMessageChannel == false)
 
                 Button(L10n.text("shortcuts.focus.history")) {
                     appDelegate.focusHistoryArea()
                 }
-                .keyboardShortcut("4", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.focusHistory))
                 .disabled(menuState.mode != .connectedServer)
 
                 Button(L10n.text("mixer.menu.open")) {
                     appDelegate.focusChannelMixerArea()
                 }
-                .keyboardShortcut("5", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.focusMixer))
                 .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
 
                 Divider()
@@ -351,25 +361,25 @@ struct ttaccessibleApp: App {
                 Button(L10n.text("connectedServer.menu.join")) {
                     appDelegate.joinSelectedChannel()
                 }
-                .keyboardShortcut("j", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.joinChannel))
                 .disabled(menuState.mode != .connectedServer || menuState.hasSelectedChannel == false)
 
                 Button(L10n.text("connectedServer.menu.leave")) {
                     appDelegate.leaveCurrentChannel()
                 }
-                .keyboardShortcut("l", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.leaveChannel))
                 .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
 
                 Button(L10n.text("shortcuts.messages")) {
                     appDelegate.openMessages()
                 }
-                .keyboardShortcut("e", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.privateMessages))
                 .disabled(menuState.mode != .connectedServer)
 
                 Button(L10n.text("shortcuts.microphone")) {
                     appDelegate.toggleMicrophone()
                 }
-                .keyboardShortcut("a", modifiers: [.command, .shift])
+                .appKeyboardShortcut(keyBindings.shortcut(.toggleMicrophone))
                 .disabled(
                     menuState.mode != .connectedServer
                         || (menuState.voiceTransmissionEnabled == false
@@ -381,8 +391,18 @@ struct ttaccessibleApp: App {
                        : L10n.text("shortcuts.masterMute")) {
                     appDelegate.toggleMasterMute()
                 }
-                .keyboardShortcut("m", modifiers: [.command])
+                .appKeyboardShortcut(keyBindings.shortcut(.masterMute))
                 .disabled(menuState.mode != .connectedServer)
+
+                Button(L10n.text("shortcuts.ttsEvents")) {
+                    appDelegate.toggleTTSEvents()
+                }
+                .appKeyboardShortcut(keyBindings.shortcut(.toggleTTSEvents))
+
+                Button(L10n.text("shortcuts.soundEvents")) {
+                    appDelegate.toggleSoundEvents()
+                }
+                .appKeyboardShortcut(keyBindings.shortcut(.toggleSoundEvents))
 
                 // While recording, show a single Stop item (⌘R). When idle, show the two
                 // start options: ⌘R single file, ⌘⇧R the preference mode (separate/both).
@@ -411,13 +431,13 @@ struct ttaccessibleApp: App {
                 Button(L10n.text("shortcuts.mediaStream.startFile")) {
                     appDelegate.startStreamingMediaFromFile()
                 }
-                .keyboardShortcut("s", modifiers: [.command, .option])
+                .appKeyboardShortcut(keyBindings.shortcut(.streamMediaFile))
                 .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false || menuState.canTransmitMediaFile == false)
 
                 Button(L10n.text("shortcuts.mediaStream.startURL")) {
                     appDelegate.startStreamingMediaFromURL()
                 }
-                .keyboardShortcut("u", modifiers: [.command, .option])
+                .appKeyboardShortcut(keyBindings.shortcut(.streamMediaURL))
                 .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false || menuState.canTransmitMediaFile == false)
 
                 Button(L10n.text("shortcuts.mediaStream.startDevice")) {
@@ -429,19 +449,19 @@ struct ttaccessibleApp: App {
                 Button(L10n.text("shortcuts.mediaStream.stop")) {
                     appDelegate.stopMediaStreaming()
                 }
-                .keyboardShortcut(".", modifiers: [.command, .option])
+                .appKeyboardShortcut(keyBindings.shortcut(.stopMediaStream))
                 .disabled(menuState.mode != .connectedServer || !menuState.isMediaStreamingActive)
 
                 Button(L10n.text("shortcuts.hearMyself")) {
                     appDelegate.toggleHearMyself()
                 }
-                .keyboardShortcut("h", modifiers: [.command, .shift])
+                .appKeyboardShortcut(keyBindings.shortcut(.hearMyself))
                 .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
 
                 Button(L10n.text("shortcuts.announceAudio")) {
                     appDelegate.announceAudioState()
                 }
-                .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(NSF9FunctionKey)!)), modifiers: [])
+                .appKeyboardShortcut(keyBindings.shortcut(.announceAudio))
                 .disabled(menuState.mode != .connectedServer)
 
                 Divider()
@@ -449,7 +469,7 @@ struct ttaccessibleApp: App {
                 Button(L10n.text("shortcuts.exportChat")) {
                     appDelegate.exportChat()
                 }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
+                .appKeyboardShortcut(keyBindings.shortcut(.exportChat))
                 .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
             }
         }
