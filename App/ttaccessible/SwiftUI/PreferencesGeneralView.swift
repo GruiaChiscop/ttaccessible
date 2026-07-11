@@ -149,30 +149,6 @@ struct PreferencesGeneralView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(L10n.text("preferences.general.keyBindingScheme.label"))
-                        .accessibilityHidden(true)
-                    Picker(
-                        L10n.text("preferences.general.keyBindingScheme.label"),
-                        selection: Binding(
-                            get: { rootStore.preferences.keyBindingScheme },
-                            set: { rootStore.updateKeyBindingScheme($0) }
-                        )
-                    ) {
-                        ForEach(AppKeyBindingScheme.allCases, id: \.self) { scheme in
-                            Text(L10n.text(scheme.localizationKey)).tag(scheme)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .accessibilityLabel(L10n.text("preferences.general.keyBindingScheme.label"))
-
-                    Text(L10n.text("preferences.general.keyBindingScheme.help"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Divider()
-
                 Text(L10n.text("preferences.updates.section"))
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
@@ -276,5 +252,37 @@ struct PreferencesGeneralView: View {
             return
         }
         store.updateDefaultNickname(trimmed)
+    }
+}
+
+struct PreferencesShortcutsView: View {
+    @ObservedObject var store: AppPreferencesStore
+
+    var body: some View {
+        PreferencesPaneScrollView(accessibilityLabel: L10n.text("preferences.shortcuts.title")) {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.text("preferences.shortcuts.keyboardScheme.label"))
+                        .accessibilityHidden(true)
+                    Picker(
+                        L10n.text("preferences.shortcuts.keyboardScheme.label"),
+                        selection: Binding(
+                            get: { store.preferences.keyBindingScheme },
+                            set: { store.updateKeyBindingScheme($0) }
+                        )
+                    ) {
+                        ForEach(AppKeyBindingScheme.allCases, id: \.self) { scheme in
+                            Text(L10n.text(scheme.localizationKey)).tag(scheme)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityLabel(L10n.text("preferences.shortcuts.keyboardScheme.label"))
+
+                    Text(L10n.text("preferences.shortcuts.keyboardScheme.help"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 }

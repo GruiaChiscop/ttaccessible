@@ -12,6 +12,7 @@ import SwiftUI
 final class PreferencesWindowController: NSWindowController {
     enum Pane: CaseIterable {
         case general
+        case shortcuts
         case connection
         case bearWare
         case audio
@@ -23,6 +24,8 @@ final class PreferencesWindowController: NSWindowController {
             switch self {
             case .general:
                 return L10n.text("preferences.general.title")
+            case .shortcuts:
+                return L10n.text("preferences.shortcuts.title")
             case .connection:
                 return L10n.text("preferences.connection.title")
             case .bearWare:
@@ -42,6 +45,8 @@ final class PreferencesWindowController: NSWindowController {
             switch self {
             case .general:
                 return "person"
+            case .shortcuts:
+                return "keyboard"
             case .connection:
                 return "network"
             case .bearWare:
@@ -231,6 +236,8 @@ private final class PreferencesContainerViewController: NSViewController {
             return NSHostingController(
                 rootView: PreferencesGeneralView(store: connectionPreferencesStore, rootStore: preferencesStore)
             )
+        case .shortcuts:
+            return NSHostingController(rootView: PreferencesShortcutsView(store: preferencesStore))
         case .connection:
             return NSHostingController(
                 rootView: PreferencesConnectionView(store: connectionPreferencesStore)
@@ -460,5 +467,99 @@ private final class PreferencesSidebarCellView: NSTableCellView {
     func configure(with pane: PreferencesWindowController.Pane) {
         paneImageView.image = NSImage(systemSymbolName: pane.iconName, accessibilityDescription: nil)
         paneTextField.stringValue = pane.title
+    }
+}
+
+@MainActor
+final class HelpKeyboardShortcutsWindowController: NSWindowController {
+    init() {
+        let contentViewController = NSHostingController(rootView: HelpKeyboardShortcutsView())
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 760, height: 560),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = L10n.text("help.shortcuts.window.title")
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.contentViewController = contentViewController
+        super.init(window: window)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    func show() {
+        showWindow(nil)
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+private struct HelpKeyboardShortcutsView: View {
+    private let columns = [
+        GridItem(.flexible(minimum: 220), alignment: .leading),
+        GridItem(.flexible(minimum: 120, maximum: 160), alignment: .leading),
+        GridItem(.flexible(minimum: 120, maximum: 160), alignment: .leading)
+    ]
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 18) {
+                Text(L10n.text("help.shortcuts.window.title"))
+                    .font(.title2)
+                    .bold()
+                    .accessibilityAddTraits(.isHeader)
+
+                Text(L10n.text("help.shortcuts.description"))
+                    .foregroundStyle(.secondary)
+
+                ForEach(AppShortcutHelpCategory.allCases, id: \.self) { category in
+                    let items = AppShortcutCatalog.items(in: category)
+                    if items.isEmpty == false {
+                        ShortcutCategorySection(category: category, items: items, columns: columns)
+                    }
+                }
+            }
+            .padding(24)
+        }
+        .accessibilityLabel(L10n.text("help.shortcuts.window.title"))
+    }
+}
+
+private struct ShortcutCategorySection: View {
+    let category: AppShortcutHelpCategory
+    let items: [AppShortcutHelpItem]
+    let columns: [GridItem]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.text(category.localizationKey))
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+                Text(L10n.text("help.shortcuts.column.command"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(L10n.text("preferences.shortcuts.keyboardScheme.ttaccessible"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(L10n.text("preferences.shortcuts.keyboardScheme.qtTeamTalk"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(items) { item in
+                    Text(item.title())
+                    Text(item.shortcutText(for: .ttaccessible))
+                        .font(.system(.body, design: .monospaced))
+                    Text(item.shortcutText(for: .qtTeamTalk))
+                        .font(.system(.body, design: .monospaced))
+                }
+            }
+        }
     }
 }

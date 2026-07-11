@@ -45,6 +45,12 @@ struct ttaccessibleApp: App {
             }
 
             CommandGroup(after: .help) {
+                Button(L10n.text("help.menu.keyboardShortcuts")) {
+                    appDelegate.openKeyboardShortcutsHelp()
+                }
+
+                Divider()
+
                 Button(L10n.text("help.menu.viewOnGitHub")) {
                     NSWorkspace.shared.open(URL(string: "https://github.com/math65/ttaccessible")!)
                 }
