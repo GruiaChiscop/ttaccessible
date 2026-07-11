@@ -62,6 +62,7 @@ enum AppShortcutCommand: Hashable {
     case kickBanUser
     case moveUser
     case markForMove
+    case moveMarkedUsers
     case focusPrimary
     case focusSecondary
     case focusMessage
@@ -143,7 +144,8 @@ extension AppKeyBindingScheme {
         .kickUserFromServer: .character("k", modifiers: [.command, .shift]),
         .kickBanUser: nil,
         .moveUser: .character("x", modifiers: [.command, .option]),
-        .markForMove: nil,
+        .markForMove: .character("x"),
+        .moveMarkedUsers: .character("v"),
         .focusPrimary: .character("1"),
         .focusSecondary: .character("2"),
         .focusMessage: .character("3"),
@@ -183,6 +185,7 @@ extension AppKeyBindingScheme {
         .kickBanUser: .character("b", modifiers: [.command, .option]),
         .moveUser: .character("v", modifiers: [.command, .option]),
         .markForMove: .character("x", modifiers: [.command, .option]),
+        .moveMarkedUsers: nil,
         .focusPrimary: nil,
         .focusSecondary: nil,
         .focusMessage: nil,

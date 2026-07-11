@@ -35,6 +35,7 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var canTransmitMediaFile = false
     @Published private(set) var canTextMessageUser = false
     @Published private(set) var canTextMessageChannel = false
+    @Published private(set) var canMoveUsers = false
     @Published private(set) var isNicknameLocked = false
     @Published private(set) var isStatusLocked = false
     @Published private(set) var hasSelectedUsers = false
@@ -109,6 +110,7 @@ final class SavedServersMenuState: ObservableObject {
         let canTransmitMediaFile = session?.canTransmitMediaFile ?? false
         let canTextMessageUser = session?.canTextMessageUser ?? false
         let canTextMessageChannel = session?.canTextMessageChannel ?? false
+        let canMoveUsers = session?.canMoveUsers ?? false
 
         if self.canCreateTemporaryChannel != canCreateTemporaryChannel { self.canCreateTemporaryChannel = canCreateTemporaryChannel }
         if self.canModifyChannels != canModifyChannels { self.canModifyChannels = canModifyChannels }
@@ -121,6 +123,7 @@ final class SavedServersMenuState: ObservableObject {
         if self.canTransmitMediaFile != canTransmitMediaFile { self.canTransmitMediaFile = canTransmitMediaFile }
         if self.canTextMessageUser != canTextMessageUser { self.canTextMessageUser = canTextMessageUser }
         if self.canTextMessageChannel != canTextMessageChannel { self.canTextMessageChannel = canTextMessageChannel }
+        if self.canMoveUsers != canMoveUsers { self.canMoveUsers = canMoveUsers }
     }
 
     var canCreateAnyChannel: Bool {

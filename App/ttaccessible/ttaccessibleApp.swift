@@ -292,6 +292,12 @@ struct ttaccessibleApp: App {
                     .appKeyboardShortcut(keyBindings.shortcut(.markForMove))
                     .disabled(menuState.canMoveSelectedUsers == false)
 
+                    Button(L10n.text("connectedServer.menu.moveMarkedUsersHere")) {
+                        appDelegate.moveMarkedUsersToSelectedChannel()
+                    }
+                    .appKeyboardShortcut(keyBindings.shortcut(.moveMarkedUsers))
+                    .disabled(menuState.mode != .connectedServer || menuState.hasSelectedChannel == false || menuState.canMoveUsers == false)
+
                     Divider()
 
                     Menu(L10n.text("user.menu.subscriptions")) {

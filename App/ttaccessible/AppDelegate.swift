@@ -1373,10 +1373,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func markSelectedUsersForMove() {
+        if isEditingText {
+            NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil)
+            return
+        }
+
         routeUserAction(
             connectedUsers: { $0.keyMarkSelectedUsersForMove() },
             mainWindow: { connectedServerViewController?.markUsersForMoveAction() }
         )
+    }
+
+    func moveMarkedUsersToSelectedChannel() {
+        if isEditingText {
+            NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
+            return
+        }
+
+        connectedServerViewController?.moveMarkedUsersToSelectedChannelAction()
+    }
+
+    private var isEditingText: Bool {
+        guard let responder = NSApp.keyWindow?.firstResponder else {
+            return false
+        }
+        if responder is NSTextView {
+            return true
+        }
+        return false
     }
 
     func toggleMuteSelectedUser() {
