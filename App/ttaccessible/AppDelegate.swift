@@ -79,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statsWindowController: NSWindowController?
     private weak var statsViewController: StatsViewController?
     private var preferencesWindowController: PreferencesWindowController?
+    private var helpKeyboardShortcutsWindowController: HelpKeyboardShortcutsWindowController?
     private var feedbackWindowController: FeedbackWindowController?
     private let announcementService = AnnouncementService()
     private var userAccountsWindowController: NSWindowController?
@@ -1631,6 +1632,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
         preferencesWindowController?.showPreferences()
+    }
+
+    func openKeyboardShortcutsHelp() {
+        if helpKeyboardShortcutsWindowController == nil {
+            helpKeyboardShortcutsWindowController = HelpKeyboardShortcutsWindowController()
+        }
+        helpKeyboardShortcutsWindowController?.show()
     }
 
     func openFeedback() {

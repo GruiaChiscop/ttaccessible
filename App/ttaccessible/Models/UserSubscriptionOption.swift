@@ -146,6 +146,23 @@ enum UserSubscriptionOption: String, CaseIterable, Hashable {
         }
     }
 
+    var shortcutDisplayKey: Character {
+        switch self {
+        case .privateMessages, .interceptPrivateMessages:
+            return "1"
+        case .channelMessages, .interceptChannelMessages:
+            return "2"
+        case .broadcastMessages:
+            return "3"
+        case .voice, .interceptVoice:
+            return "4"
+        case .desktop, .interceptDesktop:
+            return "5"
+        case .mediaFile, .interceptMediaFile:
+            return "6"
+        }
+    }
+
     var shortcutModifiers: EventModifiers {
         isIntercept ? [.control, .shift] : [.control]
     }
@@ -153,7 +170,7 @@ enum UserSubscriptionOption: String, CaseIterable, Hashable {
     func shortcut(in scheme: AppKeyBindingScheme) -> AppKeyboardShortcut {
         switch scheme {
         case .ttaccessible:
-            return AppKeyboardShortcut(key: shortcutKey, modifiers: shortcutModifiers)
+            return .character(shortcutDisplayKey, modifiers: shortcutModifiers)
         case .qtTeamTalk:
             let modifiers: EventModifiers = isIntercept ? [.command, .shift] : [.command]
             switch self {
