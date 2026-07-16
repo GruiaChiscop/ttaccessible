@@ -357,6 +357,10 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.userVolumeMemoryMode = mode }
     }
 
+    func mutateDeviceStreamLastDeviceUID(_ uid: String?) {
+        mutate { $0.deviceStreamLastDeviceUID = uid }
+    }
+
     func updateDisabledSoundEvents(_ disabled: Set<NotificationSound>) {
         mutate { $0.disabledSoundEvents = disabled }
         SoundPlayer.shared.disabledSounds = disabled

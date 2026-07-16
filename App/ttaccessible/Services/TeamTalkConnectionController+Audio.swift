@@ -660,7 +660,10 @@ extension TeamTalkConnectionController {
     /// TT_LOCAL_USERID + STREAMTYPE_MEDIAFILE_AUDIO. Voice is intentionally never
     /// self-monitored here — "hear myself" handles that separately.
     func refreshLocalMediaAudioEventLocked(instance: UnsafeMutableRawPointer) {
-        let shouldEnable = outputAudioReady && mediaStreamingActive
+        // Device streams self-monitor only when the user opted in (the source is
+        // usually audible locally already — hearing it back would be an echo).
+        let monitorAllowed = deviceStreamSource == nil || deviceStreamMonitorEnabled
+        let shouldEnable = outputAudioReady && mediaStreamingActive && monitorAllowed
         guard shouldEnable != localMediaAudioEnabled else { return }
         let media = UInt32(STREAMTYPE_MEDIAFILE_AUDIO.rawValue)
         if shouldEnable {

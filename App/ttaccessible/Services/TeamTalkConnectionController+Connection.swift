@@ -700,7 +700,8 @@ extension TeamTalkConnectionController {
                     let status = info.nStatus
                     switch status {
                     case MFS_STARTED:
-                        if info.uDurationMSec > 0 {
+                        // Device streams are endless — keep duration 0 (inert seek UI).
+                        if info.uDurationMSec > 0, deviceStreamSource == nil {
                             mediaStreamingDurationMSec = info.uDurationMSec
                         }
                         if let fileName = mediaStreamingFileName, !mediaStreamingStartedHistoryLogged {
@@ -942,6 +943,9 @@ extension TeamTalkConnectionController {
             reusableInstance = instance
         }
 
+        deviceStreamSource?.stop()
+        deviceStreamSource = nil
+        deviceStreamMonitorEnabled = false
         mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()
         mediaStreamingSecurityScopedURL = nil
         mediaStreamingActive = false

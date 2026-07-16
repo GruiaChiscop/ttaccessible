@@ -174,6 +174,12 @@ final class TeamTalkConnectionController {
     var mediaStreamingHasVideo = false
     var mediaStreamingActiveVideoCodec = VideoCodec()
     var mediaStreamingFinalizeSuppressedUntil: Date?
+    /// Live capture + loopback server when the active media stream sources an
+    /// audio device (nil for file/URL streams).
+    var deviceStreamSource: AudioDeviceStreamSource?
+    /// Whether the local user hears their own device stream back (chosen per
+    /// stream in the start dialog; file/URL streams always self-monitor).
+    var deviceStreamMonitorEnabled = false
     var activeVideoDisplayUserID: Int32 = 0
     var lastPublishedVideoFrame: VideoFramePayload?
     var lastPublishedVideoFrameUserID: Int32 = 0

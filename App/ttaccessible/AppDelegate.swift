@@ -1383,6 +1383,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         promptMediaStreamURL()
     }
 
+    func startStreamingMediaFromDevice() {
+        guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
+        promptMediaStreamDevice()
+    }
+
     func stopMediaStreaming() {
         guard menuState.mode == .connectedServer, menuState.isMediaStreamingActive else { return }
         connectionController.stopStreamingMediaFile()
@@ -1446,6 +1451,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             self.connectionController.startStreamingMediaURL(url) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        break
+                    case .failure(let error):
+                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
+                        let alert = NSAlert(error: error)
+                        alert.runModal()
+                    }
+                }
+            }
+        }
+    }
+
+    private func promptMediaStreamDevice() {
+        let devices = InputAudioDeviceResolver.availableInputDevices()
+        guard devices.isEmpty == false else {
+            announceWithVoiceOver(L10n.text("mediaStream.device.error.noDevices"))
+            let errorAlert = NSAlert()
+            errorAlert.messageText = L10n.text("mediaStream.device.prompt.title")
+            errorAlert.informativeText = L10n.text("mediaStream.device.error.noDevices")
+            errorAlert.runModal()
+            return
+        }
+
+        let alert = NSAlert()
+        alert.messageText = L10n.text("mediaStream.device.prompt.title")
+        alert.informativeText = L10n.text("mediaStream.device.prompt.message")
+        alert.addButton(withTitle: L10n.text("mediaStream.device.prompt.start"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let devicePopUp = NSPopUpButton(frame: NSRect(x: 0, y: 32, width: 320, height: 26), pullsDown: false)
+        devicePopUp.addItems(withTitles: devices.map(\.name))
+        devicePopUp.setAccessibilityLabel(L10n.text("mediaStream.device.prompt.deviceLabel"))
+        let preferredUID = preferencesStore.preferences.deviceStreamLastDeviceUID
+            ?? InputAudioDeviceResolver.defaultInputDeviceUID()
+        if let preferredUID, let index = devices.firstIndex(where: { $0.uid == preferredUID }) {
+            devicePopUp.selectItem(at: index)
+        }
+
+        // Off by default on purpose: the source is usually audible locally
+        // already, and hearing it back a second time reads as an echo.
+        let monitorCheckbox = NSButton(
+            checkboxWithTitle: L10n.text("mediaStream.device.prompt.monitor"),
+            target: nil,
+            action: nil
+        )
+        monitorCheckbox.frame = NSRect(x: 0, y: 0, width: 320, height: 24)
+        monitorCheckbox.state = .off
+
+        let accessory = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 62))
+        accessory.addSubview(devicePopUp)
+        accessory.addSubview(monitorCheckbox)
+        alert.accessoryView = accessory
+        alert.window.initialFirstResponder = devicePopUp
+
+        guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
+        alert.beginSheetModal(for: parentWindow) { [weak self] response in
+            guard response == .alertFirstButtonReturn, let self else { return }
+            let index = devicePopUp.indexOfSelectedItem
+            guard index >= 0, index < devices.count else { return }
+            let device = devices[index]
+            self.preferencesStore.mutateDeviceStreamLastDeviceUID(device.uid)
+            self.connectionController.startStreamingAudioDevice(
+                deviceUID: device.uid,
+                monitorEnabled: monitorCheckbox.state == .on
+            ) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success:

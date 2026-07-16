@@ -398,6 +398,12 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("u", modifiers: [.command, .option])
                 .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
 
+                Button(L10n.text("shortcuts.mediaStream.startDevice")) {
+                    appDelegate.startStreamingMediaFromDevice()
+                }
+                .keyboardShortcut("a", modifiers: [.command, .option])
+                .disabled(menuState.mode != .connectedServer || menuState.isMediaStreamingActive || menuState.isInChannel == false)
+
                 Button(L10n.text("shortcuts.mediaStream.stop")) {
                     appDelegate.stopMediaStreaming()
                 }
