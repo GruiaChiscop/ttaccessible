@@ -174,6 +174,11 @@ final class TeamTalkConnectionController {
     var mediaStreamingHasVideo = false
     var mediaStreamingActiveVideoCodec = VideoCodec()
     var mediaStreamingFinalizeSuppressedUntil: Date?
+    /// Coalescing for the media panel's high-frequency controls: gain updates
+    /// and seeks are expensive SDK calls, and key-repeat floods otherwise queue
+    /// a backlog that keeps adjusting after the user releases the key.
+    let mediaStreamingGainRequest = CoalescedRequest<Int>()
+    let mediaStreamingSeekRequest = CoalescedRequest<UInt32>()
     /// Live capture + loopback server when the active media stream sources an
     /// audio device (nil for file/URL streams).
     var deviceStreamSource: AudioDeviceStreamSource?

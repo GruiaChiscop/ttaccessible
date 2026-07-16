@@ -356,9 +356,14 @@ extension TeamTalkConnectionController {
     }
 
     func seekMediaStreaming(toMSec offsetMSec: UInt32) {
+        // Coalesce: each seek stops and restarts the SDK stream, so a key-repeat
+        // flood would otherwise queue restarts that keep seeking after release.
+        guard mediaStreamingSeekRequest.submit(offsetMSec) else { return }
         queue.async { [weak self] in
-            guard let self, let instance = self.instance, self.mediaStreamingActive else { return }
-            let clamped = self.clampedMediaStreamOffsetMSec(offsetMSec)
+            guard let self else { return }
+            guard let requestedMSec = self.mediaStreamingSeekRequest.take() else { return }
+            guard let instance = self.instance, self.mediaStreamingActive else { return }
+            let clamped = self.clampedMediaStreamOffsetMSec(requestedMSec)
             guard self.restartMediaStreamLocked(instance: instance, offsetMSec: clamped, paused: self.mediaStreamingPaused) else {
                 AudioLogger.log("Media stream: seek restart failed at %u ms", clamped)
                 self.publishMediaStreamingProgressLocked()
@@ -371,9 +376,15 @@ extension TeamTalkConnectionController {
     }
 
     func setMediaStreamingBroadcastGainPercent(_ percent: Int) {
+        // Coalesce: the SDK update is slow enough on some machines that
+        // key-repeat floods queue a backlog which keeps stepping the gain
+        // after the key is released — only the newest value matters.
+        guard mediaStreamingGainRequest.submit(percent) else { return }
         queue.async { [weak self] in
-            guard let self, let instance = self.instance, self.mediaStreamingActive else { return }
-            self.mediaStreamingBroadcastGainLevel = Self.userVolumeFromPercent(Double(percent))
+            guard let self else { return }
+            guard let requestedPercent = self.mediaStreamingGainRequest.take() else { return }
+            guard let instance = self.instance, self.mediaStreamingActive else { return }
+            self.mediaStreamingBroadcastGainLevel = Self.userVolumeFromPercent(Double(requestedPercent))
             var playback = self.makeMediaFilePlaybackLocked(offsetMSec: UInt32(TT_MEDIAPLAYBACK_OFFSET_IGNORE))
             guard self.applyMediaStreamingUpdateLocked(instance: instance, playback: &playback) else {
                 AudioLogger.log("Media stream: broadcast gain update failed")
