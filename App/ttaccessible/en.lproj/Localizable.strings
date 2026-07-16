@@ -248,7 +248,11 @@
 "connectedServer.channel.form.topic" = "Topic";
 "connectedServer.channel.form.password" = "Password";
 "connectedServer.channel.form.maxUsers" = "Maximum users";
-"connectedServer.channel.form.diskQuota" = "Disk quota for files in KB (0 = only admins can upload)";
+"connectedServer.channel.form.diskQuota" = "Disk quota for files (0 = only admins can upload)";
+"connectedServer.channel.form.diskQuota.unit" = "Disk quota unit";
+"common.unit.kb" = "KB";
+"common.unit.mb" = "MB";
+"common.unit.gb" = "GB";
 "connectedServer.channel.form.permanent" = "Permanent channel";
 "connectedServer.channel.form.soloTransmit" = "Solo transmit (one speaker at a time)";
 "connectedServer.channel.form.noVoiceActivation" = "Disable voice activation (push-to-talk only)";

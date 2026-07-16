@@ -248,7 +248,11 @@
 "connectedServer.channel.form.topic" = "Sujet";
 "connectedServer.channel.form.password" = "Mot de passe";
 "connectedServer.channel.form.maxUsers" = "Nombre max d'utilisateurs";
-"connectedServer.channel.form.diskQuota" = "Quota de stockage des fichiers en Ko (0 = seuls les admins peuvent envoyer)";
+"connectedServer.channel.form.diskQuota" = "Quota de stockage des fichiers (0 = seuls les admins peuvent envoyer)";
+"connectedServer.channel.form.diskQuota.unit" = "Unité du quota de stockage";
+"common.unit.kb" = "Ko";
+"common.unit.mb" = "Mo";
+"common.unit.gb" = "Go";
 "connectedServer.channel.form.permanent" = "Canal permanent";
 "connectedServer.channel.form.soloTransmit" = "Transmission solo (un seul à la fois)";
 "connectedServer.channel.form.noVoiceActivation" = "Désactiver l'activation vocale (PTT uniquement)";

@@ -159,13 +159,34 @@ extension ConnectedServerViewController {
         maxUsersField.placeholderString = "200"
         maxUsersField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.maxUsers"))
 
-        // File-storage quota, edited in KB like the official client (SDK stores bytes).
+        // File-storage quota with a KB/MB/GB unit picker; converted to the raw
+        // bytes the SDK's nDiskQuota expects. Opens showing the largest unit
+        // that divides the current value cleanly.
         let diskQuotaLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.diskQuota"))
         let diskQuotaField = NSTextField(frame: .zero)
-        let initialDiskQuotaKB = properties.diskQuotaBytes / 1024
-        diskQuotaField.stringValue = String(initialDiskQuotaKB)
         diskQuotaField.placeholderString = "0"
         diskQuotaField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.diskQuota"))
+
+        let diskQuotaUnitMultipliers: [Int64] = [1 << 10, 1 << 20, 1 << 30]
+        let diskQuotaUnitPopUp = NSPopUpButton()
+        for key in ["common.unit.kb", "common.unit.mb", "common.unit.gb"] {
+            diskQuotaUnitPopUp.addItem(withTitle: L10n.text(key))
+        }
+        diskQuotaUnitPopUp.setAccessibilityLabel(L10n.text("connectedServer.channel.form.diskQuota.unit"))
+
+        let initialDiskQuotaUnitIndex: Int
+        let initialDiskQuotaValue: Int64
+        let quotaBytes = properties.diskQuotaBytes
+        if quotaBytes > 0, quotaBytes % (1 << 30) == 0 {
+            initialDiskQuotaUnitIndex = 2
+        } else if quotaBytes > 0, quotaBytes % (1 << 20) == 0 {
+            initialDiskQuotaUnitIndex = 1
+        } else {
+            initialDiskQuotaUnitIndex = 0
+        }
+        initialDiskQuotaValue = quotaBytes / diskQuotaUnitMultipliers[initialDiskQuotaUnitIndex]
+        diskQuotaField.stringValue = String(initialDiskQuotaValue)
+        diskQuotaUnitPopUp.selectItem(at: initialDiskQuotaUnitIndex)
 
         let permanentCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.permanent"), target: nil, action: nil)
         permanentCheck.state = properties.isPermanent ? .on : .off
@@ -238,13 +259,26 @@ extension ConnectedServerViewController {
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 6
-        for item in [nameLabel, nameField, topicLabel, topicField, passwordLabel, passwordField, maxUsersLabel, maxUsersField, diskQuotaLabel, diskQuotaField] {
+        for item in [nameLabel, nameField, topicLabel, topicField, passwordLabel, passwordField, maxUsersLabel, maxUsersField] {
             item.translatesAutoresizingMaskIntoConstraints = false
             stack.addArrangedSubview(item)
-            if item !== nameLabel, item !== topicLabel, item !== passwordLabel, item !== maxUsersLabel, item !== diskQuotaLabel {
+            if item !== nameLabel, item !== topicLabel, item !== passwordLabel, item !== maxUsersLabel {
                 NSLayoutConstraint.activate([item.widthAnchor.constraint(equalToConstant: 320)])
             }
         }
+
+        diskQuotaLabel.translatesAutoresizingMaskIntoConstraints = false
+        stack.addArrangedSubview(diskQuotaLabel)
+        let diskQuotaRow = NSStackView(views: [diskQuotaField, diskQuotaUnitPopUp])
+        diskQuotaRow.orientation = .horizontal
+        diskQuotaRow.spacing = 8
+        diskQuotaField.translatesAutoresizingMaskIntoConstraints = false
+        diskQuotaUnitPopUp.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            diskQuotaField.widthAnchor.constraint(equalToConstant: 232),
+            diskQuotaUnitPopUp.widthAnchor.constraint(equalToConstant: 80)
+        ])
+        stack.addArrangedSubview(diskQuotaRow)
 
         let separator = NSBox()
         separator.boxType = .separator
@@ -315,11 +349,16 @@ extension ConnectedServerViewController {
                 bitrate: max(6000, min(510000, bitrateKbps * 1000)),
                 application: Int32(applicationPopUp.selectedItem?.tag ?? 2048)
             )
-            // Keep the exact original byte value when the KB text is untouched,
-            // so a non-KB-aligned quota doesn't drift from display rounding.
+            // Keep the exact original byte value when value and unit are both
+            // untouched, so a non-unit-aligned quota doesn't drift from
+            // display rounding.
             let diskQuotaBytes: Int64
-            if let editedKB = Int64(diskQuotaField.stringValue), editedKB != initialDiskQuotaKB {
-                diskQuotaBytes = max(0, editedKB) * 1024
+            let selectedUnitIndex = max(0, min(diskQuotaUnitPopUp.indexOfSelectedItem, diskQuotaUnitMultipliers.count - 1))
+            if let editedValue = Int64(diskQuotaField.stringValue),
+               editedValue != initialDiskQuotaValue || selectedUnitIndex != initialDiskQuotaUnitIndex {
+                let multiplier = diskQuotaUnitMultipliers[selectedUnitIndex]
+                let clamped = max(0, min(editedValue, Int64.max / multiplier))
+                diskQuotaBytes = clamped * multiplier
             } else {
                 diskQuotaBytes = properties.diskQuotaBytes
             }
