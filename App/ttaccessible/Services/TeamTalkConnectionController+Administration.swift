@@ -646,7 +646,11 @@ extension TeamTalkConnectionController {
                 maxVideoCaptureTxPerSecond: sp.nMaxVideoCaptureTxPerSecond,
                 maxMediaFileTxPerSecond: sp.nMaxMediaFileTxPerSecond,
                 maxDesktopTxPerSecond: sp.nMaxDesktopTxPerSecond,
-                maxTotalTxPerSecond: sp.nMaxTotalTxPerSecond
+                maxTotalTxPerSecond: sp.nMaxTotalTxPerSecond,
+                tcpPort: sp.nTcpPort,
+                udpPort: sp.nUdpPort,
+                serverVersion: self.ttString(from: sp.szServerVersion),
+                serverProtocolVersion: self.ttString(from: sp.szServerProtocolVersion)
             )
         }
         return result
@@ -679,6 +683,8 @@ extension TeamTalkConnectionController {
             sp.nMaxMediaFileTxPerSecond = props.maxMediaFileTxPerSecond
             sp.nMaxDesktopTxPerSecond = props.maxDesktopTxPerSecond
             sp.nMaxTotalTxPerSecond = props.maxTotalTxPerSecond
+            sp.nTcpPort = props.tcpPort
+            sp.nUdpPort = props.udpPort
 
             let commandID = withUnsafeMutablePointer(to: &sp) { TT_DoUpdateServer(instance, $0) }
             guard commandID > 0 else {

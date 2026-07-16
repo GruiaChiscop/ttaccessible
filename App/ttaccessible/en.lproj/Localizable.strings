@@ -248,6 +248,7 @@
 "connectedServer.channel.form.topic" = "Topic";
 "connectedServer.channel.form.password" = "Password";
 "connectedServer.channel.form.maxUsers" = "Maximum users";
+"connectedServer.channel.form.diskQuota" = "Disk quota for files in KB (0 = only admins can upload)";
 "connectedServer.channel.form.permanent" = "Permanent channel";
 "connectedServer.channel.form.soloTransmit" = "Solo transmit (one speaker at a time)";
 "connectedServer.channel.form.noVoiceActivation" = "Disable voice activation (push-to-talk only)";
@@ -944,6 +945,11 @@
 "serverProperties.form.title" = "Server Properties";
 "serverProperties.form.section.general" = "General";
 "serverProperties.form.section.bandwidth" = "Bandwidth Limits";
+"serverProperties.form.section.info" = "Network & Server Information";
+"serverProperties.form.tcpPort" = "TCP port";
+"serverProperties.form.udpPort" = "UDP port";
+"serverProperties.form.serverVersion" = "Server version";
+"serverProperties.form.protocolVersion" = "Protocol version";
 "serverProperties.form.name" = "Server name";
 "serverProperties.form.motd" = "Message of the Day (MOTD)";
 "serverProperties.form.maxUsers" = "Max users";

@@ -37,6 +37,12 @@ struct ServerPropertiesData {
     var maxMediaFileTxPerSecond: Int32
     var maxDesktopTxPerSecond: Int32
     var maxTotalTxPerSecond: Int32
+    var tcpPort: Int32
+    var udpPort: Int32
+    /// Read-only, reported by the server.
+    var serverVersion: String
+    /// Read-only, reported by the server.
+    var serverProtocolVersion: String
 }
 
 // MARK: - Banned user model
@@ -201,6 +207,9 @@ struct ChannelProperties {
     var isNoVoiceActivation: Bool
     var isNoRecording: Bool
     var opusCodec: OpusCodecSettings?
+    /// Channel file-storage quota in bytes (SDK `nDiskQuota`); shown as KB in
+    /// the dialog, matching the official client.
+    var diskQuotaBytes: Int64
 }
 
 struct ChannelInfo {
@@ -215,4 +224,5 @@ struct ChannelInfo {
     let isNoVoiceActivation: Bool
     let isNoRecording: Bool
     let opusCodec: OpusCodecSettings?
+    let diskQuotaBytes: Int64
 }

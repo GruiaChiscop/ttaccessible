@@ -37,7 +37,8 @@ extension ConnectedServerViewController {
         let props = ChannelProperties(
             name: "", topic: "", password: "", maxUsers: 200,
             isPermanent: false, isSoloTransmit: false, isNoVoiceActivation: false, isNoRecording: false,
-            opusCodec: parentCodec ?? OpusCodecSettings.defaultSettings
+            opusCodec: parentCodec ?? OpusCodecSettings.defaultSettings,
+            diskQuotaBytes: 0
         )
 
         presentChannelDialog(
@@ -73,7 +74,8 @@ extension ConnectedServerViewController {
             maxUsers: info.maxUsers, isPermanent: info.isPermanent,
             isSoloTransmit: info.isSoloTransmit, isNoVoiceActivation: info.isNoVoiceActivation,
             isNoRecording: info.isNoRecording,
-            opusCodec: info.opusCodec
+            opusCodec: info.opusCodec,
+            diskQuotaBytes: info.diskQuotaBytes
         )
 
         presentChannelDialog(
@@ -157,6 +159,14 @@ extension ConnectedServerViewController {
         maxUsersField.placeholderString = "200"
         maxUsersField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.maxUsers"))
 
+        // File-storage quota, edited in KB like the official client (SDK stores bytes).
+        let diskQuotaLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.diskQuota"))
+        let diskQuotaField = NSTextField(frame: .zero)
+        let initialDiskQuotaKB = properties.diskQuotaBytes / 1024
+        diskQuotaField.stringValue = String(initialDiskQuotaKB)
+        diskQuotaField.placeholderString = "0"
+        diskQuotaField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.diskQuota"))
+
         let permanentCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.permanent"), target: nil, action: nil)
         permanentCheck.state = properties.isPermanent ? .on : .off
         permanentCheck.setAccessibilityLabel(L10n.text("connectedServer.channel.form.permanent"))
@@ -228,10 +238,10 @@ extension ConnectedServerViewController {
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 6
-        for item in [nameLabel, nameField, topicLabel, topicField, passwordLabel, passwordField, maxUsersLabel, maxUsersField] {
+        for item in [nameLabel, nameField, topicLabel, topicField, passwordLabel, passwordField, maxUsersLabel, maxUsersField, diskQuotaLabel, diskQuotaField] {
             item.translatesAutoresizingMaskIntoConstraints = false
             stack.addArrangedSubview(item)
-            if item !== nameLabel, item !== topicLabel, item !== passwordLabel, item !== maxUsersLabel {
+            if item !== nameLabel, item !== topicLabel, item !== passwordLabel, item !== maxUsersLabel, item !== diskQuotaLabel {
                 NSLayoutConstraint.activate([item.widthAnchor.constraint(equalToConstant: 320)])
             }
         }
@@ -305,6 +315,14 @@ extension ConnectedServerViewController {
                 bitrate: max(6000, min(510000, bitrateKbps * 1000)),
                 application: Int32(applicationPopUp.selectedItem?.tag ?? 2048)
             )
+            // Keep the exact original byte value when the KB text is untouched,
+            // so a non-KB-aligned quota doesn't drift from display rounding.
+            let diskQuotaBytes: Int64
+            if let editedKB = Int64(diskQuotaField.stringValue), editedKB != initialDiskQuotaKB {
+                diskQuotaBytes = max(0, editedKB) * 1024
+            } else {
+                diskQuotaBytes = properties.diskQuotaBytes
+            }
             let result = ChannelProperties(
                 name: nameField.stringValue,
                 topic: topicField.stringValue,
@@ -314,7 +332,8 @@ extension ConnectedServerViewController {
                 isSoloTransmit: soloCheck.state == .on,
                 isNoVoiceActivation: noVoxCheck.state == .on,
                 isNoRecording: noRecCheck.state == .on,
-                opusCodec: codec
+                opusCodec: codec,
+                diskQuotaBytes: diskQuotaBytes
             )
             completion(result, joinCheck?.state == .on)
         }
