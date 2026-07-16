@@ -161,32 +161,24 @@ extension ConnectedServerViewController {
 
         // File-storage quota with a KB/MB/GB unit picker; converted to the raw
         // bytes the SDK's nDiskQuota expects. Opens showing the largest unit
-        // that divides the current value cleanly.
+        // that divides the current value cleanly, and switching units converts
+        // the displayed number in place.
         let diskQuotaLabel = NSTextField(labelWithString: L10n.text("connectedServer.channel.form.diskQuota"))
         let diskQuotaField = NSTextField(frame: .zero)
         diskQuotaField.placeholderString = "0"
         diskQuotaField.setAccessibilityLabel(L10n.text("connectedServer.channel.form.diskQuota"))
 
-        let diskQuotaUnitMultipliers: [Int64] = [1 << 10, 1 << 20, 1 << 30]
         let diskQuotaUnitPopUp = NSPopUpButton()
         for key in ["common.unit.kb", "common.unit.mb", "common.unit.gb"] {
             diskQuotaUnitPopUp.addItem(withTitle: L10n.text(key))
         }
         diskQuotaUnitPopUp.setAccessibilityLabel(L10n.text("connectedServer.channel.form.diskQuota.unit"))
 
-        let initialDiskQuotaUnitIndex: Int
-        let initialDiskQuotaValue: Int64
-        let quotaBytes = properties.diskQuotaBytes
-        if quotaBytes > 0, quotaBytes % (1 << 30) == 0 {
-            initialDiskQuotaUnitIndex = 2
-        } else if quotaBytes > 0, quotaBytes % (1 << 20) == 0 {
-            initialDiskQuotaUnitIndex = 1
-        } else {
-            initialDiskQuotaUnitIndex = 0
-        }
-        initialDiskQuotaValue = quotaBytes / diskQuotaUnitMultipliers[initialDiskQuotaUnitIndex]
-        diskQuotaField.stringValue = String(initialDiskQuotaValue)
-        diskQuotaUnitPopUp.selectItem(at: initialDiskQuotaUnitIndex)
+        let diskQuotaConverter = DiskQuotaUnitConverter(
+            field: diskQuotaField,
+            popup: diskQuotaUnitPopUp,
+            initialBytes: properties.diskQuotaBytes
+        )
 
         let permanentCheck = NSButton(checkboxWithTitle: L10n.text("connectedServer.channel.form.permanent"), target: nil, action: nil)
         permanentCheck.state = properties.isPermanent ? .on : .off
@@ -349,19 +341,7 @@ extension ConnectedServerViewController {
                 bitrate: max(6000, min(510000, bitrateKbps * 1000)),
                 application: Int32(applicationPopUp.selectedItem?.tag ?? 2048)
             )
-            // Keep the exact original byte value when value and unit are both
-            // untouched, so a non-unit-aligned quota doesn't drift from
-            // display rounding.
-            let diskQuotaBytes: Int64
-            let selectedUnitIndex = max(0, min(diskQuotaUnitPopUp.indexOfSelectedItem, diskQuotaUnitMultipliers.count - 1))
-            if let editedValue = Int64(diskQuotaField.stringValue),
-               editedValue != initialDiskQuotaValue || selectedUnitIndex != initialDiskQuotaUnitIndex {
-                let multiplier = diskQuotaUnitMultipliers[selectedUnitIndex]
-                let clamped = max(0, min(editedValue, Int64.max / multiplier))
-                diskQuotaBytes = clamped * multiplier
-            } else {
-                diskQuotaBytes = properties.diskQuotaBytes
-            }
+            let diskQuotaBytes = diskQuotaConverter.currentBytes
             let result = ChannelProperties(
                 name: nameField.stringValue,
                 topic: topicField.stringValue,
@@ -511,5 +491,80 @@ extension ConnectedServerViewController {
         }
 
         appDelegate.openPrivateConversation(userID: user.id, displayName: user.displayName)
+    }
+}
+
+/// Keeps the channel disk-quota field and its KB/MB/GB popup in sync: switching
+/// units converts the displayed number in place, while the underlying byte
+/// value stays exact — display rounding never drifts the stored quota unless
+/// the user actually edits the text. Retained by the dialog's completion
+/// closure for the lifetime of the sheet.
+private final class DiskQuotaUnitConverter: NSObject {
+    private let field: NSTextField
+    private let popup: NSPopUpButton
+    private let multipliers: [Int64] = [1 << 10, 1 << 20, 1 << 30]
+    private var trueBytes: Int64
+    private var lastRenderedText = ""
+    private var lastUnitIndex: Int
+
+    init(field: NSTextField, popup: NSPopUpButton, initialBytes: Int64) {
+        self.field = field
+        self.popup = popup
+        self.trueBytes = max(0, initialBytes)
+        // Largest unit that divides the value cleanly.
+        if trueBytes > 0, trueBytes % (1 << 30) == 0 {
+            lastUnitIndex = 2
+        } else if trueBytes > 0, trueBytes % (1 << 20) == 0 {
+            lastUnitIndex = 1
+        } else {
+            lastUnitIndex = 0
+        }
+        super.init()
+        popup.target = self
+        popup.action = #selector(unitChanged)
+        render()
+    }
+
+    /// The quota in bytes as currently shown: the exact original value while
+    /// the text is untouched, otherwise the edited number times the unit.
+    var currentBytes: Int64 {
+        bytesParsingField(withUnit: lastUnitIndex)
+    }
+
+    @objc private func unitChanged() {
+        let newIndex = max(0, min(popup.indexOfSelectedItem, multipliers.count - 1))
+        guard newIndex != lastUnitIndex else { return }
+        // Absorb any manual edit in the old unit before converting the display.
+        trueBytes = bytesParsingField(withUnit: lastUnitIndex)
+        lastUnitIndex = newIndex
+        render()
+    }
+
+    private func bytesParsingField(withUnit index: Int) -> Int64 {
+        if field.stringValue == lastRenderedText {
+            return trueBytes
+        }
+        // Accept a decimal comma (French keyboards) as well as a point.
+        let normalized = field.stringValue
+            .trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(normalized), value.isFinite, value >= 0 else {
+            return trueBytes
+        }
+        let bytes = (value * Double(multipliers[index])).rounded()
+        return bytes >= Double(Int64.max) ? Int64.max : Int64(bytes)
+    }
+
+    private func render() {
+        let multiplier = multipliers[lastUnitIndex]
+        let text: String
+        if trueBytes % multiplier == 0 {
+            text = String(trueBytes / multiplier)
+        } else {
+            text = String(format: "%.2f", Double(trueBytes) / Double(multiplier))
+        }
+        field.stringValue = text
+        lastRenderedText = text
+        popup.selectItem(at: lastUnitIndex)
     }
 }
