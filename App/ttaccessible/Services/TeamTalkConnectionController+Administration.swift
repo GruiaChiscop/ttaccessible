@@ -18,17 +18,12 @@ extension TeamTalkConnectionController {
                 return
             }
             let didAccess = localURL.startAccessingSecurityScopedResource()
-            do {
-                try self.validateUploadQuotaLocked(instance: instance, channelID: channelID, localURL: localURL)
-            } catch {
-                if didAccess {
-                    localURL.stopAccessingSecurityScopedResource()
-                }
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
-                return
-            }
+            // No client-side quota pre-check: the server is the authority and its
+            // enforcement differs from the visible numbers (verified live: it
+            // accepts uploads past nDiskQuota for privileged users), so local
+            // math false-rejects files the server would take. A genuine quota
+            // rejection comes back as CMDERR_MAX_DISKUSAGE_EXCEEDED and is
+            // mapped to the same localized message.
             let result = localURL.path.withCString { TT_DoSendFile(instance, channelID, $0) }
             if result > 0 {
                 if didAccess {
@@ -93,44 +88,6 @@ extension TeamTalkConnectionController {
     private func releaseSecurityScopedTransferURLLocked(transferID: Int32) {
         guard let url = securityScopedFileTransferURLs.removeValue(forKey: transferID) else { return }
         url.stopAccessingSecurityScopedResource()
-    }
-
-    private func validateUploadQuotaLocked(
-        instance: UnsafeMutableRawPointer,
-        channelID: Int32,
-        localURL: URL
-    ) throws {
-        var channel = Channel()
-        guard TT_GetChannel(instance, channelID, &channel) != 0, channel.nDiskQuota > 0 else {
-            return
-        }
-
-        let values = try? localURL.resourceValues(forKeys: [.fileSizeKey])
-        guard let size = values?.fileSize, size > 0 else {
-            return
-        }
-
-        let fileSize = Int64(size)
-        let usedStorage = channelFileStorageUsedLocked(instance: instance, channelID: channelID)
-        guard usedStorage + fileSize <= channel.nDiskQuota else {
-            throw TeamTalkConnectionError.internalError(L10n.text("files.error.uploadQuotaExceeded"))
-        }
-    }
-
-    private func channelFileStorageUsedLocked(instance: UnsafeMutableRawPointer, channelID: Int32) -> Int64 {
-        var fileCount: INT32 = 0
-        guard TT_GetChannelFiles(instance, channelID, nil, &fileCount) != 0, fileCount > 0 else {
-            return 0
-        }
-
-        var files = Array(repeating: RemoteFile(), count: Int(fileCount))
-        guard TT_GetChannelFiles(instance, channelID, &files, &fileCount) != 0 else {
-            return 0
-        }
-
-        return files.prefix(Int(fileCount)).reduce(Int64(0)) { partial, file in
-            partial + file.nFileSize
-        }
     }
 
     private func standardFilePath(_ path: String) -> String {
