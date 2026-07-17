@@ -233,7 +233,7 @@ struct AppPreferences: Codable, Equatable {
         macOSTTSVolume: Double = 1.0,
         recordingFolderBookmark: Data? = nil,
         recordingAudioFileFormat: Int = 2,
-        recordingMode: Int = 1,
+        recordingMode: Int = 3,
         soundPack: String = "Default",
         disabledSoundEvents: Set<NotificationSound> = [],
         skipKickConfirmation: Bool = false,
@@ -327,8 +327,12 @@ struct AppPreferences: Codable, Equatable {
     }
 
     /// Recording mode bitmask: 1=muxed, 2=separate, 3=both.
+    // The stored recording mode drives ⌘⇧R (and the toolbar Record button), which record
+    // separate files (2) or both muxed + separate (3). Single-file recording is always
+    // available on ⌘R and is not a stored preference, so a legacy "single" (1) value
+    // migrates to "both" (3) — a superset that still produces the single muxed file.
     nonisolated static func clampRecordingMode(_ value: Int) -> Int {
-        (1...3).contains(value) ? value : 1
+        value == 2 ? 2 : 3
     }
 
     init(from decoder: Decoder) throws {
@@ -404,7 +408,7 @@ struct AppPreferences: Codable, Equatable {
         macOSTTSVolume = Self.clampMacOSTTSVolume(try container.decodeIfPresent(Double.self, forKey: .macOSTTSVolume) ?? 1.0)
         recordingFolderBookmark = try container.decodeIfPresent(Data.self, forKey: .recordingFolderBookmark)
         recordingAudioFileFormat = Self.clampRecordingAudioFileFormat(try container.decodeIfPresent(Int.self, forKey: .recordingAudioFileFormat) ?? 2)
-        recordingMode = Self.clampRecordingMode(try container.decodeIfPresent(Int.self, forKey: .recordingMode) ?? 1)
+        recordingMode = Self.clampRecordingMode(try container.decodeIfPresent(Int.self, forKey: .recordingMode) ?? 3)
         soundPack = try container.decodeIfPresent(String.self, forKey: .soundPack) ?? "Default"
         disabledSoundEvents = try container.decodeIfPresent(Set<NotificationSound>.self, forKey: .disabledSoundEvents) ?? []
         skipKickConfirmation = try container.decodeIfPresent(Bool.self, forKey: .skipKickConfirmation) ?? false

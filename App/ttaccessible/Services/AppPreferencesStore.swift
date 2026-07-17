@@ -1114,8 +1114,9 @@ final class RecordingPreferencesStore: ObservableObject {
         let label: String
     }
 
+    // Single-file (muxed) recording is always available on ⌘R, so the preference — which
+    // drives ⌘⇧R and the toolbar button — only offers separate or both.
     static let modeOptions: [ModeOption] = [
-        ModeOption(id: 1, label: L10n.text("preferences.recording.mode.muxed")),
         ModeOption(id: 2, label: L10n.text("preferences.recording.mode.separate")),
         ModeOption(id: 3, label: L10n.text("preferences.recording.mode.both")),
     ]

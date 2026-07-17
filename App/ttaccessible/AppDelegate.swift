@@ -101,6 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastObservedSessionHistory: [SessionHistoryEntry] = []
     private var recordingAccessedFolder: URL?
     private var activeRecordingMode: Int = 0
+    private var recordingStopKeyMonitor: Any?
     private var lastObservedChannelID: Int32 = 0
     private var pendingUnsavedServerConfiguration: PendingUnsavedServerConfiguration?
 
@@ -153,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         syncNicknamePreference()
         scheduleLaunchUpdateCheck()
         configurePushToTalkObservers()
+        installRecordingStopKeyMonitor()
         // Slight delay so the announcement alert never races the main window.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.announcementService.checkAtLaunch()
@@ -1268,17 +1270,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
-    func toggleRecording() {
+    /// While recording, ⌘⇧R has no menu item (only a single Stop item on ⌘R is shown), so
+    /// catch ⌘⇧R here to stop as well. When idle, the "start (preferred)" menu item claims
+    /// ⌘⇧R before it reaches this monitor, so this only ever fires while recording is active.
+    private func installRecordingStopKeyMonitor() {
+        recordingStopKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard let self, self.menuState.isRecordingActive,
+                  event.charactersIgnoringModifiers?.lowercased() == "r",
+                  event.modifierFlags.intersection(.deviceIndependentFlagsMask) == [.command, .shift] else {
+                return event
+            }
+            self.toggleRecording()
+            return nil
+        }
+    }
+
+    /// Toggle recording. When starting, `mode` selects the recording layout as a bitmask
+    /// (1 = single muxed file, 2 = separate files, 3 = both). Pass `nil` to use the mode
+    /// configured in preferences (⌘⇧R and the toolbar button); ⌘R passes `1` to force a
+    /// single file regardless of the preference.
+    func toggleRecording(mode: Int? = nil) {
         guard menuState.mode == .connectedServer else { return }
         if menuState.isRecordingActive {
             stopAllRecording()
             return
         }
+        let resolvedMode = mode ?? preferencesStore.preferences.recordingMode
         guard let folderURL = preferencesStore.resolveRecordingFolderURL() else {
-            promptRecordingFolder()
+            promptRecordingFolder(mode: resolvedMode)
             return
         }
-        startRecordingToFolder(folderURL)
+        startRecordingToFolder(folderURL, mode: resolvedMode)
     }
 
     private func stopAllRecording() {
@@ -1310,7 +1332,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func promptRecordingFolder() {
+    private func promptRecordingFolder(mode: Int) {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -1323,34 +1345,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let bookmark = try? url.bookmarkData(options: .withSecurityScope) {
                 self.preferencesStore.updateRecordingFolderBookmark(bookmark)
             }
-            self.startRecordingToFolder(url)
+            self.startRecordingToFolder(url, mode: mode)
         }
     }
 
-    private func startRecordingToFolder(_ folder: URL) {
+    private func startRecordingToFolder(_ folder: URL, mode: Int) {
         guard folder.startAccessingSecurityScopedResource() else {
             preferencesStore.updateRecordingFolderBookmark(nil)
-            promptRecordingFolder()
+            promptRecordingFolder(mode: mode)
             return
         }
         recordingAccessedFolder = folder
         let format = AudioFileFormat(rawValue: UInt32(preferencesStore.preferences.recordingAudioFileFormat))
-        let mode = preferencesStore.preferences.recordingMode
         activeRecordingMode = mode
         preferencesStore.updateLastRecordingWasActive(true)
 
+        let recordsStems = mode & 2 != 0
         if mode & 1 != 0 {
             connectionController.startMuxedRecording(folder: folder, format: format) { [weak self] result in
                 switch result {
                 case .success(let fileName):
-                    self?.announceWithVoiceOver(L10n.format("recording.announced.started", fileName))
+                    // "Both" (single + stems) gets its own announcement so ⌘⇧R is
+                    // distinct from ⌘R's plain single-file recording.
+                    let key = recordsStems ? "recording.announced.startedBoth" : "recording.announced.started"
+                    self?.announceWithVoiceOver(L10n.format(key, fileName))
                 case .failure:
                     self?.announceWithVoiceOver(L10n.text("recording.announced.error"))
                     self?.releaseRecordingFolderAccess()
                 }
             }
         }
-        if mode & 2 != 0 {
+        if recordsStems {
             connectionController.startSeparateRecording(folder: folder, format: format) { [weak self] result in
                 if case .failure = result {
                     self?.announceWithVoiceOver(L10n.text("recording.announced.error"))
@@ -2171,7 +2196,7 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
            preferencesStore.preferences.autoRestartRecording,
            preferencesStore.preferences.lastRecordingWasActive,
            let folderURL = preferencesStore.resolveRecordingFolderURL() {
-            startRecordingToFolder(folderURL)
+            startRecordingToFolder(folderURL, mode: preferencesStore.preferences.recordingMode)
         }
 
         if privateMessagesWindowController != nil {
