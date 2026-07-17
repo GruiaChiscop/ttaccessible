@@ -874,6 +874,7 @@
 "accounts.menu.open" = "Comptes utilisateurs…";
 "accounts.table.accessibilityLabel" = "Liste des comptes utilisateurs";
 "accounts.column.username" = "Nom d'utilisateur";
+"accounts.column.nickname" = "Pseudo (en ligne)";
 "accounts.column.password" = "Mot de passe";
 "accounts.column.type" = "Type";
 "accounts.column.note" = "Note";

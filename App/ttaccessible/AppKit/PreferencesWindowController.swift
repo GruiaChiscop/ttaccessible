@@ -78,7 +78,7 @@ final class PreferencesWindowController: NSWindowController {
             advancedMicrophoneSettingsStore: advancedMicrophoneSettingsStore
         )
 
-        let window = NSWindow(
+        let window = EscapeClosableWindow(
             contentRect: NSRect(x: 0, y: 0, width: 700, height: 420),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,

@@ -317,6 +317,14 @@ extension TeamTalkConnectionController {
     func makeUserAccountProperties(from account: UserAccount) -> UserAccountProperties {
         var props = UserAccountProperties()
         props.username = ttString(from: account.szUsername)
+        // Show who currently uses the account: nickname of the logged-in user
+        // (first match for multi-login accounts), empty when nobody's online.
+        if let instance, props.username.isEmpty == false {
+            var onlineUser = User()
+            if props.username.withCString({ TT_GetUserByUsername(instance, $0, &onlineUser) != 0 }) {
+                props.onlineNickname = ttString(from: onlineUser.szNickname)
+            }
+        }
         props.password = ttString(from: account.szPassword)
         if (account.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0 {
             props.userType = .admin

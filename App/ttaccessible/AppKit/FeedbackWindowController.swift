@@ -13,7 +13,7 @@ import SwiftUI
 @MainActor
 final class FeedbackWindowController: NSWindowController {
     init(preferencesStore: AppPreferencesStore) {
-        let window = NSWindow(
+        let window = EscapeClosableWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 460),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,

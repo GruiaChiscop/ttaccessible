@@ -650,7 +650,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             vc.clientStatisticsProvider = { [weak self] in
                 self?.connectionController.getClientStatistics()
             }
-            let window = NSWindow(
+            let window = EscapeClosableWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 400, height: 260),
                 styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,

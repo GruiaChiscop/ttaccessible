@@ -873,6 +873,7 @@
 "accounts.menu.open" = "User Accounts…";
 "accounts.table.accessibilityLabel" = "User accounts list";
 "accounts.column.username" = "Username";
+"accounts.column.nickname" = "Nickname (online)";
 "accounts.column.password" = "Password";
 "accounts.column.type" = "Type";
 "accounts.column.note" = "Note";

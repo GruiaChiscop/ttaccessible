@@ -79,6 +79,9 @@ enum UserAccountType {
 
 struct UserAccountProperties {
     var username: String
+    /// Current nickname of the user logged in with this account, empty when
+    /// offline (accounts themselves carry no nickname in the protocol).
+    var onlineNickname: String = ""
     var password: String
     var userType: UserAccountType
     var userRights: UInt32
