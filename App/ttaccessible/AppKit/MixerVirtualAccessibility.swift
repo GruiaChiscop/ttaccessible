@@ -26,7 +26,7 @@ struct VirtualSliderConfig {
     let label: String
     let help: String?
     let getValue: @MainActor @Sendable () -> Double?
-    let getDisplayString: @Sendable (Double) -> String
+    let getDisplayString: @MainActor @Sendable (Double) -> String
     let setValue: @MainActor @Sendable (Double) -> Void
     let incrementValue: @Sendable (Double) -> Double
     let decrementValue: @Sendable (Double) -> Double
@@ -37,7 +37,7 @@ struct VirtualSliderConfig {
     init(label: String,
          help: String? = nil,
          getValue: @escaping @MainActor @Sendable () -> Double?,
-         getDisplayString: @escaping @Sendable (Double) -> String,
+         getDisplayString: @escaping @MainActor @Sendable (Double) -> String,
          setValue: @escaping @MainActor @Sendable (Double) -> Void,
          incrementValue: @escaping @Sendable (Double) -> Double,
          decrementValue: @escaping @Sendable (Double) -> Double,

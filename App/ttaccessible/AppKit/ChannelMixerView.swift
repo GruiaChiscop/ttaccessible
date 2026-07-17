@@ -45,11 +45,14 @@ private struct MixerStripRow: View {
             fader(L10n.text("mixer.voice.label.short"), value: strip.voicePercent, range: 0...100,
                   set: { coordinator.setVoice(id: strip.id, percent: $0) },
                   display: { "\(Int($0.rounded()))%" })
+            fader(L10n.text("mixer.pan.label.short"), value: strip.voicePan, range: -1...1,
+                  set: { coordinator.setVoicePan(id: strip.id, value: $0) },
+                  display: { ChannelMixerCoordinator.panDescription($0) })
             fader(L10n.text("mixer.media.label.short"), value: strip.mediaPercent, range: 0...100,
                   set: { coordinator.setMedia(id: strip.id, percent: $0) },
                   display: { "\(Int($0.rounded()))%" })
-            fader(L10n.text("mixer.pan.label.short"), value: strip.pan, range: -1...1,
-                  set: { coordinator.setPan(id: strip.id, value: $0) },
+            fader(L10n.text("mixer.mediapan.label.short"), value: strip.mediaPan, range: -1...1,
+                  set: { coordinator.setMediaPan(id: strip.id, value: $0) },
                   display: { ChannelMixerCoordinator.panDescription($0) })
 
             HStack(spacing: 16) {

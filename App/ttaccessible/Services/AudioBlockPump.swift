@@ -45,6 +45,14 @@ final class AudioBlockPump {
     /// (mirrors the controller's `localMediaAudioEnabled`).
     private var localMediaEnabled = false
 
+    /// Per engine-source sticky "has ever delivered genuinely stereo content" flag,
+    /// for the mixer's "Center" vs "Stereo" announcement. The SDK's block nChannels
+    /// can't answer this — a stereo-codec channel decodes even a mono phone mic to 2
+    /// channels — so we judge from the L/R content and latch to stereo once proven,
+    /// which survives a stereo source's silent gaps. Queue-confined; cleared when the
+    /// source goes away.
+    private var sawStereoByKey: [Int32: Bool] = [:]
+
     /// ~4× the usual block cadence (~40 ms OPUS frames): a queued block never
     /// waits long, and a tick on an empty queue is just a lock + check per
     /// enabled stream.
@@ -76,6 +84,7 @@ final class AudioBlockPump {
             engine = nil
             userIDs = []
             localMediaEnabled = false
+            sawStereoByKey.removeAll()
         }
     }
 
@@ -92,6 +101,8 @@ final class AudioBlockPump {
                 for userID in departed {
                     engine.removeUser(userID)
                     engine.removeUser(TeamTalkConnectionController.outputMediaSourceKey(userID))
+                    self.sawStereoByKey.removeValue(forKey: userID)
+                    self.sawStereoByKey.removeValue(forKey: TeamTalkConnectionController.outputMediaSourceKey(userID))
                 }
             }
         }
@@ -106,6 +117,7 @@ final class AudioBlockPump {
             self.localMediaEnabled = enabled
             if wasEnabled, enabled == false {
                 self.engine?.removeUser(TeamTalkConnectionController.localMediaEngineKey)
+                self.sawStereoByKey.removeValue(forKey: TeamTalkConnectionController.localMediaEngineKey)
             }
         }
     }
@@ -159,8 +171,45 @@ final class AudioBlockPump {
                     frames: frames, channels: channels, sampleRate: Double(sampleRate),
                     profile: profile
                 )
+                updateStereoJudgement(pcm: pcm, frames: frames, channels: channels,
+                                      engineKey: engineKey, engine: engine)
             }
             TT_ReleaseUserAudioBlock(instance, block)
         }
+    }
+
+    /// Update and publish the effective channel count for `engineKey`. A stereo-codec
+    /// channel decodes every sender to 2 channels, so nChannels alone reports a mono
+    /// phone mic as stereo; we instead judge from whether L genuinely differs from R.
+    /// Once a source proves stereo it latches (so its silent gaps stay "stereo").
+    private func updateStereoJudgement(pcm: [Int16], frames: Int, channels: Int,
+                                       engineKey: Int32, engine: OutputAudioRenderEngine) {
+        if channels >= 2, blockIsStereo(pcm, frames: frames, channels: channels) {
+            sawStereoByKey[engineKey] = true
+        }
+        let effective = (channels >= 2 && sawStereoByKey[engineKey] == true) ? 2 : 1
+        engine.setAnnouncedChannels(effective, for: engineKey)
+    }
+
+    /// Whether this block carries genuine stereo content, from the side/mid energy
+    /// ratio. A mono source duplicated into two channels has ~zero side energy (only
+    /// codec noise); real stereo puts a meaningful fraction of its energy in the side
+    /// (L−R). Near-silent blocks are skipped — they carry no reliable stereo info and
+    /// would let codec noise read as stereo. Thresholds are deliberately conservative
+    /// so the false direction is "mono", never a phantom "stereo".
+    private func blockIsStereo(_ pcm: [Int16], frames: Int, channels: Int) -> Bool {
+        var midEnergy = 0.0, sideEnergy = 0.0, peak = 0
+        var i = 0
+        for _ in 0..<frames {
+            let l = Int(pcm[i]), r = Int(pcm[i + 1])
+            i += channels
+            let mid = l + r, side = l - r
+            midEnergy += Double(mid * mid)
+            sideEnergy += Double(side * side)
+            let amp = max(abs(l), abs(r))
+            if amp > peak { peak = amp }
+        }
+        guard peak > 512, midEnergy > 0 else { return false }   // ignore ~silence (< ~-36 dBFS)
+        return sideEnergy > 0.05 * midEnergy                    // side ≳ 5% of mid ⇒ real stereo
     }
 }

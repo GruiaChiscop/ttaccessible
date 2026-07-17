@@ -661,12 +661,14 @@
 "mixer.voice.label" = "Voice volume, %@";
 "mixer.media.label" = "Media volume, %@";
 "mixer.pan.label" = "Pan, %@";
+"mixer.mediapan.label" = "Media pan, %@";
 "mixer.mute.voice" = "Mute voice, %@";
 "mixer.mute.media" = "Mute media, %@";
 "mixer.value.percent" = "%d%%";
 "mixer.pan.center" = "Center";
 "mixer.pan.left" = "Left %d%%";
 "mixer.pan.right" = "Right %d%%";
+"mixer.pan.stereo" = "Stereo";
 "mixer.muted.voice" = "voice muted";
 "mixer.muted.media" = "media muted";
 "mixer.area.label" = "Mixer";
@@ -678,6 +680,7 @@
 "mixer.voice.label.short" = "Volume";
 "mixer.media.label.short" = "Media volume";
 "mixer.pan.label.short" = "Pan";
+"mixer.mediapan.label.short" = "Media pan";
 "mixer.mute.label.short" = "Mute";
 "mixer.mute.action.mute" = "Mute";
 "mixer.mute.action.unmute" = "Unmute";

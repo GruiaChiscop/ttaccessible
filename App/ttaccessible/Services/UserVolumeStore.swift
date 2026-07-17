@@ -33,6 +33,7 @@ final class UserVolumeStore {
     private let mediaFileKey = "userMediaFileVolumeByUsername"
     private let stereoKey = "userStereoBalanceByUsername"
     private let panKey = "userPanByUsername"
+    private let mediaPanKey = "userMediaPanByUsername"
     private let defaults: UserDefaults
 
     /// Guards the mutable state below. It is written on the TeamTalk queue (connect /
@@ -171,23 +172,33 @@ final class UserVolumeStore {
     // Range -1 (full left) .. 0 (center) .. +1 (full right); center is the default and
     // is stored as "no entry" so it never overrides a user who only touches the L/R checks.
 
-    func pan(forUsername username: String) -> Float? {
+    // Voice and media-file each have their OWN pan, mirroring the split voice/media
+    // volume controls. The voice pan reuses the original `userPanByUsername` key, so a
+    // pan saved before the voice/media split carries forward as that user's voice pan.
+
+    func voicePan(forUsername username: String) -> Float? { pan(forUsername: username, key: panKey) }
+    func setVoicePan(_ pan: Float, forUsername username: String) { setPan(pan, forUsername: username, key: panKey) }
+
+    func mediaPan(forUsername username: String) -> Float? { pan(forUsername: username, key: mediaPanKey) }
+    func setMediaPan(_ pan: Float, forUsername username: String) { setPan(pan, forUsername: username, key: mediaPanKey) }
+
+    private func pan(forUsername username: String, key: String) -> Float? {
         guard !username.isEmpty,
-              let dict = loadDict(panKey),
+              let dict = loadDict(key),
               let value = dict[entryKey(username)] as? Double else { return nil }
         return Float(value)
     }
 
-    func setPan(_ pan: Float, forUsername username: String) {
+    private func setPan(_ pan: Float, forUsername username: String, key: String) {
         guard !username.isEmpty else { return }
         let clamped = max(-1, min(1, pan))
-        var dict = loadDict(panKey) ?? [:]
+        var dict = loadDict(key) ?? [:]
         let entry = entryKey(username)
         if abs(clamped) < 0.0001 {
             dict.removeValue(forKey: entry)
         } else {
             dict[entry] = Double(clamped)
         }
-        storeDict(dict, panKey)
+        storeDict(dict, key)
     }
 }

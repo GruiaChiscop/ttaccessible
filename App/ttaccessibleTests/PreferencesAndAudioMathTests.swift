@@ -264,15 +264,18 @@ final class UserVolumeStoreScopingTests: XCTestCase {
         let store = UserVolumeStore(defaults: defaults)
 
         store.setServerScope("serverA:10333")
-        store.setPan(0.5, forUsername: "guest")
+        store.setVoicePan(0.5, forUsername: "guest")
+        store.setMediaPan(-0.25, forUsername: "guest")
         store.setStereoBalance(.init(left: true, right: false), forUsername: "guest")
 
         store.setServerScope("serverB:10333")
-        XCTAssertNil(store.pan(forUsername: "guest"))
+        XCTAssertNil(store.voicePan(forUsername: "guest"))
+        XCTAssertNil(store.mediaPan(forUsername: "guest"))
         XCTAssertNil(store.stereoBalance(forUsername: "guest"))
 
         store.setServerScope("serverA:10333")
-        XCTAssertEqual(store.pan(forUsername: "guest"), 0.5)
+        XCTAssertEqual(store.voicePan(forUsername: "guest"), 0.5)
+        XCTAssertEqual(store.mediaPan(forUsername: "guest"), -0.25)
         XCTAssertEqual(store.stereoBalance(forUsername: "guest"), .init(left: true, right: false))
     }
 

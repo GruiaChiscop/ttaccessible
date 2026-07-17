@@ -4,12 +4,14 @@
 //
 //  The Channel Mixer's keyboard model, matching Rocco's Mixer app: a local NSEvent
 //  monitor that, while VoiceOver is focused on a mixer strip, routes
-//    Cmd+Up/Down  -> the focused user's media-file volume (master output volume when
-//                    the cursor is OUTSIDE the mixer)
-//    Up/Down      -> the focused user's voice volume
-//    Left/Right   -> the focused user's pan
-//    v / p / m    -> announce volume / pan / mute (single tap); reset 50% / center /
-//                    toggle mute (double tap)
+//    Cmd+Up/Down    -> the focused user's media-file volume (master output volume when
+//                      the cursor is OUTSIDE the mixer)
+//    Up/Down        -> the focused user's voice volume
+//    Left/Right     -> the focused user's VOICE pan
+//    Cmd+Left/Right -> the focused user's MEDIA pan (on a strip only)
+//    v / p / m      -> announce voice volume / voice pan / mute (single tap); reset 50% /
+//                      center / toggle mute (double tap)
+//    Cmd+p          -> announce media pan (single tap); reset media pan to center (double)
 //  Single/double-tap and key-repeat use the ported KeyCommandHandler / ArrowRepeatHandler.
 //  The focused user is resolved from VoiceOver's AX cursor (the "channel-strip-<id>"
 //  identifier set by the virtual-accessibility tree), so plain arrows are only hijacked
@@ -88,6 +90,30 @@ final class ChannelMixerKeyboardController {
             return true
         }
 
+        // Cmd+Left/Right -> the focused user's MEDIA-file pan (mirrors Cmd+Up/Down media
+        // volume). Strip-gated only: unlike media volume, media pan has no off-strip
+        // meaning, so off a strip these pass straight through.
+        if cmd, !mods.contains(.option), !mods.contains(.control),
+           let arrow, arrow == .left || arrow == .right {
+            guard let uid = findFocusedStripUserID() else { arrowRepeat.stop(); return false }
+            arrowRepeat.start(key: arrow) { [weak self] in
+                guard let self, let c = self.coordinator else { return }
+                self.announce(c.nudgeMediaPan(uid, right: arrow == .right))
+            }
+            return true
+        }
+
+        // Cmd+P -> announce (single) / reset-center (double) the focused user's media pan,
+        // mirroring plain P for voice pan. Strip-gated, so off a strip Cmd+P is untouched.
+        if cmd, !mods.contains(.option), !mods.contains(.control),
+           event.charactersIgnoringModifiers?.lowercased() == "p" {
+            guard let uid = findFocusedStripUserID() else { return false }
+            keyHandler.handle(key: "cmd-p",
+                onSingle: { [weak self] in self?.announceFrom { $0.announceMediaPan(uid) } },
+                onDouble: { [weak self] in self?.announceFrom { $0.resetMediaPan(uid) } })
+            return true
+        }
+
         // Everything else needs a focused user strip — but resolving it is up to ~8
         // system-wide AXUIElementCopyAttributeValue calls, far too costly to run on
         // every keystroke (and key-repeat). Only the plain arrows and v/p/m/s act on a
@@ -109,8 +135,8 @@ final class ChannelMixerKeyboardController {
                 switch arrow {
                 case .up: text = c.nudgeVoice(uid, up: true)
                 case .down: text = c.nudgeVoice(uid, up: false)
-                case .left: text = c.nudgePan(uid, right: false)
-                case .right: text = c.nudgePan(uid, right: true)
+                case .left: text = c.nudgeVoicePan(uid, right: false)
+                case .right: text = c.nudgeVoicePan(uid, right: true)
                 }
                 self.announce(text)
             }
@@ -126,8 +152,8 @@ final class ChannelMixerKeyboardController {
             return true
         case "p":
             keyHandler.handle(key: "p",
-                onSingle: { [weak self] in self?.announceFrom { $0.announcePan(uid) } },
-                onDouble: { [weak self] in self?.announceFrom { $0.resetPan(uid) } })
+                onSingle: { [weak self] in self?.announceFrom { $0.announceVoicePan(uid) } },
+                onDouble: { [weak self] in self?.announceFrom { $0.resetVoicePan(uid) } })
             return true
         case "m":
             keyHandler.handle(key: "m",

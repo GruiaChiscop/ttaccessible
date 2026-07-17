@@ -661,12 +661,14 @@
 "mixer.voice.label" = "Volume de la voix, %@";
 "mixer.media.label" = "Volume du média, %@";
 "mixer.pan.label" = "Panoramique, %@";
+"mixer.mediapan.label" = "Panoramique du média, %@";
 "mixer.mute.voice" = "Couper la voix, %@";
 "mixer.mute.media" = "Couper le média, %@";
 "mixer.value.percent" = "%d %%";
 "mixer.pan.center" = "Centre";
 "mixer.pan.left" = "Gauche %d %%";
 "mixer.pan.right" = "Droite %d %%";
+"mixer.pan.stereo" = "Stéréo";
 "mixer.muted.voice" = "voix coupée";
 "mixer.muted.media" = "média coupé";
 "mixer.area.label" = "Mixeur";
@@ -678,6 +680,7 @@
 "mixer.voice.label.short" = "Volume";
 "mixer.media.label.short" = "Volume du média";
 "mixer.pan.label.short" = "Panoramique";
+"mixer.mediapan.label.short" = "Panoramique du média";
 "mixer.mute.label.short" = "Sourdine";
 "mixer.mute.action.mute" = "Couper le son";
 "mixer.mute.action.unmute" = "Rétablir le son";

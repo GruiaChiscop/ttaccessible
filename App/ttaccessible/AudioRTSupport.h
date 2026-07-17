@@ -52,17 +52,32 @@ static inline void ttac_mix_clear(int32_t *acc, int count) {
 /// with per-side gains. `channels` 1 = mono (duplicated to both sides),
 /// otherwise the first two interleaved channels are used. Truncation toward
 /// zero matches the previous Swift `Int(Float * Float)` behavior.
+///
+/// `collapseToMono` folds a stereo source's two channels to their average
+/// before applying the per-side gains. This is what makes panning a stereo
+/// sender sound right: applying pan gains to L and R independently just fades
+/// one channel's *content* out ("lopsided stereo") instead of repositioning
+/// the sound. The caller sets this only for stereo sources that are panned off
+/// center; a centered stereo source stays true stereo (both channels pass
+/// through untouched). Mono sources ignore it.
 static inline void ttac_mix_add(int32_t *acc,
                                 const int16_t *src,
                                 int frames,
                                 int channels,
                                 float leftGain,
-                                float rightGain) {
+                                float rightGain,
+                                int collapseToMono) {
     if (channels == 1) {
         for (int f = 0; f < frames; f++) {
             const float s = (float)src[f];
             acc[f * 2] += (int32_t)(s * leftGain);
             acc[f * 2 + 1] += (int32_t)(s * rightGain);
+        }
+    } else if (collapseToMono) {
+        for (int f = 0; f < frames; f++) {
+            const float mono = 0.5f * ((float)src[f * channels] + (float)src[f * channels + 1]);
+            acc[f * 2] += (int32_t)(mono * leftGain);
+            acc[f * 2 + 1] += (int32_t)(mono * rightGain);
         }
     } else {
         for (int f = 0; f < frames; f++) {

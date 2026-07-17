@@ -230,12 +230,12 @@ private final class PerUserMixSource {
     /// the given per-side gains. The per-sample work happens in the C hot loop
     /// (`ttac_mix_add`) so it stays real-time-fast even in unoptimized builds.
     /// Returns the number of frames consumed (short when the source runs dry).
-    func mixInto(_ acc: UnsafeMutablePointer<Int32>, frames: Int, leftGain: Float, rightGain: Float) -> Int {
+    func mixInto(_ acc: UnsafeMutablePointer<Int32>, frames: Int, leftGain: Float, rightGain: Float, collapseToMono: Bool) -> Int {
         let n = min(frames, availableFrames)
         guard n > 0 else { return 0 }
         buffer.withUnsafeBufferPointer { buf in
             guard let base = buf.baseAddress else { return }
-            ttac_mix_add(acc, base + head, Int32(n), Int32(channels), leftGain, rightGain)
+            ttac_mix_add(acc, base + head, Int32(n), Int32(channels), leftGain, rightGain, collapseToMono ? 1 : 0)
         }
         head += n * channels
         return n
@@ -267,6 +267,17 @@ final class OutputAudioRenderEngine {
     // MARK: Per-user mix sources (serial queue only)
     private var userSources: [Int32: PerUserMixSource] = [:]
     private var defaultUserSettings: [Int32: OutputUserMixSettings] = [:]
+
+    // Effective channel count per source key (1 mono / 2 stereo) for the mixer's
+    // "Center" vs "Stereo" announcement. This is deliberately NOT the SDK block's
+    // nChannels: a channel configured with a stereo codec decodes EVERY sender to 2
+    // channels, so a mono phone mic arrives stereo-shaped but with identical L/R. The
+    // pump therefore reports a CONTENT-derived value (does L actually differ from R)
+    // via setAnnouncedChannels. Written from the pump, read on the main thread
+    // (announcements) — hence its own lock. No entry means "not judged yet" (nothing,
+    // or only silence, heard so far).
+    private let announcedChannelsLock = NSLock()
+    private var announcedChannelsByKey: [Int32: Int] = [:]
     private var mixScratch: [Int16] = []
     /// Stereo Int32 accumulator the C mix loop sums sources into.
     private var accScratch: [Int32] = []
@@ -545,12 +556,34 @@ final class OutputAudioRenderEngine {
         engineQueue.async { [weak self] in
             self?.userSources.removeValue(forKey: userID)
         }
+        announcedChannelsLock.lock()
+        announcedChannelsByKey.removeValue(forKey: userID)
+        announcedChannelsLock.unlock()
     }
 
     func removeAllUsers() {
         engineQueue.async { [weak self] in
             self?.userSources.removeAll()
         }
+        announcedChannelsLock.lock()
+        announcedChannelsByKey.removeAll()
+        announcedChannelsLock.unlock()
+    }
+
+    /// Report the content-derived effective channel count (1 mono / 2 stereo) for a
+    /// source key. The pump computes this from the actual L/R content, not the SDK's
+    /// codec-driven nChannels (see `announcedChannelsByKey`).
+    func setAnnouncedChannels(_ channels: Int, for key: Int32) {
+        announcedChannelsLock.lock()
+        announcedChannelsByKey[key] = channels
+        announcedChannelsLock.unlock()
+    }
+
+    /// The effective channel count last judged for the given source key (1 mono /
+    /// 2 stereo), or nil if not judged yet. Drives the mixer's "Center" vs "Stereo".
+    func announcedChannels(for key: Int32) -> Int? {
+        announcedChannelsLock.lock(); defer { announcedChannelsLock.unlock() }
+        return announcedChannelsByKey[key]
     }
 
     // MARK: - Producer (engineQueue): feed one remote user's decoded PCM
@@ -636,7 +669,11 @@ final class OutputAudioRenderEngine {
             ttac_mix_clear(acc, Int32(needed))
             for src in active {
                 let (lg, rg) = Self.panGains(volume: src.settings.volume, pan: src.settings.pan)
-                _ = src.mixInto(acc, frames: produce, leftGain: lg, rightGain: rg)
+                // A stereo sender panned off center is downmixed to mono first, so
+                // the pan repositions the sound instead of just fading one channel's
+                // content ("lopsided stereo"). Centered stereo stays true stereo.
+                let collapse = src.channels >= 2 && abs(src.settings.pan) > 0.0001
+                _ = src.mixInto(acc, frames: produce, leftGain: lg, rightGain: rg, collapseToMono: collapse)
             }
             mixScratch.withUnsafeMutableBufferPointer { out in
                 guard let outBase = out.baseAddress else { return }
