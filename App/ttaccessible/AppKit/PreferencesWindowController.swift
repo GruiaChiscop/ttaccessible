@@ -162,6 +162,14 @@ private final class PreferencesContainerViewController: NSViewController {
         nil
     }
 
+    // Programmatic view controllers MUST override loadView: before macOS 14
+    // AppKit's default implementation looks for a nib and throws when there
+    // isn't one (macOS 14+ silently creates an empty view — the behavior this
+    // class was unknowingly relying on).
+    override func loadView() {
+        view = NSView()
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         configureLayout()

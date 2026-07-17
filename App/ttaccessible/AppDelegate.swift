@@ -474,7 +474,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             || savedServersWindowController?.window?.isVisible == false
 
         if savedServersWindowController == nil {
-            let windowController = SavedServersWindowController(contentViewController: NSViewController())
+            // Assign the placeholder's view directly: a bare NSViewController
+            // has no nib, and before macOS 14 its default loadView throws.
+            let placeholder = NSViewController()
+            placeholder.view = NSView()
+            let windowController = SavedServersWindowController(contentViewController: placeholder)
             savedServersWindowController = windowController
         }
 
