@@ -3,6 +3,7 @@
 //  ttaccessible
 //
 
+import AVFoundation
 import Foundation
 import AudioToolbox
 import CoreAudio
@@ -14,9 +15,18 @@ enum AudioDeviceStreamSourceError: Error {
     case serverStartFailed
 }
 
-/// Captures a CoreAudio input device and serves it as an endless 48 kHz / 16-bit /
-/// stereo WAV stream on a loopback HTTP server, so the SDK's media streamer can
-/// broadcast it to the channel exactly like a URL stream.
+/// Captures a CoreAudio input device and serves it as an endless AAC (ADTS)
+/// stream on a loopback HTTP server, so the SDK's media streamer can broadcast
+/// it to the channel exactly like a URL stream.
+///
+/// AAC rather than raw WAV/PCM because of latency: FFmpeg's stream analysis
+/// (which the SDK runs with default options when it opens the URL) consumes a
+/// fixed ~50 packets before playback starts, and everything consumed during
+/// analysis is replayed — i.e. it becomes permanent standing latency. PCM
+/// packets are ~85 ms each (≈4.3 s of lag, measured against the SDK's own
+/// FFmpeg); AAC frames are ~21 ms (≈1.1 s). The channel's Opus codec
+/// re-encodes either way, and Apple's native AAC encoder keeps this
+/// dependency-free.
 ///
 /// The server paces its output against the wall clock and substitutes silence
 /// whenever the device stops delivering (silent source, unplugged, stalled), so the
@@ -326,8 +336,9 @@ final class AudioDeviceStreamSource {
     // MARK: - Per-connection realtime pump
 
     /// One accepted HTTP connection: consumes the request head, replies with an
-    /// endless WAV body paced to realtime, padding with silence whenever capture
-    /// falls behind so the stream never starves.
+    /// endless AAC/ADTS body paced to realtime (in the PCM domain, before the
+    /// encoder), padding with silence whenever capture falls behind so the
+    /// stream never starves.
     private final class StreamConnection {
         private let connection: NWConnection
         private let ring: PCMRing
@@ -338,8 +349,13 @@ final class AudioDeviceStreamSource {
         private var cursor: UInt64 = 0
         private var framesSent: UInt64 = 0
         private var epoch: DispatchTime = .now()
-        private var pendingSendBytes = 0
+        /// PCM frames' worth of encoded audio sitting in the socket, awaiting
+        /// send completion. Media time, not bytes: AAC compresses silence to a
+        /// few bytes per frame, so a byte cap would let a stalled reader build
+        /// minutes of media-time backlog while quiet.
+        private var pendingSendMediaFrames = 0
         private var finished = false
+        private var encoder: ADTSEncoder?
 
         /// Operating buffer: the pump deliberately runs this far behind the
         /// capture live edge, so scheduling jitter on either side is absorbed
@@ -351,10 +367,10 @@ final class AudioDeviceStreamSource {
         /// Maximum backlog of captured-but-unsent audio before skipping ahead
         /// (must comfortably exceed bufferFrames, the steady-state backlog).
         private static let maxLagFrames = AudioDeviceStreamSource.outputSampleRate * 3 / 5
-        /// Stop enqueueing while this much audio is stuck in the socket (the SDK
-        /// reader stalled); the pump then skips ahead instead of buffering.
-        private static let maxPendingSendBytes = AudioDeviceStreamSource.outputSampleRate
-            * AudioDeviceStreamSource.outputChannels * 2 * 2  // 2 seconds
+        /// Stop enqueueing while this much audio (media time, as PCM frames) is
+        /// stuck in the socket (the SDK reader stalled); the pump then skips
+        /// ahead instead of buffering.
+        private static let maxPendingSendFrames = AudioDeviceStreamSource.outputSampleRate * 2
 
         private static let tickMSec = 20
 
@@ -411,13 +427,19 @@ final class AudioDeviceStreamSource {
         }
 
         private func beginStreaming() {
+            guard let encoder = ADTSEncoder() else {
+                AudioLogger.log("device stream: AAC encoder unavailable — closing connection")
+                finish()
+                return
+            }
+            self.encoder = encoder
+
             let headers = "HTTP/1.1 200 OK\r\n"
-                + "Content-Type: audio/wav\r\n"
+                + "Content-Type: audio/aac\r\n"
                 + "Cache-Control: no-store\r\n"
                 + "Connection: close\r\n"
                 + "\r\n"
             send(Data(headers.utf8))
-            send(Self.wavStreamHeader())
 
             cursor = ring.liveEdge
             // Crediting the operating buffer as already-sent delays the first
@@ -453,7 +475,7 @@ final class AudioDeviceStreamSource {
 
             // If the reader has stalled (socket backlog), drop this tick's audio
             // and keep the timeline moving so we stay live once it drains.
-            if pendingSendBytes > Self.maxPendingSendBytes {
+            if pendingSendMediaFrames > Self.maxPendingSendFrames {
                 framesSent = targetFrames + UInt64(Self.bufferFrames)
                 cursor = ring.liveEdge
                 return
@@ -471,7 +493,7 @@ final class AudioDeviceStreamSource {
                 cursor = newCursor
                 framesSent += UInt64(framesRead)
                 owed -= framesRead
-                send(pcmData(samples))
+                sendEncoded(samples, mediaFrames: framesRead)
             }
 
             // Capture isn't delivering (silent stall, unplug): pad silence so the
@@ -484,54 +506,146 @@ final class AudioDeviceStreamSource {
                                       count: padFrames * AudioDeviceStreamSource.outputChannels)
                 framesSent += UInt64(padFrames)
                 cursor = ring.liveEdge
-                send(pcmData(silence))
+                sendEncoded(silence, mediaFrames: padFrames)
             }
         }
 
-        private func pcmData(_ samples: [Int16]) -> Data {
-            samples.withUnsafeBufferPointer { Data(buffer: $0) }
+        private func sendEncoded(_ samples: [Int16], mediaFrames: Int) {
+            guard let encoder else { return }
+            let adts = encoder.encode(samples)
+            if adts.isEmpty == false {
+                send(adts, mediaFrames: mediaFrames)
+            }
         }
 
-        private func send(_ data: Data) {
+        private func send(_ data: Data, mediaFrames: Int = 0) {
             guard finished == false, data.isEmpty == false else { return }
-            pendingSendBytes += data.count
+            pendingSendMediaFrames += mediaFrames
             connection.send(content: data, completion: .contentProcessed { [weak self] error in
                 guard let self else { return }
-                self.pendingSendBytes -= data.count
+                self.pendingSendMediaFrames -= mediaFrames
                 if error != nil {
                     self.finish()
                 }
             })
         }
 
-        /// 44-byte WAV header with 0xFFFFFFFF chunk sizes — FFmpeg's WAV demuxer
-        /// treats that as an unbounded live stream.
-        private static func wavStreamHeader() -> Data {
-            var data = Data()
-            func appendUInt32(_ value: UInt32) {
-                withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
-            }
-            func appendUInt16(_ value: UInt16) {
-                withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
-            }
-            let sampleRate = UInt32(AudioDeviceStreamSource.outputSampleRate)
-            let channels = UInt16(AudioDeviceStreamSource.outputChannels)
-            let bytesPerFrame = UInt32(channels) * 2
+    }
 
-            data.append(contentsOf: Array("RIFF".utf8))
-            appendUInt32(0xFFFF_FFFF)
-            data.append(contentsOf: Array("WAVE".utf8))
-            data.append(contentsOf: Array("fmt ".utf8))
-            appendUInt32(16)
-            appendUInt16(1)  // PCM
-            appendUInt16(channels)
-            appendUInt32(sampleRate)
-            appendUInt32(sampleRate * bytesPerFrame)
-            appendUInt16(UInt16(bytesPerFrame))
-            appendUInt16(16)  // bits per sample
-            data.append(contentsOf: Array("data".utf8))
-            appendUInt32(0xFFFF_FFFF)
-            return data
+    // MARK: - AAC/ADTS encoder
+
+    /// Streaming AAC-LC encoder (Apple's native codec via AVAudioConverter)
+    /// producing self-contained ADTS frames. One instance per connection —
+    /// every HTTP response is an independent stream that must start with a
+    /// fresh encoder.
+    private final class ADTSEncoder {
+        static let bitRate = 192_000
+        private static let samplesPerFrame = 1024  // AAC-LC frame size
+
+        private let converter: AVAudioConverter
+        private let inputFormat: AVAudioFormat
+        private let maxPacketSize: Int
+        /// Interleaved PCM awaiting encoding (< one AAC frame after each call).
+        private var pendingSamples: [Int16] = []
+
+        init?() {
+            guard let input = AVAudioFormat(
+                commonFormat: .pcmFormatInt16,
+                sampleRate: Double(AudioDeviceStreamSource.outputSampleRate),
+                channels: AVAudioChannelCount(AudioDeviceStreamSource.outputChannels),
+                interleaved: true
+            ) else { return nil }
+
+            var description = AudioStreamBasicDescription()
+            description.mSampleRate = Double(AudioDeviceStreamSource.outputSampleRate)
+            description.mFormatID = kAudioFormatMPEG4AAC
+            description.mChannelsPerFrame = UInt32(AudioDeviceStreamSource.outputChannels)
+            guard let output = AVAudioFormat(streamDescription: &description),
+                  let converter = AVAudioConverter(from: input, to: output) else {
+                return nil
+            }
+            converter.bitRate = Self.bitRate
+            self.converter = converter
+            self.inputFormat = input
+            self.maxPacketSize = max(converter.maximumOutputPacketSize, 1536)
+        }
+
+        /// Feed interleaved PCM; returns whatever complete ADTS frames the
+        /// encoder produced (possibly empty while it accumulates a frame).
+        func encode(_ samples: [Int16]) -> Data {
+            pendingSamples.append(contentsOf: samples)
+            var out = Data()
+            let channels = AudioDeviceStreamSource.outputChannels
+            while pendingSamples.count >= Self.samplesPerFrame * channels {
+                guard let frames = encodeOneChunk() else { break }
+                out.append(frames)
+            }
+            return out
+        }
+
+        private func encodeOneChunk() -> Data? {
+            let channels = AudioDeviceStreamSource.outputChannels
+            let chunkSamples = Self.samplesPerFrame * channels
+            guard let pcm = AVAudioPCMBuffer(
+                pcmFormat: inputFormat,
+                frameCapacity: AVAudioFrameCount(Self.samplesPerFrame)
+            ) else { return nil }
+            pcm.frameLength = AVAudioFrameCount(Self.samplesPerFrame)
+            pendingSamples.withUnsafeBufferPointer { source in
+                pcm.int16ChannelData?[0].update(from: source.baseAddress!, count: chunkSamples)
+            }
+            pendingSamples.removeFirst(chunkSamples)
+
+            let packed = AVAudioCompressedBuffer(
+                format: converter.outputFormat,
+                packetCapacity: 8,
+                maximumPacketSize: maxPacketSize
+            )
+            var fed = false
+            var conversionError: NSError?
+            let status = converter.convert(to: packed, error: &conversionError) { _, outStatus in
+                if fed {
+                    outStatus.pointee = .noDataNow
+                    return nil
+                }
+                fed = true
+                outStatus.pointee = .haveData
+                return pcm
+            }
+            guard status != .error else {
+                AudioLogger.log("device stream: AAC convert failed — %@",
+                                conversionError?.localizedDescription ?? "unknown")
+                return nil
+            }
+
+            var out = Data()
+            let base = packed.data
+            if let descriptions = packed.packetDescriptions {
+                for index in 0..<Int(packed.packetCount) {
+                    let descriptor = descriptions[index]
+                    let length = Int(descriptor.mDataByteSize)
+                    out.append(Self.adtsHeader(payloadLength: length))
+                    out.append(Data(bytes: base + Int(descriptor.mStartOffset), count: length))
+                }
+            }
+            return out
+        }
+
+        /// 7-byte ADTS header (MPEG-4 AAC-LC, no CRC) for one frame.
+        private static func adtsHeader(payloadLength: Int) -> Data {
+            let profile = 2       // AAC-LC
+            let samplingIndex = 3 // 48000 Hz
+            let channelConfig = AudioDeviceStreamSource.outputChannels
+            let frameLength = payloadLength + 7
+            var header = [UInt8](repeating: 0, count: 7)
+            header[0] = 0xFF
+            header[1] = 0xF1
+            header[2] = UInt8(((profile - 1) << 6) | (samplingIndex << 2) | (channelConfig >> 2))
+            header[3] = UInt8(((channelConfig & 3) << 6) | ((frameLength >> 11) & 0x3))
+            header[4] = UInt8((frameLength >> 3) & 0xFF)
+            header[5] = UInt8(((frameLength & 0x7) << 5) | 0x1F)
+            header[6] = 0xFC
+            return Data(header)
         }
     }
 
