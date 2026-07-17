@@ -192,6 +192,10 @@ final class ConnectedServerViewController: NSViewController {
         // post an accessibility focus notification to move VO there.
         let overlay = channelMixerCoordinator.overlay
         let target: NSView = overlay.virtualStrips.first ?? overlay
+        // Prepend "Channel Mixer" to the landed element's label for this one read so VO
+        // speaks the region name first — a plain focus change would otherwise announce only
+        // the element (the strip/area), swallowing the region context.
+        (target as? MixerRegionAnnouncing)?.applyRegionPrefix(L10n.text("mixer.area.announce"))
         view.window?.makeFirstResponder(target)
         NSAccessibility.post(element: target, notification: .focusedUIElementChanged)
     }
@@ -215,8 +219,8 @@ final class ConnectedServerViewController: NSViewController {
         focusMessageInput()
     }
 
-    func performToggleMicrophoneShortcut() {
-        toggleMicrophone(nil)
+    func performToggleMicrophoneShortcut(announceStatus: Bool = true) {
+        toggleMicrophone(announceStatus: announceStatus)
     }
 
     func promptChangeNickname() {
@@ -447,7 +451,7 @@ final class ConnectedServerViewController: NSViewController {
         sendButton.setAccessibilityLabel(L10n.text("connectedServer.chat.send.accessibilityLabel"))
 
         microphoneButton.target = self
-        microphoneButton.action = #selector(toggleMicrophone)
+        microphoneButton.action = #selector(toggleMicrophone(_:))
         microphoneButton.bezelStyle = .rounded
 
         collapsibleVideoPanel.setExpanded(preferencesStore.preferences.videoPanelExpanded, notifyDelegate: false)
@@ -698,6 +702,7 @@ final class ConnectedServerViewController: NSViewController {
                 }
             )
         )
+        menuState.setMicrophoneMuted(session.voiceTransmissionEnabled == false)
         menuState.setRecordingActive(session.recordingActive)
         menuState.setMediaStreamingActive(session.mediaStreamingActive)
     }
@@ -1361,8 +1366,14 @@ final class ConnectedServerViewController: NSViewController {
         }
     }
 
+    // Pressing the in-window mic button directly makes VoiceOver re-read the button's
+    // changed title/state, so skip the redundant spoken status announcement in that case.
     @objc
     func toggleMicrophone(_ sender: Any? = nil) {
+        toggleMicrophone(announceStatus: (sender as AnyObject?) !== microphoneButton)
+    }
+
+    func toggleMicrophone(announceStatus: Bool) {
         if session.voiceTransmissionEnabled {
             connectionController.deactivateVoiceTransmission { [weak self] result in
                 guard let self else {
@@ -1371,7 +1382,9 @@ final class ConnectedServerViewController: NSViewController {
 
                 switch result {
                 case .success:
-                    self.announce(L10n.text("connectedServer.audio.voiceDisabled"))
+                    if announceStatus {
+                        self.announce(L10n.text("connectedServer.audio.voiceDisabled"))
+                    }
                 case .failure(let error):
                     self.presentActionError(error.localizedDescription)
                 }
@@ -1395,7 +1408,9 @@ final class ConnectedServerViewController: NSViewController {
 
                 switch result {
                 case .success:
-                    self.announce(L10n.text("connectedServer.audio.voiceEnabled"))
+                    if announceStatus {
+                        self.announce(L10n.text("connectedServer.audio.voiceEnabled"))
+                    }
                 case .failure(let error):
                     self.presentActionError(error.localizedDescription)
                 }

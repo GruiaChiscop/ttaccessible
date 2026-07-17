@@ -667,6 +667,7 @@
 "mixer.muted.voice" = "voix coupée";
 "mixer.muted.media" = "média coupé";
 "mixer.area.label" = "Mixeur";
+"mixer.area.announce" = "Mixeur du canal";
 "mixer.area.roleDescription" = "zone";
 "mixer.strip.roleDescription" = "tranche de console";
 "mixer.control.slider.roleDescription" = "curseur";
@@ -985,11 +986,15 @@
 "toolbar.preferences" = "Préférences";
 "toolbar.preferences.tooltip" = "Ouvrir les préférences (⌘,)";
 "toolbar.microphone" = "Microphone";
+"toolbar.microphone.muted" = "Microphone, coupé";
+"toolbar.microphone.unmuted" = "Microphone, activé";
 "toolbar.microphone.tooltip" = "Activer / désactiver le micro (⌘⇧A)";
 "toolbar.mute" = "Couper le son";
 "toolbar.mute.tooltip" = "Couper le volume principal (⌘M)";
 "toolbar.unmute" = "Rétablir le son";
 "toolbar.unmute.tooltip" = "Rétablir le volume principal (⌘M)";
+"toolbar.master.muted" = "Principal, coupé";
+"toolbar.master.unmuted" = "Principal, rétabli";
 "toolbar.recording.start" = "Enregistrer";
 "toolbar.recording.start.tooltip" = "Démarrer l'enregistrement (⌘R)";
 "toolbar.recording.stop" = "Arrêter l'enregistrement";

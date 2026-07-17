@@ -237,6 +237,34 @@ final class VirtualControlView: NSView {
     }
 }
 
+// MARK: - Region announcement
+
+/// Elements that can carry a one-shot spoken prefix ("Channel Mixer") so that when the
+/// VoiceOver cursor is moved onto them programmatically (Cmd+5), the region name is spoken
+/// before the element's own label — in a single utterance, so the focus change can't
+/// interrupt it. Cleared after the read via `clearRegionPrefix(after:)`.
+@MainActor
+protocol MixerRegionAnnouncing: AnyObject {
+    var regionAnnouncementPrefix: String? { get set }
+}
+
+extension MixerRegionAnnouncing {
+    /// Prepend the region name to `label` for one read, then clear it shortly after so
+    /// ordinary navigation back to this element doesn't repeat the prefix.
+    func applyRegionPrefix(_ prefix: String) {
+        regionAnnouncementPrefix = prefix
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            self?.regionAnnouncementPrefix = nil
+        }
+    }
+
+    func regionPrefixed(_ label: String?) -> String? {
+        guard let prefix = regionAnnouncementPrefix else { return label }
+        guard let label, !label.isEmpty else { return prefix }
+        return "\(prefix), \(label)"
+    }
+}
+
 // MARK: - Strip descriptor (one per user)
 
 struct MixerStripDescriptor {
@@ -248,10 +276,11 @@ struct MixerStripDescriptor {
 // MARK: - Virtual strip view (one user)
 
 /// Invisible NSView for one user strip. VoiceOver enters it to reach the controls.
-final class VirtualStripView: NSView {
+final class VirtualStripView: NSView, MixerRegionAnnouncing {
     let stripId: Int32
     private let labelProvider: @MainActor @Sendable () -> String?
     private(set) var childElements: [VirtualControlView] = []
+    var regionAnnouncementPrefix: String?
 
     init(descriptor: MixerStripDescriptor) {
         self.stripId = descriptor.id
@@ -274,7 +303,7 @@ final class VirtualStripView: NSView {
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityRoleDescription() -> String? { L10n.text("mixer.strip.roleDescription") }
     override func accessibilityIdentifier() -> String { "channel-strip-\(stripId)" }
-    override func accessibilityLabel() -> String? { MainActor.assumeIsolated { labelProvider() } }
+    override func accessibilityLabel() -> String? { MainActor.assumeIsolated { regionPrefixed(labelProvider()) } }
     override func accessibilityChildren() -> [Any]? { childElements.isEmpty ? nil : childElements }
 }
 
@@ -283,12 +312,13 @@ final class VirtualStripView: NSView {
 /// Accessibility-only NSView overlay. VoiceOver navigates the virtual strips/controls;
 /// the visible UI is drawn separately (and accessibilityHidden). Driven by a descriptor
 /// provider so it rebuilds as users join/leave the channel.
-final class A11yVirtualGridOverlayView: NSView {
+final class A11yVirtualGridOverlayView: NSView, MixerRegionAnnouncing {
     private(set) var virtualStrips: [VirtualStripView] = []
     private var provider: (@MainActor () -> [MixerStripDescriptor])?
     private var areaLabel: String = "Mixer"
     private var areaRoleDescription: String = "area"
     private var lastStripIds: [Int32] = []
+    var regionAnnouncementPrefix: String?
 
     override init(frame: NSRect) { super.init(frame: frame) }
     required init?(coder: NSCoder) { nil }
@@ -302,7 +332,7 @@ final class A11yVirtualGridOverlayView: NSView {
     override func isAccessibilityElement() -> Bool { true }
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityRoleDescription() -> String? { areaRoleDescription }
-    override func accessibilityLabel() -> String? { areaLabel }
+    override func accessibilityLabel() -> String? { MainActor.assumeIsolated { regionPrefixed(areaLabel) } }
     override func accessibilityChildren() -> [Any]? { virtualStrips.isEmpty ? nil : virtualStrips }
 
     func configure(areaLabel: String, areaRoleDescription: String,

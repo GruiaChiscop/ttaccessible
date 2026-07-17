@@ -64,6 +64,7 @@ final class SavedServersWindowController: NSWindowController {
 
         Publishers.MergeMany(
             menuState.$hasSelection.map { _ in () }.eraseToAnyPublisher(),
+            menuState.$isMicrophoneMuted.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isMasterMuted.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isRecordingActive.map { _ in () }.eraseToAnyPublisher(),
             menuState.$isHearMyselfEnabled.map { _ in () }.eraseToAnyPublisher(),
@@ -103,10 +104,16 @@ final class SavedServersWindowController: NSWindowController {
             case .ttDisconnect:
                 item.isEnabled = menuState.mode == .connectedServer
             case .ttMicrophone:
+                // Mirror the Mute/Recording pattern: VoiceOver reads the toolbar item's
+                // label, so fold the muted/unmuted state into it.
+                let micMuted = menuState.isMicrophoneMuted
+                item.label = L10n.text(micMuted ? "toolbar.microphone.muted" : "toolbar.microphone.unmuted")
+                item.paletteLabel = item.label
+                item.image = NSImage(systemSymbolName: "mic", accessibilityDescription: item.label)
                 item.isEnabled = menuState.mode == .connectedServer && menuState.isInChannel
             case .ttMasterMute:
                 let muted = menuState.isMasterMuted
-                item.label = L10n.text(muted ? "toolbar.unmute" : "toolbar.mute")
+                item.label = L10n.text(muted ? "toolbar.master.muted" : "toolbar.master.unmuted")
                 item.paletteLabel = item.label
                 item.toolTip = L10n.text(muted ? "toolbar.unmute.tooltip" : "toolbar.mute.tooltip")
                 item.image = NSImage(
@@ -185,7 +192,7 @@ final class SavedServersWindowController: NSWindowController {
     }
 
     @objc fileprivate func toolbarMicrophoneAction(_ sender: Any?) {
-        appDelegate?.toggleMicrophone()
+        appDelegate?.toggleMicrophone(fromControl: true)
     }
 
     @objc fileprivate func toolbarMasterMuteAction(_ sender: Any?) {

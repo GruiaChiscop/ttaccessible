@@ -667,6 +667,7 @@
 "mixer.muted.voice" = "voice muted";
 "mixer.muted.media" = "media muted";
 "mixer.area.label" = "Mixer";
+"mixer.area.announce" = "Channel Mixer";
 "mixer.area.roleDescription" = "area";
 "mixer.strip.roleDescription" = "channel strip";
 "mixer.control.slider.roleDescription" = "slider";
@@ -985,11 +986,15 @@
 "toolbar.preferences" = "Preferences";
 "toolbar.preferences.tooltip" = "Open preferences (⌘,)";
 "toolbar.microphone" = "Microphone";
+"toolbar.microphone.muted" = "Microphone, muted";
+"toolbar.microphone.unmuted" = "Microphone, unmuted";
 "toolbar.microphone.tooltip" = "Toggle microphone transmission (⌘⇧A)";
 "toolbar.mute" = "Mute";
 "toolbar.mute.tooltip" = "Mute master volume (⌘M)";
 "toolbar.unmute" = "Unmute";
 "toolbar.unmute.tooltip" = "Unmute master volume (⌘M)";
+"toolbar.master.muted" = "Master, muted";
+"toolbar.master.unmuted" = "Master, unmuted";
 "toolbar.recording.start" = "Record";
 "toolbar.recording.start.tooltip" = "Start recording (⌘R)";
 "toolbar.recording.stop" = "Stop recording";

@@ -31,6 +31,7 @@ final class SavedServersMenuState: ObservableObject {
     @Published private(set) var isSelectedUserMuted = false
     @Published private(set) var isSelectedUserMediaFileMuted = false
     @Published private(set) var isSelectedUserChannelOperator = false
+    @Published private(set) var isMicrophoneMuted = false
     @Published private(set) var isMasterMuted = false
     @Published private(set) var isRecordingActive = false
     @Published private(set) var isHearMyselfEnabled = false
@@ -65,6 +66,7 @@ final class SavedServersMenuState: ObservableObject {
     func resetConnectedTransientState() {
         setCanSendBroadcast(false)
         setSelectedUsersState(hasSelectedUsers: false, hasSingleSelectedUser: false, hasSingleSelectedOtherUser: false, isSelectedUserMuted: false, isSelectedUserMediaFileMuted: false, isSelectedUserChannelOperator: false, states: [:])
+        setMicrophoneMuted(false)
         setMasterMuted(false)
         setRecordingActive(false)
         setHearMyselfEnabled(false)
@@ -85,6 +87,10 @@ final class SavedServersMenuState: ObservableObject {
 
     func setStatusLocked(_ value: Bool) {
         if isStatusLocked != value { isStatusLocked = value }
+    }
+
+    func setMicrophoneMuted(_ value: Bool) {
+        if isMicrophoneMuted != value { isMicrophoneMuted = value }
     }
 
     func setMasterMuted(_ value: Bool) {
