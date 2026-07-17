@@ -24,7 +24,7 @@ struct PreferencesGeneralView: View {
                     TextField("", text: $nicknameDraft)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(L10n.text("preferences.general.defaultNickname"))
-                        .onChange(of: nicknameDraft) { _, newValue in
+                        .onChangeCompat(of: nicknameDraft) { newValue in
                             scheduleNicknameCommit(for: newValue)
                         }
                         .onSubmit { commitNicknameDraft() }
@@ -40,7 +40,7 @@ struct PreferencesGeneralView: View {
                     TextField("", text: $statusMessageDraft)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(L10n.text("preferences.connection.defaultStatusMessage"))
-                        .onChange(of: statusMessageDraft) { _, newValue in
+                        .onChangeCompat(of: statusMessageDraft) { newValue in
                             scheduleStatusCommit(for: newValue)
                         }
                         .onSubmit { commitStatusDraft() }
@@ -97,7 +97,7 @@ struct PreferencesGeneralView: View {
                     TextField("", text: $autoAwayStatusMessageDraft)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(L10n.text("preferences.connection.autoAwayStatusMessage"))
-                        .onChange(of: autoAwayStatusMessageDraft) { _, newValue in
+                        .onChangeCompat(of: autoAwayStatusMessageDraft) { newValue in
                             scheduleAutoAwayCommit(for: newValue)
                         }
                         .onSubmit { commitAutoAwayDraft() }
@@ -163,13 +163,13 @@ struct PreferencesGeneralView: View {
             statusMessageDraft = store.state.defaultStatusMessage
             autoAwayStatusMessageDraft = store.state.autoAwayStatusMessage
         }
-        .onChange(of: store.state.defaultNickname) { _, newValue in
+        .onChangeCompat(of: store.state.defaultNickname) { newValue in
             if nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { nicknameDraft = newValue }
         }
-        .onChange(of: store.state.defaultStatusMessage) { _, newValue in
+        .onChangeCompat(of: store.state.defaultStatusMessage) { newValue in
             if newValue != statusMessageDraft { statusMessageDraft = newValue }
         }
-        .onChange(of: store.state.autoAwayStatusMessage) { _, newValue in
+        .onChangeCompat(of: store.state.autoAwayStatusMessage) { newValue in
             if newValue != autoAwayStatusMessageDraft { autoAwayStatusMessageDraft = newValue }
         }
         .onDisappear {

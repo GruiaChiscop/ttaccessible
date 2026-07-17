@@ -113,6 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
     private var updaterAutoCheckCancellable: AnyCancellable?
     private var nicknameCancellable: AnyCancellable?
+    private var userMenuVisibilityCancellable: AnyCancellable?
     private var pushToTalkModeCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -153,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         syncNicknamePreference()
         scheduleLaunchUpdateCheck()
         configurePushToTalkObservers()
+        configureUserMenuVisibility()
         // Slight delay so the announcement alert never races the main window.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.announcementService.checkAtLaunch()
@@ -165,6 +167,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func flushPersistableStores() {
         store.flushPendingChanges()
         preferencesStore.flushPendingChanges()
+    }
+
+    /// The User command menu is declared unconditionally — macOS 12's
+    /// CommandsBuilder cannot express a conditional menu, and the Optional
+    /// Commands conformance an availability split would need doesn't exist at
+    /// runtime before macOS 13. Its menu-bar visibility is managed here at the
+    /// AppKit layer instead: hidden unless connected, the same behavior the
+    /// SwiftUI-level `if` used to provide. Re-applied (idempotently) after any
+    /// menuState change, since SwiftUI may rebuild the main menu then.
+    private func configureUserMenuVisibility() {
+        userMenuVisibilityCancellable = menuState.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.applyUserMenuVisibility()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self?.applyUserMenuVisibility()
+                }
+            }
+        // SwiftUI installs the main menu after launch finishes — apply once
+        // now and again after it has settled.
+        applyUserMenuVisibility()
+        for delay in [0.5, 1.5, 3.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.applyUserMenuVisibility()
+            }
+        }
+    }
+
+    private func applyUserMenuVisibility() {
+        let title = L10n.text("user.menu.title")
+        guard let item = NSApp.mainMenu?.items.first(where: {
+            $0.submenu?.title == title || $0.title == title
+        }) else { return }
+        item.isHidden = menuState.mode != .connectedServer
     }
 
     private func syncNicknamePreference() {

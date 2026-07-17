@@ -216,8 +216,11 @@ struct ttaccessibleApp: App {
                 }
             }
 
-            if menuState.mode == .connectedServer {
-                CommandMenu(L10n.text("user.menu.title")) {
+            // The mode condition lives INSIDE the menu (ViewBuilder), not around
+            // it: CommandsBuilder has no `if` before macOS 13, and SwiftUI omits
+            // a CommandMenu whose content is empty, so this renders identically.
+            CommandMenu(L10n.text("user.menu.title")) {
+                if menuState.mode == .connectedServer {
                     Button(L10n.text("user.menu.info")) {
                         appDelegate.openSelectedUserInfo()
                     }
@@ -313,6 +316,7 @@ struct ttaccessibleApp: App {
             }
 
             CommandMenu(L10n.text("shortcuts.menu.title")) {
+
                 Button(L10n.text("shortcuts.focus.primary")) {
                     appDelegate.focusPrimaryArea()
                 }
