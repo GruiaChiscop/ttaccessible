@@ -47,6 +47,9 @@ final class AudioDeviceStreamSource {
     private var captureBufferCapacity: Int = 0
     private var captureSampleRate: Double = 48_000
     private var captureChannels: Int = 2
+    /// Pre-allocated stereo scratch reused by the RT input callback (sized to the
+    /// AUHAL's max frames), so `handleInput` doesn't heap-allocate per callback.
+    private var captureStereoScratch = [Int16]()
 
     // Server state (guarded by serverQueue).
     private var listener: NWListener?
@@ -105,10 +108,14 @@ final class AudioDeviceStreamSource {
         stopCapture()
         serverQueue.sync {
             stopped = true
-            for connection in connections.values {
+            // Snapshot + clear before cancelling: cancel() → finish() → onFinish
+            // removes from `connections` synchronously, which would mutate the
+            // dictionary mid-iteration.
+            let active = Array(connections.values)
+            connections.removeAll()
+            for connection in active {
                 connection.cancel()
             }
-            connections.removeAll()
             listener?.cancel()
             listener = nil
         }
@@ -192,6 +199,7 @@ final class AudioDeviceStreamSource {
         captureBufferCapacity = byteCapacity
         captureSampleRate = sampleRate
         captureChannels = channelCount
+        captureStereoScratch = [Int16](repeating: 0, count: Int(maxFrames) * 2)
 
         var callbackStruct = AURenderCallbackStruct(
             inputProc: deviceStreamInputCallback,
@@ -257,23 +265,24 @@ final class AudioDeviceStreamSource {
         }
         let input = rawData.assumingMemoryBound(to: Int16.self)
 
-        // Map to stereo: mono duplicates, >2 channels keep the first two.
-        var stereo = [Int16](repeating: 0, count: frames * 2)
+        // Map to stereo into the pre-allocated scratch (no RT-thread allocation):
+        // mono duplicates, >2 channels keep the first two.
+        guard frames * 2 <= captureStereoScratch.count else { return }
         if channels == 1 {
             for frame in 0..<frames {
                 let sample = input[frame]
-                stereo[frame * 2] = sample
-                stereo[frame * 2 + 1] = sample
+                captureStereoScratch[frame * 2] = sample
+                captureStereoScratch[frame * 2 + 1] = sample
             }
         } else {
             for frame in 0..<frames {
-                stereo[frame * 2] = input[frame * channels]
-                stereo[frame * 2 + 1] = input[frame * channels + 1]
+                captureStereoScratch[frame * 2] = input[frame * channels]
+                captureStereoScratch[frame * 2 + 1] = input[frame * channels + 1]
             }
         }
 
         let resampled = AudioPCMResampler.resampleInterleaved(
-            stereo,
+            captureStereoScratch,
             frameCount: frames,
             channels: 2,
             inputRate: captureSampleRate,
@@ -325,8 +334,10 @@ final class AudioDeviceStreamSource {
             self?.acceptConnection(connection)
         }
 
+        // `stopped` already defaults to false (fresh instance per stream); don't
+        // re-write it off serverQueue. `listener` is published here before start()
+        // returns and is only mutated on serverQueue thereafter.
         self.listener = listener
-        stopped = false
         listener.start(queue: serverQueue)
 
         _ = readySemaphore.wait(timeout: .now() + 5)

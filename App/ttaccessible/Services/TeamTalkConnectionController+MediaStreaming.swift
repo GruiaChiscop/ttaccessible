@@ -137,13 +137,11 @@ extension TeamTalkConnectionController {
         monitorEnabled: Bool,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
-        queue.async { [weak self] in
+        // Enumerate + open the capture device OFF the controller queue. Device
+        // enumeration and the loopback server's readiness wait (up to 5s) must
+        // not block the SDK's serial event loop.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-            guard let instance = self.instance, let record = self.connectedRecord else {
-                self.healStaleSessionIfNeededLocked()
-                self.finishOnMain(.failure(self.sessionUnavailableErrorLocked()), completion: completion)
-                return
-            }
 
             guard let device = InputAudioDeviceResolver.availableInputDevices()
                 .first(where: { $0.uid == deviceUID }) else {
@@ -152,10 +150,6 @@ extension TeamTalkConnectionController {
                     completion: completion
                 )
                 return
-            }
-
-            if self.mediaStreamingActive {
-                self.stopStreamingMediaFileLocked(instance: instance)
             }
 
             let source = AudioDeviceStreamSource(device: device)
@@ -170,27 +164,40 @@ extension TeamTalkConnectionController {
                 return
             }
 
-            self.mediaStreamingPaused = false
-            self.mediaStreamingBroadcastGainLevel = INT32(SOUND_GAIN_DEFAULT.rawValue)
-            self.mediaStreamingHasVideo = false
+            self.queue.async { [weak self] in
+                guard let self else { source.stop(); return }
+                guard let instance = self.instance, let record = self.connectedRecord else {
+                    source.stop()
+                    self.healStaleSessionIfNeededLocked()
+                    self.finishOnMain(.failure(self.sessionUnavailableErrorLocked()), completion: completion)
+                    return
+                }
 
-            var playback = self.makeMediaFilePlaybackLocked(offsetMSec: 0)
-            var videoCodec = self.makeVideoCodecLocked(includeVideo: false)
-            self.mediaStreamingActiveVideoCodec = videoCodec
+                if self.mediaStreamingActive {
+                    self.stopStreamingMediaFileLocked(instance: instance)
+                }
 
-            let started = url.absoluteString.withCString { cPath -> Bool in
-                TT_StartStreamingMediaFileToChannelEx(instance, cPath, &playback, &videoCodec) != 0
-            }
-            guard started else {
-                source.stop()
-                self.finishOnMain(
-                    .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.startFailed"))),
-                    completion: completion
-                )
-                return
-            }
+                self.mediaStreamingPaused = false
+                self.mediaStreamingBroadcastGainLevel = INT32(SOUND_GAIN_DEFAULT.rawValue)
+                self.mediaStreamingHasVideo = false
 
-            self.deviceStreamSource = source
+                var playback = self.makeMediaFilePlaybackLocked(offsetMSec: 0)
+                var videoCodec = self.makeVideoCodecLocked(includeVideo: false)
+                self.mediaStreamingActiveVideoCodec = videoCodec
+
+                let started = url.absoluteString.withCString { cPath -> Bool in
+                    TT_StartStreamingMediaFileToChannelEx(instance, cPath, &playback, &videoCodec) != 0
+                }
+                guard started else {
+                    source.stop()
+                    self.finishOnMain(
+                        .failure(TeamTalkConnectionError.internalError(L10n.text("mediaStream.device.error.startFailed"))),
+                        completion: completion
+                    )
+                    return
+                }
+
+                self.deviceStreamSource = source
             self.deviceStreamMonitorEnabled = monitorEnabled
             self.mediaStreamingActive = true
             // Subscribe to our own media stream only if the user opted in.
@@ -208,6 +215,7 @@ extension TeamTalkConnectionController {
             self.publishSessionLocked(instance: instance, record: record, invalidation: .audio)
             self.publishMediaStreamingProgressLocked()
             self.finishOnMain(.success(()), completion: completion)
+            }
         }
     }
 
