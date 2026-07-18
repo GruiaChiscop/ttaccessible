@@ -55,6 +55,10 @@ final class AudioDeviceStreamSource {
 
     private let stopLock = NSLock()
     private var didStop = false
+    /// When true the capture callback writes silence instead of the live audio —
+    /// used to "pause" a device stream without pausing the SDK (which desyncs a
+    /// live loopback). Plain Bool: a one-buffer-late transition is inaudible.
+    private var isMuted = false
 
     init(device: InputAudioDeviceInfo) {
         self.device = device
@@ -82,6 +86,12 @@ final class AudioDeviceStreamSource {
         }
         AudioLogger.log("device stream: source started device=%@ url=%@", device.name, url.absoluteString)
         return url
+    }
+
+    /// Pause/resume the device stream by muting the capture (see isMuted).
+    func setMuted(_ muted: Bool) {
+        isMuted = muted
+        AudioLogger.log("device stream: %@", muted ? "paused (muted)" : "resumed")
     }
 
     func stop() {
@@ -269,7 +279,15 @@ final class AudioDeviceStreamSource {
             inputRate: captureSampleRate,
             outputRate: Double(Self.outputSampleRate)
         )
-        ring.write(resampled.samples, frames: resampled.frameCount)
+        // "Pause" a live device stream by writing silence instead of the capture:
+        // the loopback keeps feeding the SDK real-time frames (no discontinuity),
+        // the channel just hears silence until resumed.
+        if isMuted {
+            ring.write([Int16](repeating: 0, count: resampled.frameCount * 2),
+                       frames: resampled.frameCount)
+        } else {
+            ring.write(resampled.samples, frames: resampled.frameCount)
+        }
     }
 
     // MARK: - Loopback HTTP server
@@ -374,6 +392,17 @@ final class AudioDeviceStreamSource {
 
         private static let tickMSec = 20
 
+        /// Milliseconds of silent pre-roll blasted to the SDK as fast as the
+        /// socket accepts it before real-time pacing begins. The SDK's FFmpeg
+        /// reads a batch of packets to analyze the stream inside
+        /// TT_StartStreamingMediaFileToChannelEx and holds the SDK audio lock the
+        /// whole time — freezing the channel's two-way voice. Feeding the analysis
+        /// batch up front lets it finish almost instantly, killing the freeze.
+        /// The SDK replays what it consumes, so this is ALSO the standing latency:
+        /// keep it near the analysis minimum. Tunable — lower = less latency but
+        /// the freeze returns once it drops below what the analysis needs.
+        private static let analysisBurstMSec = 1500
+
         init(connection: NWConnection, ring: PCMRing, queue: DispatchQueue, onFinish: @escaping (StreamConnection) -> Void) {
             self.connection = connection
             self.ring = ring
@@ -440,6 +469,21 @@ final class AudioDeviceStreamSource {
                 + "Connection: close\r\n"
                 + "\r\n"
             send(Data(headers.utf8))
+
+            // Blast a short silent pre-roll (bypassing the real-time media-frame
+            // accounting) so the SDK's stream analysis finishes immediately
+            // instead of holding its audio lock — and the channel's voice — for
+            // seconds. See analysisBurstMSec.
+            let burstFrames = AudioDeviceStreamSource.outputSampleRate * Self.analysisBurstMSec / 1000
+            let burstSilence = [Int16](repeating: 0,
+                                       count: burstFrames * AudioDeviceStreamSource.outputChannels)
+            let burstADTS = encoder.encode(burstSilence)
+            if burstADTS.isEmpty == false {
+                connection.send(content: burstADTS, completion: .contentProcessed { [weak self] error in
+                    if error != nil { self?.finish() }
+                })
+            }
+            AudioLogger.log("device stream: burst pre-roll %d ms for SDK analysis", Self.analysisBurstMSec)
 
             cursor = ring.liveEdge
             // Crediting the operating buffer as already-sent delays the first

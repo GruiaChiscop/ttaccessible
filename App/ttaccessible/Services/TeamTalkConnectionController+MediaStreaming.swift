@@ -318,6 +318,19 @@ extension TeamTalkConnectionController {
         guard let instance = self.instance, self.mediaStreamingActive else { return }
         if self.mediaStreamingPaused == paused { return }
 
+        // Live device streams can't be SDK-paused: the loopback keeps producing,
+        // so TT_UpdateStreamingMediaFileToChannel(bPaused) desyncs it and resume
+        // breaks. Instead mute the capture — the loopback keeps feeding the SDK
+        // real-time silence, so there's no discontinuity.
+        if let deviceStreamSource {
+            mediaStreamingPaused = paused
+            mediaStreamingUserPauseIntent = paused
+            mediaStreamingElapsedSampleAt = paused ? nil : Date()
+            deviceStreamSource.setMuted(paused)
+            publishMediaStreamingProgressLocked()
+            return
+        }
+
         let offsetMSec = currentMediaStreamingElapsedMSecLocked()
         let previousPaused = mediaStreamingPaused
         let previousPauseIntent = mediaStreamingUserPauseIntent
@@ -407,6 +420,27 @@ extension TeamTalkConnectionController {
         guard mediaStreamingDurationMSec > 0 else { return true }
         // Ignore spurious finish/abort right after a seek while still far from the end.
         return info.uElapsedMSec + 2_000 < mediaStreamingDurationMSec
+    }
+
+    /// Re-point an active media stream at the newly-joined channel. The SDK
+    /// streams to whatever channel you're in, so a channel switch requires a
+    /// stop + restart — otherwise the broadcast keeps going to the old channel
+    /// (or stops), which is the "device stream breaks on channel switch" bug.
+    func restartMediaStreamForChannelChangeLocked(instance: UnsafeMutableRawPointer) {
+        guard mediaStreamingActive, mediaStreamingPath != nil else { return }
+        if deviceStreamSource != nil {
+            // Live device stream: restart to the new channel, never SDK-paused —
+            // the mute/pause state lives in the capture source and persists across
+            // the restart (same AudioDeviceStreamSource, same loopback URL). The
+            // restart resets mediaStreamingPaused, so restore it to match the
+            // source's still-muted state.
+            let wasPaused = mediaStreamingPaused
+            _ = restartMediaStreamLocked(instance: instance, offsetMSec: 0, paused: false)
+            mediaStreamingPaused = wasPaused
+        } else {
+            let offset = currentMediaStreamingElapsedMSecLocked()
+            _ = restartMediaStreamLocked(instance: instance, offsetMSec: offset, paused: mediaStreamingPaused)
+        }
     }
 
     /// Stop and restart channel media streaming (TT_Update seek/resume is unreliable for media files).

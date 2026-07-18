@@ -858,6 +858,9 @@ extension TeamTalkConnectionController {
                                 )
                             }
                         }
+                        if message.user.nUserID == currentUserID {
+                            restartMediaStreamForChannelChangeLocked(instance: instance)
+                        }
                         let joinedUsername = ttString(from: message.user.szUsername)
                         if let storedVolume = userVolumeStore.volume(forUsername: joinedUsername) {
                             _ = TT_SetUserVolume(instance, message.user.nUserID, STREAMTYPE_VOICE, storedVolume)
@@ -1159,6 +1162,7 @@ extension TeamTalkConnectionController {
                                     )
                                 }
                             }
+                            restartMediaStreamForChannelChangeLocked(instance: instance)
                             if recordingMuxedActive {
                                 restartMuxedRecordingForChannelChange()
                             }
