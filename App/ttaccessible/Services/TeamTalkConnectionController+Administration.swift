@@ -218,6 +218,19 @@ extension TeamTalkConnectionController {
             if cmdID > 0 {
                 self.pendingUserAccounts = []
                 self.listUserAccountsCmdID = cmdID
+                // Build the online-nickname map once for this listing (first login
+                // wins for multi-login accounts, matching the old per-account
+                // TT_GetUserByUsername behaviour) instead of one SDK call each.
+                var nicknames: [String: String] = [:]
+                for user in self.fetchServerUsersLocked(instance: instance) {
+                    let username = ttString(from: user.szUsername)
+                    guard username.isEmpty == false else { continue }
+                    let key = username.lowercased()
+                    if nicknames[key] == nil {
+                        nicknames[key] = ttString(from: user.szNickname)
+                    }
+                }
+                self.onlineNicknamesByUsername = nicknames
             }
         }
     }
@@ -319,11 +332,9 @@ extension TeamTalkConnectionController {
         props.username = ttString(from: account.szUsername)
         // Show who currently uses the account: nickname of the logged-in user
         // (first match for multi-login accounts), empty when nobody's online.
-        if let instance, props.username.isEmpty == false {
-            var onlineUser = User()
-            if props.username.withCString({ TT_GetUserByUsername(instance, $0, &onlineUser) != 0 }) {
-                props.onlineNickname = ttString(from: onlineUser.szNickname)
-            }
+        // Read from the map built once per listing rather than an SDK call each.
+        if props.username.isEmpty == false {
+            props.onlineNickname = onlineNicknamesByUsername[props.username.lowercased()] ?? ""
         }
         props.password = ttString(from: account.szPassword)
         if (account.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0 {

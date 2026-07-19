@@ -209,6 +209,10 @@ final class TeamTalkConnectionController {
     var pendingUserAccounts: [UserAccountProperties] = []
     var cachedUserAccounts: [UserAccountProperties] = []
     var listUserAccountsCmdID: Int32 = -1
+    /// Lowercased-username → nickname of currently-online users, built once per
+    /// account listing so `makeUserAccountProperties` resolves each account's online
+    /// nickname from a map instead of a per-account `TT_GetUserByUsername` call.
+    var onlineNicknamesByUsername: [String: String] = [:]
     var pendingBannedUsers: [BannedUserProperties] = []
     var listBansCmdID: Int32 = -1
     var pendingFileTransferCommands: [Int32: PendingFileTransferCommand] = [:]
