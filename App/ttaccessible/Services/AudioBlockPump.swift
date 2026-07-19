@@ -184,7 +184,11 @@ final class AudioBlockPump {
     /// Once a source proves stereo it latches (so its silent gaps stay "stereo").
     private func updateStereoJudgement(pcm: [Int16], frames: Int, channels: Int,
                                        engineKey: Int32, engine: OutputAudioRenderEngine) {
-        if channels >= 2, blockIsStereo(pcm, frames: frames, channels: channels) {
+        // Once a key has latched to stereo the effective channel count never drops
+        // back, so skip the per-block mid/side energy scan — it's pure waste on the
+        // pump's 10 ms queue (most visible in Debug).
+        if channels >= 2, sawStereoByKey[engineKey] != true,
+           blockIsStereo(pcm, frames: frames, channels: channels) {
             sawStereoByKey[engineKey] = true
         }
         let effective = (channels >= 2 && sawStereoByKey[engineKey] == true) ? 2 : 1

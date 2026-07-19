@@ -246,16 +246,25 @@ final class VirtualControlView: NSView {
 @MainActor
 protocol MixerRegionAnnouncing: AnyObject {
     var regionAnnouncementPrefix: String? { get set }
+    /// Pending clear for the current prefix, so a rapid re-announcement can cancel it.
+    var regionPrefixClearWorkItem: DispatchWorkItem? { get set }
 }
 
 extension MixerRegionAnnouncing {
     /// Prepend the region name to `label` for one read, then clear it shortly after so
     /// ordinary navigation back to this element doesn't repeat the prefix.
     func applyRegionPrefix(_ prefix: String) {
+        // Cancel any clear still pending from an earlier announcement — otherwise two
+        // quick Cmd+5s would leave the first announcement's timer to fire mid-read of
+        // the second, blanking the prefix before VoiceOver finishes speaking it.
+        regionPrefixClearWorkItem?.cancel()
         regionAnnouncementPrefix = prefix
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+        let clear = DispatchWorkItem { [weak self] in
             self?.regionAnnouncementPrefix = nil
+            self?.regionPrefixClearWorkItem = nil
         }
+        regionPrefixClearWorkItem = clear
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: clear)
     }
 
     func regionPrefixed(_ label: String?) -> String? {
@@ -281,6 +290,7 @@ final class VirtualStripView: NSView, MixerRegionAnnouncing {
     private let labelProvider: @MainActor @Sendable () -> String?
     private(set) var childElements: [VirtualControlView] = []
     var regionAnnouncementPrefix: String?
+    var regionPrefixClearWorkItem: DispatchWorkItem?
 
     init(descriptor: MixerStripDescriptor) {
         self.stripId = descriptor.id
@@ -319,6 +329,7 @@ final class A11yVirtualGridOverlayView: NSView, MixerRegionAnnouncing {
     private var areaRoleDescription: String = "area"
     private var lastStripIds: [Int32] = []
     var regionAnnouncementPrefix: String?
+    var regionPrefixClearWorkItem: DispatchWorkItem?
 
     override init(frame: NSRect) { super.init(frame: frame) }
     required init?(coder: NSCoder) { nil }

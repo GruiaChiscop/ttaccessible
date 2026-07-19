@@ -164,6 +164,10 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.lastRecordingWasActive = active }
     }
 
+    func updateLastActiveRecordingMode(_ mode: Int) {
+        mutate { $0.lastActiveRecordingMode = mode }
+    }
+
     func updateAutoRestartRecording(_ enabled: Bool) {
         mutate { $0.autoRestartRecording = enabled }
     }

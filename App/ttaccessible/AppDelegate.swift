@@ -1359,6 +1359,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let format = AudioFileFormat(rawValue: UInt32(preferencesStore.preferences.recordingAudioFileFormat))
         activeRecordingMode = mode
         preferencesStore.updateLastRecordingWasActive(true)
+        // Persist the *actual* mode so auto-restart restores what was really in use
+        // (e.g. a single-file ⌘R recording) rather than the clamped preference mode.
+        preferencesStore.updateLastActiveRecordingMode(mode)
 
         let recordsStems = mode & 2 != 0
         if mode & 1 != 0 {
@@ -2196,7 +2199,11 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
            preferencesStore.preferences.autoRestartRecording,
            preferencesStore.preferences.lastRecordingWasActive,
            let folderURL = preferencesStore.resolveRecordingFolderURL() {
-            startRecordingToFolder(folderURL, mode: preferencesStore.preferences.recordingMode)
+            // Restore the mode that was actually in use (single-file, separate, or both);
+            // fall back to the preference only if we somehow have no recorded mode.
+            let savedMode = preferencesStore.preferences.lastActiveRecordingMode
+            let restartMode = savedMode != 0 ? savedMode : preferencesStore.preferences.recordingMode
+            startRecordingToFolder(folderURL, mode: restartMode)
         }
 
         if privateMessagesWindowController != nil {

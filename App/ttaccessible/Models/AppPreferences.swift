@@ -75,6 +75,7 @@ struct AppPreferences: Codable, Equatable {
         case prefersAutomaticTeamTalkConfigDetection
         case useRelativeTimestamps
         case lastRecordingWasActive
+        case lastActiveRecordingMode
         case autoRestartRecording
         case preferredInputDevice
         case preferredOutputDevice
@@ -135,6 +136,12 @@ struct AppPreferences: Codable, Equatable {
     var prefersAutomaticTeamTalkConfigDetection: Bool
     var useRelativeTimestamps: Bool
     var lastRecordingWasActive: Bool
+    /// The recording mode (1 = single file, 2 = separate stems, 3 = both) of the
+    /// recording that was active when it last stopped. Unlike `recordingMode`, this
+    /// is stored raw (not clamped to 2/3) so auto-restart can faithfully restore a
+    /// single-file (⌘R) recording rather than silently upgrading it to the preference.
+    /// 0 means "no active recording to restore".
+    var lastActiveRecordingMode: Int
     var autoRestartRecording: Bool
     var autoJoinRootChannel: Bool
     var autoReconnect: Bool
@@ -196,6 +203,7 @@ struct AppPreferences: Codable, Equatable {
         prefersAutomaticTeamTalkConfigDetection: Bool = true,
         useRelativeTimestamps: Bool = false,
         lastRecordingWasActive: Bool = false,
+        lastActiveRecordingMode: Int = 0,
         autoRestartRecording: Bool = false,
         preferredInputDevice: AudioDevicePreference = .systemDefault,
         preferredOutputDevice: AudioDevicePreference = .systemDefault,
@@ -254,6 +262,7 @@ struct AppPreferences: Codable, Equatable {
         self.prefersAutomaticTeamTalkConfigDetection = prefersAutomaticTeamTalkConfigDetection
         self.useRelativeTimestamps = useRelativeTimestamps
         self.lastRecordingWasActive = lastRecordingWasActive
+        self.lastActiveRecordingMode = lastActiveRecordingMode
         self.autoRestartRecording = autoRestartRecording
         self.preferredInputDevice = preferredInputDevice
         self.preferredOutputDevice = preferredOutputDevice
@@ -345,6 +354,7 @@ struct AppPreferences: Codable, Equatable {
         prefersAutomaticTeamTalkConfigDetection = try container.decodeIfPresent(Bool.self, forKey: .prefersAutomaticTeamTalkConfigDetection) ?? true
         useRelativeTimestamps = try container.decodeIfPresent(Bool.self, forKey: .useRelativeTimestamps) ?? false
         lastRecordingWasActive = try container.decodeIfPresent(Bool.self, forKey: .lastRecordingWasActive) ?? false
+        lastActiveRecordingMode = try container.decodeIfPresent(Int.self, forKey: .lastActiveRecordingMode) ?? 0
         autoRestartRecording = try container.decodeIfPresent(Bool.self, forKey: .autoRestartRecording) ?? false
         preferredInputDevice = try container.decodeIfPresent(AudioDevicePreference.self, forKey: .preferredInputDevice) ?? .systemDefault
         preferredOutputDevice = try container.decodeIfPresent(AudioDevicePreference.self, forKey: .preferredOutputDevice) ?? .systemDefault
@@ -432,6 +442,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(prefersAutomaticTeamTalkConfigDetection, forKey: .prefersAutomaticTeamTalkConfigDetection)
         try container.encode(useRelativeTimestamps, forKey: .useRelativeTimestamps)
         try container.encode(lastRecordingWasActive, forKey: .lastRecordingWasActive)
+        try container.encode(lastActiveRecordingMode, forKey: .lastActiveRecordingMode)
         try container.encode(autoRestartRecording, forKey: .autoRestartRecording)
         try container.encode(preferredInputDevice, forKey: .preferredInputDevice)
         try container.encode(preferredOutputDevice, forKey: .preferredOutputDevice)
