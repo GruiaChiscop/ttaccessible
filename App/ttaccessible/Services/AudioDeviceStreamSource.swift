@@ -50,6 +50,9 @@ final class AudioDeviceStreamSource {
     /// Pre-allocated stereo scratch reused by the RT input callback (sized to the
     /// AUHAL's max frames), so `handleInput` doesn't heap-allocate per callback.
     private var captureStereoScratch = [Int16]()
+    /// Pre-allocated resample target reused by the RT input callback (sized to the
+    /// worst-case 48 kHz output frame count), so resampling doesn't allocate either.
+    private var captureResampleScratch = [Int16]()
 
     // Server state (guarded by serverQueue).
     private var listener: NWListener?
@@ -200,6 +203,12 @@ final class AudioDeviceStreamSource {
         captureSampleRate = sampleRate
         captureChannels = channelCount
         captureStereoScratch = [Int16](repeating: 0, count: Int(maxFrames) * 2)
+        // Worst case the device runs below 48 kHz, so resampling grows the frame
+        // count; size the scratch for that ceiling (+ margin) once, up front.
+        let worstCaseOutputFrames = Int(
+            (Double(maxFrames) * Double(Self.outputSampleRate) / max(sampleRate, 1)).rounded(.up)
+        ) + 8
+        captureResampleScratch = [Int16](repeating: 0, count: worstCaseOutputFrames * Self.outputChannels)
 
         var callbackStruct = AURenderCallbackStruct(
             inputProc: deviceStreamInputCallback,
@@ -281,21 +290,32 @@ final class AudioDeviceStreamSource {
             }
         }
 
-        let resampled = AudioPCMResampler.resampleInterleaved(
-            captureStereoScratch,
-            frameCount: frames,
-            channels: 2,
-            inputRate: captureSampleRate,
-            outputRate: Double(Self.outputSampleRate)
-        )
+        // Resample to 48 kHz into the pre-allocated scratch (no RT-thread alloc).
+        let outputFrames = captureStereoScratch.withUnsafeBufferPointer { source -> Int in
+            captureResampleScratch.withUnsafeMutableBufferPointer { dest -> Int in
+                guard let sourceBase = source.baseAddress, let destBase = dest.baseAddress else { return 0 }
+                return AudioPCMResampler.resampleInterleaved(
+                    input: sourceBase,
+                    frameCount: frames,
+                    channels: 2,
+                    inputRate: captureSampleRate,
+                    outputRate: Double(Self.outputSampleRate),
+                    output: destBase,
+                    outputCapacityFrames: dest.count / 2
+                )
+            }
+        }
+        guard outputFrames > 0 else { return }
+
         // "Pause" a live device stream by writing silence instead of the capture:
         // the loopback keeps feeding the SDK real-time frames (no discontinuity),
         // the channel just hears silence until resumed.
         if isMuted {
-            ring.write([Int16](repeating: 0, count: resampled.frameCount * 2),
-                       frames: resampled.frameCount)
-        } else {
-            ring.write(resampled.samples, frames: resampled.frameCount)
+            for index in 0..<(outputFrames * 2) { captureResampleScratch[index] = 0 }
+        }
+        captureResampleScratch.withUnsafeBufferPointer { buffer in
+            guard let base = buffer.baseAddress else { return }
+            ring.write(base, frames: outputFrames)
         }
     }
 
@@ -572,88 +592,114 @@ final class AudioDeviceStreamSource {
 
     /// Fixed-capacity interleaved Int16 ring with absolute frame counters, so
     /// multiple connections read at independent cursors without consuming.
+    ///
+    /// Single-producer (the RT audio thread) / multi-consumer (connection sends).
+    /// The producer is lock-free and allocation-free: it copies into a raw buffer,
+    /// then publishes the absolute write cursor with a release store. Readers load
+    /// it with acquire, copy, then re-validate that the producer hasn't lapped and
+    /// overwritten the copied region — a seqlock, so no lock touches the RT thread.
     private final class PCMRing {
-        private let lock = NSLock()
-        private var buffer: [Int16]
+        private let bufferPtr: UnsafeMutablePointer<Int16>
+        private let sampleCount: Int
         private let capacityFrames: Int
         private let channels: Int
-        private var writeFrames: UInt64 = 0
+        /// Published write cursor (absolute frames). Producer release-stores here;
+        /// readers acquire-load. Heap-boxed C atomic — see AtomicU64.
+        private let writeCursor: OpaquePointer
+        /// Producer-private running frame count; only `write()` touches it, and
+        /// `write()` is only ever called from the single AUHAL callback thread.
+        private var producerFrames: UInt64 = 0
 
         init(capacityFrames: Int, channels: Int) {
             self.capacityFrames = capacityFrames
             self.channels = channels
-            self.buffer = [Int16](repeating: 0, count: capacityFrames * channels)
+            self.sampleCount = capacityFrames * channels
+            let ptr = UnsafeMutablePointer<Int16>.allocate(capacity: capacityFrames * channels)
+            ptr.initialize(repeating: 0, count: capacityFrames * channels)
+            self.bufferPtr = ptr
+            self.writeCursor = ttac_atomic_u64_create(0)
         }
 
-        var liveEdge: UInt64 {
-            lock.lock()
-            defer { lock.unlock() }
-            return writeFrames
+        deinit {
+            bufferPtr.deinitialize(count: sampleCount)
+            bufferPtr.deallocate()
+            ttac_atomic_u64_destroy(writeCursor)
         }
 
-        func write(_ samples: [Int16], frames: Int) {
+        var liveEdge: UInt64 { ttac_atomic_u64_load(writeCursor) }
+
+        /// Called only from the RT audio thread. Lock-free and allocation-free.
+        func write(_ samples: UnsafePointer<Int16>, frames: Int) {
             guard frames > 0 else { return }
-            lock.lock()
-            defer { lock.unlock() }
             // Writes larger than the ring keep only the newest capacity worth.
             let usableFrames = min(frames, capacityFrames)
             let skippedFrames = frames - usableFrames
-            var writeIndex = Int((writeFrames + UInt64(skippedFrames)) % UInt64(capacityFrames))
-            samples.withUnsafeBufferPointer { source in
-                guard let base = source.baseAddress else { return }
-                var sourceFrame = skippedFrames
-                var remaining = usableFrames
-                while remaining > 0 {
-                    let run = min(remaining, capacityFrames - writeIndex)
-                    buffer.withUnsafeMutableBufferPointer { dest in
-                        dest.baseAddress!
-                            .advanced(by: writeIndex * channels)
-                            .update(from: base + sourceFrame * channels, count: run * channels)
-                    }
-                    sourceFrame += run
-                    writeIndex = (writeIndex + run) % capacityFrames
-                    remaining -= run
-                }
+            var writeIndex = Int((producerFrames + UInt64(skippedFrames)) % UInt64(capacityFrames))
+            var sourceFrame = skippedFrames
+            var remaining = usableFrames
+            while remaining > 0 {
+                let run = min(remaining, capacityFrames - writeIndex)
+                (bufferPtr + writeIndex * channels)
+                    .update(from: samples + sourceFrame * channels, count: run * channels)
+                sourceFrame += run
+                writeIndex = (writeIndex + run) % capacityFrames
+                remaining -= run
             }
-            writeFrames += UInt64(frames)
+            producerFrames += UInt64(frames)
+            // Release-publish so acquiring readers observe the buffer writes above.
+            ttac_atomic_u64_store(writeCursor, producerFrames)
         }
 
         /// Copy up to `maxFrames` starting at absolute frame `cursor`. A cursor
         /// that has been overwritten is advanced to the oldest retained frame.
+        /// Runs on a connection's serial queue (not the RT thread), so allocating
+        /// the returned array is fine.
         func read(from cursor: UInt64, maxFrames: Int) -> ([Int16], Int, UInt64) {
             guard maxFrames > 0 else { return ([], 0, cursor) }
-            lock.lock()
-            defer { lock.unlock() }
-            guard writeFrames > cursor else { return ([], 0, cursor) }
 
-            let oldestRetained = writeFrames > UInt64(capacityFrames)
-                ? writeFrames - UInt64(capacityFrames)
-                : 0
-            let effectiveCursor = max(cursor, oldestRetained)
-            let available = Int(writeFrames - effectiveCursor)
-            let framesToRead = min(maxFrames, available)
-            guard framesToRead > 0 else { return ([], 0, effectiveCursor) }
+            var attempt = 0
+            while true {
+                let writeFrames = ttac_atomic_u64_load(writeCursor)
+                guard writeFrames > cursor else { return ([], 0, cursor) }
 
-            var output = [Int16](repeating: 0, count: framesToRead * channels)
-            var readIndex = Int(effectiveCursor % UInt64(capacityFrames))
-            output.withUnsafeMutableBufferPointer { dest in
-                guard let destBase = dest.baseAddress else { return }
-                var destFrame = 0
-                var remaining = framesToRead
-                buffer.withUnsafeBufferPointer { source in
-                    guard let sourceBase = source.baseAddress else { return }
+                let oldestRetained = writeFrames > UInt64(capacityFrames)
+                    ? writeFrames - UInt64(capacityFrames)
+                    : 0
+                let effectiveCursor = max(cursor, oldestRetained)
+                let available = Int(writeFrames - effectiveCursor)
+                let framesToRead = min(maxFrames, available)
+                guard framesToRead > 0 else { return ([], 0, effectiveCursor) }
+
+                var output = [Int16](repeating: 0, count: framesToRead * channels)
+                var readIndex = Int(effectiveCursor % UInt64(capacityFrames))
+                output.withUnsafeMutableBufferPointer { dest in
+                    guard let destBase = dest.baseAddress else { return }
+                    var destFrame = 0
+                    var remaining = framesToRead
                     while remaining > 0 {
                         let run = min(remaining, capacityFrames - readIndex)
                         destBase
                             .advanced(by: destFrame * channels)
-                            .update(from: sourceBase + readIndex * channels, count: run * channels)
+                            .update(from: bufferPtr + readIndex * channels, count: run * channels)
                         destFrame += run
                         readIndex = (readIndex + run) % capacityFrames
                         remaining -= run
                     }
                 }
+
+                // Seqlock validation: if the producer lapped far enough to overwrite
+                // the start of the region we just copied, the copy is torn — retry
+                // with the newer edge (bounded; the producer can't lap forever within
+                // a tick, so this converges immediately in practice).
+                let writeFramesAfter = ttac_atomic_u64_load(writeCursor)
+                let oldestAfter = writeFramesAfter > UInt64(capacityFrames)
+                    ? writeFramesAfter - UInt64(capacityFrames)
+                    : 0
+                if oldestAfter <= effectiveCursor || attempt >= 3 {
+                    return (output, framesToRead, effectiveCursor + UInt64(framesToRead))
+                }
+                attempt += 1
             }
-            return (output, framesToRead, effectiveCursor + UInt64(framesToRead))
         }
     }
 }
