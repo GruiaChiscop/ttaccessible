@@ -174,6 +174,17 @@ final class TeamTalkConnectionController {
     var mediaStreamingHasVideo = false
     var mediaStreamingActiveVideoCodec = VideoCodec()
     var mediaStreamingFinalizeSuppressedUntil: Date?
+    /// Coalescing for the media panel's high-frequency controls: gain updates
+    /// and seeks are expensive SDK calls, and key-repeat floods otherwise queue
+    /// a backlog that keeps adjusting after the user releases the key.
+    let mediaStreamingGainRequest = CoalescedRequest<Int>()
+    let mediaStreamingSeekRequest = CoalescedRequest<UInt32>()
+    /// Live capture + loopback server when the active media stream sources an
+    /// audio device (nil for file/URL streams).
+    var deviceStreamSource: AudioDeviceStreamSource?
+    /// Whether the local user hears their own device stream back (chosen per
+    /// stream in the start dialog; file/URL streams always self-monitor).
+    var deviceStreamMonitorEnabled = false
     var activeVideoDisplayUserID: Int32 = 0
     var lastPublishedVideoFrame: VideoFramePayload?
     var lastPublishedVideoFrameUserID: Int32 = 0
@@ -198,6 +209,10 @@ final class TeamTalkConnectionController {
     var pendingUserAccounts: [UserAccountProperties] = []
     var cachedUserAccounts: [UserAccountProperties] = []
     var listUserAccountsCmdID: Int32 = -1
+    /// Lowercased-username → nickname of currently-online users, built once per
+    /// account listing so `makeUserAccountProperties` resolves each account's online
+    /// nickname from a map instead of a per-account `TT_GetUserByUsername` call.
+    var onlineNicknamesByUsername: [String: String] = [:]
     var pendingBannedUsers: [BannedUserProperties] = []
     var listBansCmdID: Int32 = -1
     var pendingFileTransferCommands: [Int32: PendingFileTransferCommand] = [:]

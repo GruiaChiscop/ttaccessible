@@ -78,7 +78,7 @@ final class PreferencesWindowController: NSWindowController {
             advancedMicrophoneSettingsStore: advancedMicrophoneSettingsStore
         )
 
-        let window = NSWindow(
+        let window = EscapeClosableWindow(
             contentRect: NSRect(x: 0, y: 0, width: 700, height: 420),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
@@ -160,6 +160,14 @@ private final class PreferencesContainerViewController: NSViewController {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         nil
+    }
+
+    // Programmatic view controllers MUST override loadView: before macOS 14
+    // AppKit's default implementation looks for a nib and throws when there
+    // isn't one (macOS 14+ silently creates an empty view — the behavior this
+    // class was unknowingly relying on).
+    override func loadView() {
+        view = NSView()
     }
 
     override func viewDidLoad() {

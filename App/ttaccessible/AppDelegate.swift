@@ -113,6 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
     private var updaterAutoCheckCancellable: AnyCancellable?
     private var nicknameCancellable: AnyCancellable?
+    private var userMenuVisibilityCancellable: AnyCancellable?
     private var pushToTalkModeCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -153,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         syncNicknamePreference()
         scheduleLaunchUpdateCheck()
         configurePushToTalkObservers()
+        configureUserMenuVisibility()
         // Slight delay so the announcement alert never races the main window.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.announcementService.checkAtLaunch()
@@ -165,6 +167,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func flushPersistableStores() {
         store.flushPendingChanges()
         preferencesStore.flushPendingChanges()
+    }
+
+    /// The User command menu is declared unconditionally — macOS 12's
+    /// CommandsBuilder cannot express a conditional menu, and the Optional
+    /// Commands conformance an availability split would need doesn't exist at
+    /// runtime before macOS 13. Its menu-bar visibility is managed here at the
+    /// AppKit layer instead: hidden unless connected, the same behavior the
+    /// SwiftUI-level `if` used to provide. Re-applied (idempotently) after any
+    /// menuState change, since SwiftUI may rebuild the main menu then.
+    private func configureUserMenuVisibility() {
+        userMenuVisibilityCancellable = menuState.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.applyUserMenuVisibility()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self?.applyUserMenuVisibility()
+                }
+            }
+        // SwiftUI installs the main menu after launch finishes — apply once
+        // now and again after it has settled.
+        applyUserMenuVisibility()
+        for delay in [0.5, 1.5, 3.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.applyUserMenuVisibility()
+            }
+        }
+    }
+
+    private func applyUserMenuVisibility() {
+        let title = L10n.text("user.menu.title")
+        guard let item = NSApp.mainMenu?.items.first(where: {
+            $0.submenu?.title == title || $0.title == title
+        }) else { return }
+        item.isHidden = menuState.mode != .connectedServer
     }
 
     private func syncNicknamePreference() {
@@ -438,7 +474,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             || savedServersWindowController?.window?.isVisible == false
 
         if savedServersWindowController == nil {
-            let windowController = SavedServersWindowController(contentViewController: NSViewController())
+            // Assign the placeholder's view directly: a bare NSViewController
+            // has no nib, and before macOS 14 its default loadView throws.
+            let placeholder = NSViewController()
+            placeholder.view = NSView()
+            let windowController = SavedServersWindowController(contentViewController: placeholder)
             savedServersWindowController = windowController
         }
 
@@ -610,7 +650,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             vc.clientStatisticsProvider = { [weak self] in
                 self?.connectionController.getClientStatistics()
             }
-            let window = NSWindow(
+            let window = EscapeClosableWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 400, height: 260),
                 styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,
@@ -1383,6 +1423,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         promptMediaStreamURL()
     }
 
+    func startStreamingMediaFromDevice() {
+        guard menuState.mode == .connectedServer, !menuState.isMediaStreamingActive else { return }
+        promptMediaStreamDevice()
+    }
+
     func stopMediaStreaming() {
         guard menuState.mode == .connectedServer, menuState.isMediaStreamingActive else { return }
         connectionController.stopStreamingMediaFile()
@@ -1446,6 +1491,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             self.connectionController.startStreamingMediaURL(url) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        break
+                    case .failure(let error):
+                        self?.announceWithVoiceOver(L10n.text("mediaStream.announced.error"))
+                        let alert = NSAlert(error: error)
+                        alert.runModal()
+                    }
+                }
+            }
+        }
+    }
+
+    private func promptMediaStreamDevice() {
+        let devices = InputAudioDeviceResolver.availableInputDevices()
+        guard devices.isEmpty == false else {
+            announceWithVoiceOver(L10n.text("mediaStream.device.error.noDevices"))
+            let errorAlert = NSAlert()
+            errorAlert.messageText = L10n.text("mediaStream.device.prompt.title")
+            errorAlert.informativeText = L10n.text("mediaStream.device.error.noDevices")
+            errorAlert.runModal()
+            return
+        }
+
+        let alert = NSAlert()
+        alert.messageText = L10n.text("mediaStream.device.prompt.title")
+        alert.informativeText = L10n.text("mediaStream.device.prompt.message")
+        alert.addButton(withTitle: L10n.text("mediaStream.device.prompt.start"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let devicePopUp = NSPopUpButton(frame: NSRect(x: 0, y: 32, width: 320, height: 26), pullsDown: false)
+        devicePopUp.addItems(withTitles: devices.map(\.name))
+        devicePopUp.setAccessibilityLabel(L10n.text("mediaStream.device.prompt.deviceLabel"))
+        let preferredUID = preferencesStore.preferences.deviceStreamLastDeviceUID
+            ?? InputAudioDeviceResolver.defaultInputDeviceUID()
+        if let preferredUID, let index = devices.firstIndex(where: { $0.uid == preferredUID }) {
+            devicePopUp.selectItem(at: index)
+        }
+
+        // Off by default on purpose: the source is usually audible locally
+        // already, and hearing it back a second time reads as an echo.
+        let monitorCheckbox = NSButton(
+            checkboxWithTitle: L10n.text("mediaStream.device.prompt.monitor"),
+            target: nil,
+            action: nil
+        )
+        monitorCheckbox.frame = NSRect(x: 0, y: 0, width: 320, height: 24)
+        monitorCheckbox.state = .off
+
+        let accessory = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 62))
+        accessory.addSubview(devicePopUp)
+        accessory.addSubview(monitorCheckbox)
+        alert.accessoryView = accessory
+        alert.window.initialFirstResponder = devicePopUp
+
+        guard let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
+        alert.beginSheetModal(for: parentWindow) { [weak self] response in
+            guard response == .alertFirstButtonReturn, let self else { return }
+            let index = devicePopUp.indexOfSelectedItem
+            guard index >= 0, index < devices.count else { return }
+            let device = devices[index]
+            self.preferencesStore.mutateDeviceStreamLastDeviceUID(device.uid)
+            self.connectionController.startStreamingAudioDevice(
+                deviceUID: device.uid,
+                monitorEnabled: monitorCheckbox.state == .on
+            ) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success:

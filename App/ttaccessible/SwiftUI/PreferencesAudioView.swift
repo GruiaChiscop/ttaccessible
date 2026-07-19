@@ -31,7 +31,7 @@ struct PreferencesAudioView: View {
                     }
                     .labelsHidden()
                     .accessibilityLabel(L10n.text("preferences.audio.outputDevice"))
-                    .onChange(of: selectedOutputID) { _, _ in
+                    .onChangeCompat(of: selectedOutputID) { _ in
                         persistAndApply()
                     }
                 }
@@ -47,7 +47,7 @@ struct PreferencesAudioView: View {
                     }
                     .labelsHidden()
                     .accessibilityLabel(L10n.text("preferences.audio.inputDevice"))
-                    .onChange(of: selectedInputID) { _, _ in
+                    .onChangeCompat(of: selectedInputID) { _ in
                         persistAndApply()
                     }
                 }
@@ -149,13 +149,13 @@ struct PreferencesAudioView: View {
             store.prepareIfNeeded()
             syncSelectionFromStore()
         }
-        .onChange(of: store.state.preferredInputDevice) { _, _ in
+        .onChangeCompat(of: store.state.preferredInputDevice) { _ in
             syncSelectionFromStore()
         }
-        .onChange(of: store.state.preferredOutputDevice) { _, _ in
+        .onChangeCompat(of: store.state.preferredOutputDevice) { _ in
             syncSelectionFromStore()
         }
-        .onChange(of: store.state.catalog) { _, _ in
+        .onChangeCompat(of: store.state.catalog) { _ in
             syncSelectionFromStore()
         }
         .onDisappear {

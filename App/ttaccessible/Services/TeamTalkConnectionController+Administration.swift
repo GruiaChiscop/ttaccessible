@@ -18,17 +18,12 @@ extension TeamTalkConnectionController {
                 return
             }
             let didAccess = localURL.startAccessingSecurityScopedResource()
-            do {
-                try self.validateUploadQuotaLocked(instance: instance, channelID: channelID, localURL: localURL)
-            } catch {
-                if didAccess {
-                    localURL.stopAccessingSecurityScopedResource()
-                }
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
-                return
-            }
+            // No client-side quota pre-check: the server is the authority and its
+            // enforcement differs from the visible numbers (verified live: it
+            // accepts uploads past nDiskQuota for privileged users), so local
+            // math false-rejects files the server would take. A genuine quota
+            // rejection comes back as CMDERR_MAX_DISKUSAGE_EXCEEDED and is
+            // mapped to the same localized message.
             let result = localURL.path.withCString { TT_DoSendFile(instance, channelID, $0) }
             if result > 0 {
                 if didAccess {
@@ -93,44 +88,6 @@ extension TeamTalkConnectionController {
     private func releaseSecurityScopedTransferURLLocked(transferID: Int32) {
         guard let url = securityScopedFileTransferURLs.removeValue(forKey: transferID) else { return }
         url.stopAccessingSecurityScopedResource()
-    }
-
-    private func validateUploadQuotaLocked(
-        instance: UnsafeMutableRawPointer,
-        channelID: Int32,
-        localURL: URL
-    ) throws {
-        var channel = Channel()
-        guard TT_GetChannel(instance, channelID, &channel) != 0, channel.nDiskQuota > 0 else {
-            return
-        }
-
-        let values = try? localURL.resourceValues(forKeys: [.fileSizeKey])
-        guard let size = values?.fileSize, size > 0 else {
-            return
-        }
-
-        let fileSize = Int64(size)
-        let usedStorage = channelFileStorageUsedLocked(instance: instance, channelID: channelID)
-        guard usedStorage + fileSize <= channel.nDiskQuota else {
-            throw TeamTalkConnectionError.internalError(L10n.text("files.error.uploadQuotaExceeded"))
-        }
-    }
-
-    private func channelFileStorageUsedLocked(instance: UnsafeMutableRawPointer, channelID: Int32) -> Int64 {
-        var fileCount: INT32 = 0
-        guard TT_GetChannelFiles(instance, channelID, nil, &fileCount) != 0, fileCount > 0 else {
-            return 0
-        }
-
-        var files = Array(repeating: RemoteFile(), count: Int(fileCount))
-        guard TT_GetChannelFiles(instance, channelID, &files, &fileCount) != 0 else {
-            return 0
-        }
-
-        return files.prefix(Int(fileCount)).reduce(Int64(0)) { partial, file in
-            partial + file.nFileSize
-        }
     }
 
     private func standardFilePath(_ path: String) -> String {
@@ -261,6 +218,19 @@ extension TeamTalkConnectionController {
             if cmdID > 0 {
                 self.pendingUserAccounts = []
                 self.listUserAccountsCmdID = cmdID
+                // Build the online-nickname map once for this listing (first login
+                // wins for multi-login accounts, matching the old per-account
+                // TT_GetUserByUsername behaviour) instead of one SDK call each.
+                var nicknames: [String: String] = [:]
+                for user in self.fetchServerUsersLocked(instance: instance) {
+                    let username = ttString(from: user.szUsername)
+                    guard username.isEmpty == false else { continue }
+                    let key = username.lowercased()
+                    if nicknames[key] == nil {
+                        nicknames[key] = ttString(from: user.szNickname)
+                    }
+                }
+                self.onlineNicknamesByUsername = nicknames
             }
         }
     }
@@ -360,6 +330,12 @@ extension TeamTalkConnectionController {
     func makeUserAccountProperties(from account: UserAccount) -> UserAccountProperties {
         var props = UserAccountProperties()
         props.username = ttString(from: account.szUsername)
+        // Show who currently uses the account: nickname of the logged-in user
+        // (first match for multi-login accounts), empty when nobody's online.
+        // Read from the map built once per listing rather than an SDK call each.
+        if props.username.isEmpty == false {
+            props.onlineNickname = onlineNicknamesByUsername[props.username.lowercased()] ?? ""
+        }
         props.password = ttString(from: account.szPassword)
         if (account.uUserType & UInt32(USERTYPE_ADMIN.rawValue)) != 0 {
             props.userType = .admin
@@ -689,7 +665,11 @@ extension TeamTalkConnectionController {
                 maxVideoCaptureTxPerSecond: sp.nMaxVideoCaptureTxPerSecond,
                 maxMediaFileTxPerSecond: sp.nMaxMediaFileTxPerSecond,
                 maxDesktopTxPerSecond: sp.nMaxDesktopTxPerSecond,
-                maxTotalTxPerSecond: sp.nMaxTotalTxPerSecond
+                maxTotalTxPerSecond: sp.nMaxTotalTxPerSecond,
+                tcpPort: sp.nTcpPort,
+                udpPort: sp.nUdpPort,
+                serverVersion: self.ttString(from: sp.szServerVersion),
+                serverProtocolVersion: self.ttString(from: sp.szServerProtocolVersion)
             )
         }
         return result
@@ -722,6 +702,8 @@ extension TeamTalkConnectionController {
             sp.nMaxMediaFileTxPerSecond = props.maxMediaFileTxPerSecond
             sp.nMaxDesktopTxPerSecond = props.maxDesktopTxPerSecond
             sp.nMaxTotalTxPerSecond = props.maxTotalTxPerSecond
+            sp.nTcpPort = props.tcpPort
+            sp.nUdpPort = props.udpPort
 
             let commandID = withUnsafeMutablePointer(to: &sp) { TT_DoUpdateServer(instance, $0) }
             guard commandID > 0 else {

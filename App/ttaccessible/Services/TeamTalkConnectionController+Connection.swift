@@ -700,7 +700,8 @@ extension TeamTalkConnectionController {
                     let status = info.nStatus
                     switch status {
                     case MFS_STARTED:
-                        if info.uDurationMSec > 0 {
+                        // Device streams are endless — keep duration 0 (inert seek UI).
+                        if info.uDurationMSec > 0, deviceStreamSource == nil {
                             mediaStreamingDurationMSec = info.uDurationMSec
                         }
                         if let fileName = mediaStreamingFileName, !mediaStreamingStartedHistoryLogged {
@@ -857,6 +858,9 @@ extension TeamTalkConnectionController {
                                 )
                             }
                         }
+                        if message.user.nUserID == currentUserID {
+                            restartMediaStreamForChannelChangeLocked(instance: instance)
+                        }
                         let joinedUsername = ttString(from: message.user.szUsername)
                         if let storedVolume = userVolumeStore.volume(forUsername: joinedUsername) {
                             _ = TT_SetUserVolume(instance, message.user.nUserID, STREAMTYPE_VOICE, storedVolume)
@@ -942,6 +946,9 @@ extension TeamTalkConnectionController {
             reusableInstance = instance
         }
 
+        deviceStreamSource?.stop()
+        deviceStreamSource = nil
+        deviceStreamMonitorEnabled = false
         mediaStreamingSecurityScopedURL?.stopAccessingSecurityScopedResource()
         mediaStreamingSecurityScopedURL = nil
         mediaStreamingActive = false
@@ -1155,6 +1162,7 @@ extension TeamTalkConnectionController {
                                     )
                                 }
                             }
+                            restartMediaStreamForChannelChangeLocked(instance: instance)
                             if recordingMuxedActive {
                                 restartMuxedRecordingForChannelChange()
                             }
