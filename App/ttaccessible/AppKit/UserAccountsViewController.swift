@@ -4,6 +4,7 @@
 //
 
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 
 // MARK: - Custom table to capture Enter / Delete
@@ -248,20 +249,31 @@ final class UserAccountsViewController: NSViewController {
     }
 
     @objc private func addAccount() {
-        let formVC = UserAccountFormViewController(mode: .create, connectionController: connectionController) { [weak self] in
+        presentUserAccountForm(mode: .create) { [weak self] in
             self?.refresh()
         }
-        presentAsSheet(formVC)
     }
 
     @objc private func editSelected() {
         guard tableView.selectedRow >= 0, tableView.selectedRow < accounts.count else { return }
         let account = accounts[tableView.selectedRow]
-        let formVC = UserAccountFormViewController(mode: .edit(account), connectionController: connectionController) { [weak self] in
+        presentUserAccountForm(mode: .edit(account)) { [weak self] in
             self?.refresh()
             self?.announce(L10n.format("accounts.announced.updated", account.username))
         }
-        presentAsSheet(formVC)
+    }
+
+    private func presentUserAccountForm(mode: UserAccountFormMode, onSave: @escaping () -> Void) {
+        let hostingController = NSHostingController(
+            rootView: UserAccountFormView(mode: mode, connectionController: connectionController, onDismiss: {}, onSave: {})
+        )
+        hostingController.rootView = UserAccountFormView(
+            mode: mode,
+            connectionController: connectionController,
+            onDismiss: { [weak hostingController] in hostingController?.dismiss(nil) },
+            onSave: onSave
+        )
+        presentAsSheet(hostingController)
     }
 
     @objc private func confirmDeleteSelected() {

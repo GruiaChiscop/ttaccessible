@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import SwiftUI
 import KeyboardShortcuts
 import UserNotifications
 import UniformTypeIdentifiers
@@ -77,7 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var privateMessagesWindowController: PrivateMessagesWindowController?
     private var channelFilesWindowController: ChannelFilesWindowController?
     private var statsWindowController: NSWindowController?
-    private weak var statsViewController: StatsViewController?
+    private weak var statsViewModel: StatsViewModel?
     private var preferencesWindowController: PreferencesWindowController?
     private var feedbackWindowController: FeedbackWindowController?
     private let announcementService = AnnouncementService()
@@ -91,8 +92,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private weak var privateMessagesViewController: PrivateMessagesViewController?
     private weak var channelFilesViewController: ChannelFilesViewController?
     private weak var userAccountsViewController: UserAccountsViewController?
-    private weak var bannedUsersViewController: BannedUsersViewController?
-    private weak var userInfoViewController: UserInfoViewController?
+    private weak var bannedUsersViewModel: BannedUsersViewModel?
+    private weak var userInfoViewModel: UserInfoViewModel?
     private weak var connectedUsersViewController: ConnectedUsersViewController?
     weak var profilesViewController: ProfilesViewController?
     private var hasFinishedLaunching = false
@@ -656,11 +657,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func openStats() {
         guard menuState.mode == .connectedServer else { return }
         if statsWindowController == nil {
-            let vc = StatsViewController()
-            vc.onRefreshNeeded = { [weak self] in
+            let viewModel = StatsViewModel()
+            viewModel.onRefreshNeeded = { [weak self] in
                 self?.connectionController.queryServerStats()
             }
-            vc.clientStatisticsProvider = { [weak self] in
+            viewModel.clientStatisticsProvider = { [weak self] in
                 self?.connectionController.getClientStatistics()
             }
             let window = EscapeClosableWindow(
@@ -671,10 +672,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
             window.title = L10n.text("stats.window.title")
             window.isReleasedWhenClosed = false
-            window.contentViewController = vc
+            window.contentViewController = NSHostingController(rootView: StatsView(viewModel: viewModel))
             window.center()
             statsWindowController = NSWindowController(window: window)
-            statsViewController = vc
+            statsViewModel = viewModel
         }
         statsWindowController?.showWindow(nil)
         statsWindowController?.window?.makeKeyAndOrderFront(nil)
@@ -1684,25 +1685,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func openUserInfo(for user: ConnectedServerUser) {
         guard menuState.mode == .connectedServer else { return }
 
-        let viewController: UserInfoViewController
-        if let existing = userInfoViewController {
-            viewController = existing
+        let viewModel: UserInfoViewModel
+        if let existing = userInfoViewModel {
+            viewModel = existing
         } else {
-            viewController = UserInfoViewController()
-            viewController.userStatisticsProvider = { [weak self] userID in
+            viewModel = UserInfoViewModel()
+            viewModel.userStatisticsProvider = { [weak self] userID in
                 self?.connectionController.getUserStatistics(userID: userID)
             }
-            userInfoViewController = viewController
+            userInfoViewModel = viewModel
         }
 
         if userInfoWindowController == nil {
-            userInfoWindowController = UserInfoWindowController(contentViewController: viewController)
+            userInfoWindowController = UserInfoWindowController(contentViewController: NSHostingController(rootView: UserInfoView(viewModel: viewModel)))
         } else {
-            userInfoWindowController?.window?.contentViewController = viewController
+            userInfoWindowController?.window?.contentViewController = NSHostingController(rootView: UserInfoView(viewModel: viewModel))
         }
 
         userInfoUserID = user.id
-        viewController.update(user: user)
+        viewModel.update(user: user)
         userInfoWindowController?.window?.title = L10n.format("userInfo.window.title.withName", user.displayName)
         userInfoWindowController?.showWindow(nil)
         userInfoWindowController?.window?.makeKeyAndOrderFront(nil)
@@ -1913,9 +1914,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func openBannedUsers() {
         guard menuState.mode == .connectedServer, menuState.canBanUsers else { return }
         if bannedUsersWindowController == nil {
-            let vc = BannedUsersViewController(connectionController: connectionController)
-            bannedUsersViewController = vc
-            bannedUsersWindowController = BannedUsersWindowController(contentViewController: vc)
+            let viewModel = BannedUsersViewModel(connectionController: connectionController)
+            bannedUsersViewModel = viewModel
+            bannedUsersWindowController = BannedUsersWindowController(contentViewController: NSHostingController(rootView: BannedUsersView(viewModel: viewModel)))
         }
         bannedUsersWindowController?.showWindow(nil)
         bannedUsersWindowController?.window?.makeKeyAndOrderFront(nil)
@@ -1926,13 +1927,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func closeBannedUsersWindow() {
         bannedUsersWindowController?.close()
         bannedUsersWindowController = nil
-        bannedUsersViewController = nil
+        bannedUsersViewModel = nil
     }
 
     private func closeUserInfoWindow() {
         userInfoWindowController?.close()
         userInfoWindowController = nil
-        userInfoViewController = nil
+        userInfoViewModel = nil
         userInfoUserID = nil
     }
 
@@ -2398,7 +2399,7 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
         }
         if let userInfoUserID, userInfoWindowController != nil {
             let user = allConnectedUsers(in: session).first(where: { $0.id == userInfoUserID })
-            userInfoViewController?.update(user: user)
+            userInfoViewModel?.update(user: user)
             userInfoWindowController?.window?.title = user.map {
                 L10n.format("userInfo.window.title.withName", $0.displayName)
             } ?? L10n.text("userInfo.window.title")
@@ -2485,7 +2486,7 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
     }
 
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didReceiveServerStatistics stats: ServerStatistics) {
-        statsViewController?.update(stats: stats)
+        statsViewModel?.update(stats: stats)
     }
 
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didReceiveUserAccounts accounts: [UserAccountProperties]) {
@@ -2493,7 +2494,7 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
     }
 
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didReceiveBannedUsers bans: [BannedUserProperties]) {
-        bannedUsersViewController?.update(bans: bans)
+        bannedUsersViewModel?.update(bans: bans)
     }
 
     func teamTalkConnectionController(_ controller: TeamTalkConnectionController, didUpdateMediaStreamingProgress progress: MediaStreamingProgress) {

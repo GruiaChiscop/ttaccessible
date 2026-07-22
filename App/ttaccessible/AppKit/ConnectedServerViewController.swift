@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 
 // MARK: - AudioGainControlView (see AudioGainControlView.swift)
@@ -1274,18 +1275,28 @@ final class ConnectedServerViewController: NSViewController {
     func promptServerProperties() {
         guard let window = view.window,
               let props = connectionController.getServerProperties() else { return }
-        let vc = ServerPropertiesViewController(properties: props)
-        vc.onSave = { [weak self] updated in
-            self?.connectionController.updateServerProperties(updated) { [weak self] result in
-                switch result {
-                case .success:
-                    self?.announce(L10n.text("serverProperties.announced.updated"))
-                case .failure(let error):
-                    self?.presentActionError(error.localizedDescription)
+
+        let hostingController = NSHostingController(
+            rootView: ServerPropertiesView(properties: props, onCancel: {}, onSave: { _ in })
+        )
+        hostingController.rootView = ServerPropertiesView(
+            properties: props,
+            onCancel: { [weak hostingController] in
+                hostingController?.dismiss(nil)
+            },
+            onSave: { [weak self, weak hostingController] updated in
+                hostingController?.dismiss(nil)
+                self?.connectionController.updateServerProperties(updated) { [weak self] result in
+                    switch result {
+                    case .success:
+                        self?.announce(L10n.text("serverProperties.announced.updated"))
+                    case .failure(let error):
+                        self?.presentActionError(error.localizedDescription)
+                    }
                 }
             }
-        }
-        window.contentViewController?.presentAsSheet(vc)
+        )
+        window.contentViewController?.presentAsSheet(hostingController)
     }
 
     func expandCurrentChannelPath() {
