@@ -127,6 +127,7 @@ struct AppPreferences: Codable, Equatable {
         case videoPanelExpanded
         case userVolumeMemoryMode
         case deviceStreamLastDeviceUID
+        case languagePreference
     }
 
     var defaultNickname: String
@@ -198,6 +199,7 @@ struct AppPreferences: Codable, Equatable {
     /// CoreAudio UID of the input device last streamed to a channel, so the
     /// device-stream dialog preselects it next time.
     var deviceStreamLastDeviceUID: String?
+    var languagePreference: AppLanguagePreference
     init(
         defaultNickname: String = AppPreferences.defaultNicknameFromAccount(),
         defaultStatusMessage: String = "",
@@ -257,7 +259,8 @@ struct AppPreferences: Codable, Equatable {
         pushToTalkBeepEnabled: Bool = true,
         videoPanelExpanded: Bool = true,
         userVolumeMemoryMode: UserVolumeMemoryMode = .persistent,
-        deviceStreamLastDeviceUID: String? = nil
+        deviceStreamLastDeviceUID: String? = nil,
+        languagePreference: AppLanguagePreference = .system
     ) {
         self.defaultNickname = defaultNickname
         self.defaultStatusMessage = defaultStatusMessage
@@ -318,6 +321,7 @@ struct AppPreferences: Codable, Equatable {
         self.videoPanelExpanded = videoPanelExpanded
         self.userVolumeMemoryMode = userVolumeMemoryMode
         self.deviceStreamLastDeviceUID = deviceStreamLastDeviceUID
+        self.languagePreference = languagePreference
     }
 
     nonisolated static func clampGainDB(_ value: Double) -> Double {
@@ -437,6 +441,7 @@ struct AppPreferences: Codable, Equatable {
         videoPanelExpanded = try container.decodeIfPresent(Bool.self, forKey: .videoPanelExpanded) ?? true
         userVolumeMemoryMode = try container.decodeIfPresent(UserVolumeMemoryMode.self, forKey: .userVolumeMemoryMode) ?? .persistent
         deviceStreamLastDeviceUID = try container.decodeIfPresent(String.self, forKey: .deviceStreamLastDeviceUID)
+        languagePreference = try container.decodeIfPresent(AppLanguagePreference.self, forKey: .languagePreference) ?? .system
     }
 
     func encode(to encoder: Encoder) throws {
@@ -500,6 +505,7 @@ struct AppPreferences: Codable, Equatable {
         try container.encode(videoPanelExpanded, forKey: .videoPanelExpanded)
         try container.encode(userVolumeMemoryMode, forKey: .userVolumeMemoryMode)
         try container.encodeIfPresent(deviceStreamLastDeviceUID, forKey: .deviceStreamLastDeviceUID)
+        try container.encode(languagePreference, forKey: .languagePreference)
     }
 
     func isSubscriptionEnabledByDefault(_ option: UserSubscriptionOption) -> Bool {
