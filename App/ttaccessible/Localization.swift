@@ -36,20 +36,31 @@ enum AppLanguagePreference: String, Codable, CaseIterable {
 }
 
 enum L10n {
+    // `text`/`format` run on whichever thread is producing a status string or
+    // announcement — including the real-time audio render thread — so reads
+    // and the (rare) write from `configure` need a lock, not just `unsafe`.
+    private static let lock = NSLock()
     private nonisolated(unsafe) static var overrideBundle: Bundle?
 
     nonisolated static func configure(languagePreference: AppLanguagePreference) {
-        guard let languageCode = languagePreference.languageCode,
-              let path = Bundle.main.path(forResource: languageCode, ofType: "lproj") else {
-            overrideBundle = nil
-            return
+        let newBundle: Bundle?
+        if let languageCode = languagePreference.languageCode,
+           let path = Bundle.main.path(forResource: languageCode, ofType: "lproj") {
+            newBundle = Bundle(path: path)
+        } else {
+            newBundle = nil
         }
-        overrideBundle = Bundle(path: path)
+        lock.lock()
+        overrideBundle = newBundle
+        lock.unlock()
     }
 
     nonisolated static func text(_ key: String) -> String {
-        if let overrideBundle {
-            return overrideBundle.localizedString(forKey: key, value: nil, table: nil)
+        lock.lock()
+        let bundle = overrideBundle
+        lock.unlock()
+        if let bundle {
+            return bundle.localizedString(forKey: key, value: nil, table: nil)
         }
         return NSLocalizedString(key, comment: "")
     }
