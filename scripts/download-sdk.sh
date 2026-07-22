@@ -37,8 +37,9 @@ if [ -f "$VENDOR_DIR/libTeamTalk5.dylib" ]; then
         # The patch must never be coupled to a fresh download: a cached, unpatched
         # copy is exactly how a ~13 s-slow-connect build ships. The patcher is
         # idempotent, so this is a no-op when the dylib is already patched.
-        echo "Keeping existing dylib. Ensuring PortAudio probe is patched..."
+        echo "Keeping existing dylib. Ensuring SDK patches are applied..."
         python3 "$(dirname "$0")/patch-sdk-portaudio.py" "$VENDOR_DIR/libTeamTalk5.dylib"
+        python3 "$(dirname "$0")/patch-sdk-norecording.py" "$VENDOR_DIR/libTeamTalk5.dylib"
         exit 0
     fi
 fi
@@ -61,6 +62,11 @@ cp "$TEMP_DIR/${SDK_DIR}/Library/TeamTalk_DLL/TeamTalk.h" "$VENDOR_DIR/"
 # dylib is the unmodified BearWare build, so re-apply the patch on every download.
 echo "Patching out PortAudio's startup device probe..."
 python3 "$(dirname "$0")/patch-sdk-portaudio.py" "$VENDOR_DIR/libTeamTalk5.dylib"
+
+# Restore per-user audio-block delivery in CHANNEL_NO_RECORDING channels (else the app
+# is silent there). See scripts/patch-sdk-norecording.py for the full rationale.
+echo "Patching out the NO_RECORDING audio-block gate..."
+python3 "$(dirname "$0")/patch-sdk-norecording.py" "$VENDOR_DIR/libTeamTalk5.dylib"
 
 echo ""
 echo "Done. SDK ${SDK_VERSION} installed (PortAudio probe patched):"
