@@ -60,17 +60,6 @@ final class AudioBlockPump {
     /// Safety bound per (user, stream) per tick; normal traffic is 1–2 blocks.
     private let maxBlocksPerStreamPerTick = 16
 
-    // MARK: - Diagnostics
-    /// Per-user count of audio blocks actually acquired since the last report.
-    /// The smoking gun for "I hear no one here": if a user shows as talking and
-    /// subscribed but their voice count stays 0, the SDK isn't delivering blocks
-    /// (subscription/codec/server), not a mixer bug. Logged every ~5 s.
-    private var diagTicks = 0
-    private let diagReportEveryTicks = 500 // 500 × 10 ms ≈ 5 s
-    private var voiceBlockCounts: [Int32: Int] = [:]
-    private var mediaBlockCounts: [Int32: Int] = [:]
-    private var localMediaBlockCount = 0
-
     /// Begin pumping for `instance`, feeding decoded PCM into `engine`.
     /// Synchronous so the user set pushed right after lands on a running pump.
     func start(instance: UnsafeMutableRawPointer, engine: OutputAudioRenderEngine) {
@@ -141,49 +130,21 @@ final class AudioBlockPump {
     private func tick() {
         guard let instance, let engine else { return }
         for userID in userIDs {
-            let voice = drain(instance: instance, engine: engine, userID: userID,
-                              streamType: STREAMTYPE_VOICE, engineKey: userID, profile: .network)
-            let media = drain(instance: instance, engine: engine, userID: userID,
-                              streamType: STREAMTYPE_MEDIAFILE_AUDIO,
-                              engineKey: TeamTalkConnectionController.outputMediaSourceKey(userID), profile: .network)
-            if voice > 0 { voiceBlockCounts[userID, default: 0] += voice }
-            if media > 0 { mediaBlockCounts[userID, default: 0] += media }
+            drain(instance: instance, engine: engine, userID: userID,
+                  streamType: STREAMTYPE_VOICE, engineKey: userID, profile: .network)
+            drain(instance: instance, engine: engine, userID: userID,
+                  streamType: STREAMTYPE_MEDIAFILE_AUDIO,
+                  engineKey: TeamTalkConnectionController.outputMediaSourceKey(userID), profile: .network)
         }
         if localMediaEnabled {
-            localMediaBlockCount += drain(instance: instance, engine: engine, userID: TT_LOCAL_USERID,
-                                          streamType: STREAMTYPE_MEDIAFILE_AUDIO,
-                                          engineKey: TeamTalkConnectionController.localMediaEngineKey, profile: .localMedia)
+            drain(instance: instance, engine: engine, userID: TT_LOCAL_USERID,
+                  streamType: STREAMTYPE_MEDIAFILE_AUDIO,
+                  engineKey: TeamTalkConnectionController.localMediaEngineKey, profile: .localMedia)
         }
-        diagTicks += 1
-        if diagTicks >= diagReportEveryTicks {
-            reportBlockDiag()
-            diagTicks = 0
-        }
-    }
-
-    /// Log per-user block-acquisition counts (once every ~5 s). Reports a line
-    /// for every enabled user — including those with ZERO voice blocks, which is
-    /// exactly the case we're hunting. Resets counters after each report.
-    private func reportBlockDiag() {
-        guard userIDs.isEmpty == false || localMediaEnabled else { return }
-        var parts: [String] = []
-        for userID in userIDs.sorted() {
-            parts.append(String(format: "u%d(voice=%d media=%d)",
-                                userID, voiceBlockCounts[userID] ?? 0, mediaBlockCounts[userID] ?? 0))
-        }
-        if localMediaEnabled {
-            parts.append(String(format: "localMedia=%d", localMediaBlockCount))
-        }
-        AudioLogger.log("pump diag: %d users — %@", userIDs.count, parts.joined(separator: " "))
-        voiceBlockCounts.removeAll(keepingCapacity: true)
-        mediaBlockCounts.removeAll(keepingCapacity: true)
-        localMediaBlockCount = 0
     }
 
     /// Acquire every queued block for one (user, stream) and hand the PCM to the
-    /// mix engine (which hops to its own serial queue). Returns the number of
-    /// blocks acquired this call (for the per-user block-acquisition diagnostic).
-    @discardableResult
+    /// mix engine (which hops to its own serial queue).
     private func drain(
         instance: UnsafeMutableRawPointer,
         engine: OutputAudioRenderEngine,
@@ -191,7 +152,7 @@ final class AudioBlockPump {
         streamType: StreamType,
         engineKey: Int32,
         profile: OutputSourceBufferProfile
-    ) -> Int {
+    ) {
         var drained = 0
         while drained < maxBlocksPerStreamPerTick,
               let block = TT_AcquireUserAudioBlock(instance, UInt32(streamType.rawValue), userID) {
@@ -215,7 +176,6 @@ final class AudioBlockPump {
             }
             TT_ReleaseUserAudioBlock(instance, block)
         }
-        return drained
     }
 
     /// Update and publish the effective channel count for `engineKey`. A stereo-codec

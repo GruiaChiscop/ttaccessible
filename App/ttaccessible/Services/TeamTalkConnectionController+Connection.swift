@@ -586,27 +586,6 @@ extension TeamTalkConnectionController {
             // 80 ms (the old ~100 ms cadence) — pending changes still flush within a
             // few ticks since the timer fires regardless of message traffic. The
             // lightweight transfer-progress publish stays immediate.
-            // Reception diagnostic (issue #25): every 5 s, log how many voice/UDP
-            // bytes actually reached this client since the last report. Zero voice
-            // deltas while a channel member is talking proves the server (or the
-            // network path) isn't forwarding voice — as opposed to the SDK
-            // receiving packets and failing to deliver decoded blocks.
-            if connectedRecord != nil, now - lastStatsDiagTime >= 5.0 {
-                lastStatsDiagTime = now
-                var stats = ClientStatistics()
-                if TT_GetClientStatistics(instance, &stats) != 0 {
-                    let prev = lastStatsDiagSnapshot
-                    lastStatsDiagSnapshot = (stats.nUdpBytesRecv, stats.nVoiceBytesRecv, stats.nVoiceBytesSent)
-                    if let prev {
-                        AudioLogger.log("stats diag: ch=%d Δ5s udpRecv=%lld voiceRecv=%lld voiceSent=%lld pingUdp=%dms silenceUdp=%ds",
-                                        TT_GetMyChannelID(instance),
-                                        stats.nUdpBytesRecv - prev.udpRecv,
-                                        stats.nVoiceBytesRecv - prev.voiceRecv,
-                                        stats.nVoiceBytesSent - prev.voiceSent,
-                                        stats.nUdpPingTimeMs, stats.nUdpServerSilenceSec)
-                    }
-                }
-            }
             let heavyBits: SessionPublishInvalidation = [.rootTree, .chat, .history, .privateConversations, .channelFiles, .audio, .identity, .permissions]
             pendingPublishInvalidation.formUnion(publishInvalidation)
             if pendingPublishInvalidation.contains(.activeTransfers),
@@ -701,17 +680,6 @@ extension TeamTalkConnectionController {
                 }
             case CLIENTEVENT_USER_STATECHANGE:
                 if connectedRecord != nil {
-                    // Reception diagnostic (issue #25): the SDK sets USERSTATE_VOICE
-                    // when it starts receiving/playing a user's voice packets. If a
-                    // remote talker never transitions to talking=1 here, their
-                    // packets never reached this client at all.
-                    let user = message.user
-                    let talking = (user.uUserState & UInt32(USERSTATE_VOICE.rawValue)) != 0
-                    if lastTalkingStateByUser[user.nUserID] != talking {
-                        lastTalkingStateByUser[user.nUserID] = talking
-                        AudioLogger.log("state diag: user=%d nick=\"%@\" talking=%d",
-                                        user.nUserID, ttString(from: user.szNickname), talking ? 1 : 0)
-                    }
                     publishAudioRuntimeUpdateLocked(instance: instance)
                 }
             case CLIENTEVENT_USER_MEDIAFILE_VIDEO:
