@@ -555,6 +555,7 @@
 "recording.announced.startedBoth" = "Recording started: %@ plus stems";
 "recording.announced.stopped" = "Recording stopped";
 "recording.announced.error" = "Recording failed";
+"recording.announced.notAllowedHere" = "Recording is not allowed in this channel";
 "recording.error.startFailed" = "Failed to start recording.";
 "recording.error.channelNoRecording" = "Recording is not allowed in this channel.";
 "recording.panel.choose" = "Choose";

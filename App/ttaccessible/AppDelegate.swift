@@ -1335,6 +1335,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             stopAllRecording()
             return
         }
+        // Honour the channel's recording policy: a CHANNEL_NO_RECORDING channel forbids
+        // recording unless our account holds USERRIGHT_RECORD_VOICE. (We patch the SDK to
+        // keep *playing* audio in such channels, but must not record there.)
+        guard connectionController.isRecordingAllowedInCurrentChannel() else {
+            announceWithVoiceOver(L10n.text("recording.announced.notAllowedHere"))
+            return
+        }
         let resolvedMode = mode ?? preferencesStore.preferences.recordingMode
         guard let folderURL = preferencesStore.resolveRecordingFolderURL() else {
             promptRecordingFolder(mode: resolvedMode)
@@ -2310,6 +2317,8 @@ extension AppDelegate: TeamTalkConnectionControllerDelegate {
            !session.recordingActive,
            preferencesStore.preferences.autoRestartRecording,
            preferencesStore.preferences.lastRecordingWasActive,
+           // Don't auto-restart into a channel that forbids recording.
+           connectionController.isRecordingAllowedInCurrentChannel(),
            let folderURL = preferencesStore.resolveRecordingFolderURL() {
             // Restore the mode that was actually in use (single-file, separate, or both);
             // fall back to the preference only if we somehow have no recorded mode.

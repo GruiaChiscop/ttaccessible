@@ -555,6 +555,7 @@
 "recording.announced.startedBoth" = "Enregistrement démarré : %@ plus les stems";
 "recording.announced.stopped" = "Enregistrement arrêté";
 "recording.announced.error" = "Échec de l'enregistrement";
+"recording.announced.notAllowedHere" = "L'enregistrement n'est pas autorisé dans ce canal";
 "recording.error.startFailed" = "Impossible de démarrer l'enregistrement.";
 "recording.error.channelNoRecording" = "L'enregistrement n'est pas autorisé dans ce canal.";
 "recording.panel.choose" = "Choisir";

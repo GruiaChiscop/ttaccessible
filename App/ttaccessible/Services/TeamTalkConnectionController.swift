@@ -201,6 +201,11 @@ final class TeamTalkConnectionController {
     var audioHardwareChangeWorkItem: DispatchWorkItem?
     var lastAudioRoutingSnapshot: AudioRoutingSnapshot?
     var lastAutoAwayCheckTime: CFAbsoluteTime = 0
+    // Reception diagnostics (issue #25): 5 s network-stats deltas + per-user
+    // talking-state transitions, logged to audio.log.
+    var lastStatsDiagTime: CFAbsoluteTime = 0
+    var lastStatsDiagSnapshot: (udpRecv: Int64, voiceRecv: Int64, voiceSent: Int64)?
+    var lastTalkingStateByUser: [Int32: Bool] = [:]
     var isAutoAwayActive = false
     var autoAwayActivationTime: Date?
     var autoAwayRestoreStatusMessage = ""

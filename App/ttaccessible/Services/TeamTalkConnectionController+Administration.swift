@@ -613,6 +613,25 @@ extension TeamTalkConnectionController {
         }
     }
 
+    /// Whether recording is allowed in the channel we are currently in. Mirrors the SDK's
+    /// own rule: a channel with CHANNEL_NO_RECORDING forbids recording unless our account
+    /// holds USERRIGHT_RECORD_VOICE. Used to disable the ⌘R / ⌘⇧R recording actions so the
+    /// app honours the channel's policy (matching the Qt client). Returns true when not in
+    /// a channel, so the caller's other guards decide.
+    func isRecordingAllowedInCurrentChannel() -> Bool {
+        guard let instance else { return true }
+        return queue.sync {
+            let channelID = TT_GetMyChannelID(instance)
+            guard channelID > 0 else { return true }
+            var channel = Channel()
+            guard TT_GetChannel(instance, channelID, &channel) != 0 else { return true }
+            let noRecording = (channel.uChannelType & UInt32(CHANNEL_NO_RECORDING.rawValue)) != 0
+            guard noRecording else { return true }
+            let canRecord = (TT_GetMyUserRights(instance) & UInt32(USERRIGHT_RECORD_VOICE.rawValue)) != 0
+            return canRecord
+        }
+    }
+
     // MARK: - Server management
 
     func getUserStatistics(userID: Int32) -> UserStatistics? {
