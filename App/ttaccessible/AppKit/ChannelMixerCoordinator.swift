@@ -22,7 +22,8 @@ struct MixerDisplayStrip: Identifiable, Equatable {
     let name: String
     var voicePercent: Double
     var mediaPercent: Double
-    var pan: Double
+    var voicePan: Double
+    var mediaPan: Double
     var muted: Bool
     var soloed: Bool
 }
@@ -41,7 +42,8 @@ final class ChannelMixerCoordinator: ObservableObject {
     // session confirmation (so the toggle is responsive and announces once).
     private var voicePctCache: [Int32: Double] = [:]
     private var mediaPctCache: [Int32: Double] = [:]
-    private var panCache: [Int32: Double] = [:]
+    private var voicePanCache: [Int32: Double] = [:]
+    private var mediaPanCache: [Int32: Double] = [:]
     private var muteCache: [Int32: Bool] = [:]
     // Solo: while any user is soloed, every NON-soloed user is muted in OUR engine
     // (independent of their persistent SDK mute). Lets you isolate one or more people.
@@ -71,7 +73,8 @@ final class ChannelMixerCoordinator: ObservableObject {
         // Prune value caches for users no longer present.
         voicePctCache = voicePctCache.filter { ids.contains($0.key) }
         mediaPctCache = mediaPctCache.filter { ids.contains($0.key) }
-        panCache = panCache.filter { ids.contains($0.key) }
+        voicePanCache = voicePanCache.filter { ids.contains($0.key) }
+        mediaPanCache = mediaPanCache.filter { ids.contains($0.key) }
         // Solo: drop leavers; re-apply engine mutes when the roster changed while solo is
         // (or was just) active, so a joiner gets muted and a departed soloist clears.
         soloed = soloed.intersection(ids)
@@ -113,8 +116,9 @@ final class ChannelMixerCoordinator: ObservableObject {
             label: { [weak self] in self?.stripLabel(for: id) },
             controls: [
                 .slider(voiceConfig(id: id)),
+                .slider(voicePanConfig(id: id)),
                 .slider(mediaConfig(id: id)),
-                .slider(panConfig(id: id)),
+                .slider(mediaPanConfig(id: id)),
                 .toggle(muteConfig(id: id)),
                 .toggle(soloConfig(id: id))
             ]
@@ -148,10 +152,16 @@ final class ChannelMixerCoordinator: ObservableObject {
         return Double(TeamTalkConnectionController.percentFromUserVolume(v))
     }
 
-    private func panValue(_ id: Int32) -> Double {
-        if let cached = panCache[id] { return cached }
+    private func voicePanValue(_ id: Int32) -> Double {
+        if let cached = voicePanCache[id] { return cached }
         guard let controller, let user = user(for: id) else { return 0 }
-        return Double(controller.userVolumeStore.pan(forUsername: user.username) ?? 0)
+        return Double(controller.userVolumeStore.voicePan(forUsername: user.username) ?? 0)
+    }
+
+    private func mediaPanValue(_ id: Int32) -> Double {
+        if let cached = mediaPanCache[id] { return cached }
+        guard let controller, let user = user(for: id) else { return 0 }
+        return Double(controller.userVolumeStore.mediaPan(forUsername: user.username) ?? 0)
     }
 
     private func isMutedFromSession(_ id: Int32) -> Bool {
@@ -185,12 +195,24 @@ final class ChannelMixerCoordinator: ObservableObject {
         )
     }
 
-    private func panConfig(id: Int32) -> VirtualSliderConfig {
+    private func voicePanConfig(id: Int32) -> VirtualSliderConfig {
         VirtualSliderConfig(
             label: L10n.text("mixer.pan.label.short"),
-            getValue: { [weak self] in self.map { $0.panValue(id) } },
-            getDisplayString: { v in ChannelMixerCoordinator.panDescription(v) },
-            setValue: { [weak self] v in self?.setPan(id: id, value: v) },
+            getValue: { [weak self] in self.map { $0.voicePanValue(id) } },
+            getDisplayString: { [weak self] v in self?.voicePanDescription(id, value: v) ?? ChannelMixerCoordinator.panDescription(v) },
+            setValue: { [weak self] v in self?.setVoicePan(id: id, value: v) },
+            incrementValue: { [panStep] v in min(1, v + panStep) },
+            decrementValue: { [panStep] v in max(-1, v - panStep) },
+            minValue: -1, maxValue: 1, resetValue: 0
+        )
+    }
+
+    private func mediaPanConfig(id: Int32) -> VirtualSliderConfig {
+        VirtualSliderConfig(
+            label: L10n.text("mixer.mediapan.label.short"),
+            getValue: { [weak self] in self.map { $0.mediaPanValue(id) } },
+            getDisplayString: { [weak self] v in self?.mediaPanDescription(id, value: v) ?? ChannelMixerCoordinator.panDescription(v) },
+            setValue: { [weak self] v in self?.setMediaPan(id: id, value: v) },
             incrementValue: { [panStep] v in min(1, v + panStep) },
             decrementValue: { [panStep] v in max(-1, v - panStep) },
             minValue: -1, maxValue: 1, resetValue: 0
@@ -258,11 +280,19 @@ final class ChannelMixerCoordinator: ObservableObject {
         refreshDisplay()
     }
 
-    func setPan(id: Int32, value: Double) {
+    func setVoicePan(id: Int32, value: Double) {
         guard let controller, let user = user(for: id) else { return }
         let clamped = Double(min(1, max(-1, value)))
-        panCache[id] = clamped
-        controller.setUserPan(userID: id, username: user.username, pan: Float(clamped), engineMuted: soloMuted(id))
+        voicePanCache[id] = clamped
+        controller.setUserVoicePan(userID: id, username: user.username, pan: Float(clamped), engineMuted: soloMuted(id))
+        refreshDisplay()
+    }
+
+    func setMediaPan(id: Int32, value: Double) {
+        guard let controller, let user = user(for: id) else { return }
+        let clamped = Double(min(1, max(-1, value)))
+        mediaPanCache[id] = clamped
+        controller.setUserMediaPan(userID: id, username: user.username, pan: Float(clamped), engineMuted: soloMuted(id))
         refreshDisplay()
     }
 
@@ -284,8 +314,11 @@ final class ChannelMixerCoordinator: ObservableObject {
     private func reapplySolo() {
         guard let controller else { return }
         for u in usersInChannel() {
-            controller.setUserPan(userID: u.id, username: u.username,
-                                  pan: Float(currentPan(u.id)), engineMuted: soloMuted(u.id))
+            let muted = soloMuted(u.id)
+            controller.setUserVoicePan(userID: u.id, username: u.username,
+                                       pan: Float(currentVoicePan(u.id)), engineMuted: muted)
+            controller.setUserMediaPan(userID: u.id, username: u.username,
+                                       pan: Float(currentMediaPan(u.id)), engineMuted: muted)
         }
     }
 
@@ -295,7 +328,8 @@ final class ChannelMixerCoordinator: ObservableObject {
             MixerDisplayStrip(id: u.id, name: u.displayName,
                               voicePercent: currentVoicePercent(u.id),
                               mediaPercent: currentMediaPercent(u.id),
-                              pan: currentPan(u.id),
+                              voicePan: currentVoicePan(u.id),
+                              mediaPan: currentMediaPan(u.id),
                               muted: isMuted(u.id),
                               soloed: isSoloed(u.id))
         }
@@ -303,7 +337,8 @@ final class ChannelMixerCoordinator: ObservableObject {
 
     func currentVoicePercent(_ id: Int32) -> Double { voicePercent(id) }
     func currentMediaPercent(_ id: Int32) -> Double { mediaPercent(id) }
-    func currentPan(_ id: Int32) -> Double { panValue(id) }
+    func currentVoicePan(_ id: Int32) -> Double { voicePanValue(id) }
+    func currentMediaPan(_ id: Int32) -> Double { mediaPanValue(id) }
     func isMuted(_ id: Int32) -> Bool { muteCache[id] ?? isMutedFromSession(id) }
     func toggleMute(_ id: Int32) { applyMute(id: id, muted: !isMuted(id)) }
 
@@ -320,15 +355,23 @@ final class ChannelMixerCoordinator: ObservableObject {
         // Qualified so VoiceOver distinguishes it from the plain-arrow voice nudge.
         return L10n.format("mixer.media.label", L10n.format("mixer.value.percent", Int(v.rounded())))
     }
-    func nudgePan(_ id: Int32, right: Bool) -> String {
-        let p = min(1, max(-1, currentPan(id) + (right ? panStep : -panStep)))
-        setPan(id: id, value: p)
-        return Self.panDescription(p)
+    func nudgeVoicePan(_ id: Int32, right: Bool) -> String {
+        let p = min(1, max(-1, currentVoicePan(id) + (right ? panStep : -panStep)))
+        setVoicePan(id: id, value: p)
+        return voicePanDescription(id)
+    }
+    func nudgeMediaPan(_ id: Int32, right: Bool) -> String {
+        let p = min(1, max(-1, currentMediaPan(id) + (right ? panStep : -panStep)))
+        setMediaPan(id: id, value: p)
+        // Qualified so VoiceOver distinguishes it from the plain-arrow voice pan.
+        return L10n.format("mixer.mediapan.label", mediaPanDescription(id))
     }
     func announceVoice(_ id: Int32) -> String { L10n.format("mixer.value.percent", Int(currentVoicePercent(id).rounded())) }
-    func announcePan(_ id: Int32) -> String { Self.panDescription(currentPan(id)) }
+    func announceVoicePan(_ id: Int32) -> String { voicePanDescription(id) }
+    func announceMediaPan(_ id: Int32) -> String { L10n.format("mixer.mediapan.label", mediaPanDescription(id)) }
     func resetVoice(_ id: Int32) -> String { setVoice(id: id, percent: 50); return L10n.format("mixer.value.percent", 50) }
-    func resetPan(_ id: Int32) -> String { setPan(id: id, value: 0); return Self.panDescription(0) }
+    func resetVoicePan(_ id: Int32) -> String { setVoicePan(id: id, value: 0); return voicePanDescription(id) }
+    func resetMediaPan(_ id: Int32) -> String { setMediaPan(id: id, value: 0); return L10n.format("mixer.mediapan.label", mediaPanDescription(id)) }
     func muteState(_ id: Int32) -> String {
         isMuted(id) ? L10n.text("mixer.toggle.muted") : L10n.text("mixer.toggle.unmuted")
     }
@@ -342,10 +385,23 @@ final class ChannelMixerCoordinator: ObservableObject {
         return isSoloed(id) ? L10n.text("mixer.solo.on") : L10n.text("mixer.solo.off")
     }
 
-    static func panDescription(_ pan: Double) -> String {
+    /// Pan announcement. At center, says "Stereo" when the source is actually sending
+    /// two channels and "Center" otherwise (mono, or nothing received yet) — so the user
+    /// hears whether a centered stereo sender keeps its stereo image (it does; only
+    /// off-center pans fold to mono).
+    static func panDescription(_ pan: Double, channels: Int? = nil) -> String {
         let pct = Int((abs(pan) * 100).rounded())
-        if pct == 0 { return L10n.text("mixer.pan.center") }
+        if pct == 0 { return channels == 2 ? L10n.text("mixer.pan.stereo") : L10n.text("mixer.pan.center") }
         return pan < 0 ? L10n.format("mixer.pan.left", pct) : L10n.format("mixer.pan.right", pct)
+    }
+
+    /// Pan description for a user's VOICE source, stereo-aware from its live channel count.
+    func voicePanDescription(_ id: Int32, value: Double? = nil) -> String {
+        Self.panDescription(value ?? currentVoicePan(id), channels: controller?.deliveredVoiceChannels(userID: id))
+    }
+    /// Pan description for a user's MEDIA source, stereo-aware from its live channel count.
+    func mediaPanDescription(_ id: Int32, value: Double? = nil) -> String {
+        Self.panDescription(value ?? currentMediaPan(id), channels: controller?.deliveredMediaChannels(userID: id))
     }
 }
 #endif

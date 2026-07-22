@@ -380,13 +380,27 @@ struct ttaccessibleApp: App {
                 .keyboardShortcut("m", modifiers: [.command])
                 .disabled(menuState.mode != .connectedServer)
 
-                Button(menuState.isRecordingActive
-                       ? L10n.text("shortcuts.recording.stop")
-                       : L10n.text("shortcuts.recording.start")) {
-                    appDelegate.toggleRecording()
+                // While recording, show a single Stop item (⌘R). When idle, show the two
+                // start options: ⌘R single file, ⌘⇧R the preference mode (separate/both).
+                if menuState.isRecordingActive {
+                    Button(L10n.text("shortcuts.recording.stop")) {
+                        appDelegate.toggleRecording()
+                    }
+                    .keyboardShortcut("r", modifiers: [.command])
+                    .disabled(menuState.mode != .connectedServer)
+                } else {
+                    Button(L10n.text("shortcuts.recording.startSingle")) {
+                        appDelegate.toggleRecording(mode: 1)
+                    }
+                    .keyboardShortcut("r", modifiers: [.command])
+                    .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
+
+                    Button(L10n.text("shortcuts.recording.startPreferred")) {
+                        appDelegate.toggleRecording()
+                    }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                    .disabled(menuState.mode != .connectedServer || menuState.isInChannel == false)
                 }
-                .keyboardShortcut("r", modifiers: [.command])
-                .disabled(menuState.mode != .connectedServer || (!menuState.isRecordingActive && menuState.isInChannel == false))
 
                 Divider()
 

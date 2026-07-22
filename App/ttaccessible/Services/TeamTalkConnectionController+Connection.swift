@@ -873,13 +873,19 @@ extension TeamTalkConnectionController {
                         }
                         // Continuous mixer pan lives in our own render engine (not the SDK),
                         // so push it here too — otherwise the strip shows the saved pan while
-                        // the user plays centered until the slider is touched. muted:false is
-                        // the engine default; an active SOLO is re-applied right after via the
-                        // coordinator's reapplySolo() on the next session update.
-                        if let storedPan = userVolumeStore.pan(forUsername: joinedUsername) {
-                            let panSettings = OutputUserMixSettings(volume: 1, pan: storedPan, muted: false)
-                            outputRenderEngine.setUserSettings(panSettings, for: message.user.nUserID)
-                            outputRenderEngine.setUserSettings(panSettings, for: outputMediaSourceKey(message.user.nUserID))
+                        // the user plays centered until the slider is touched. Voice and media
+                        // pan independently (mirroring split volume). muted:false is the engine
+                        // default; an active SOLO is re-applied right after via the coordinator's
+                        // reapplySolo() on the next session update.
+                        if let storedVoicePan = userVolumeStore.voicePan(forUsername: joinedUsername) {
+                            outputRenderEngine.setUserSettings(
+                                OutputUserMixSettings(volume: 1, pan: storedVoicePan, muted: false),
+                                for: message.user.nUserID)
+                        }
+                        if let storedMediaPan = userVolumeStore.mediaPan(forUsername: joinedUsername) {
+                            outputRenderEngine.setUserSettings(
+                                OutputUserMixSettings(volume: 1, pan: storedMediaPan, muted: false),
+                                for: outputMediaSourceKey(message.user.nUserID))
                         }
                         applyJitterControlLocked(instance: instance, userID: message.user.nUserID)
                     case CLIENTEVENT_CMD_USER_LEFT:
@@ -1179,13 +1185,19 @@ extension TeamTalkConnectionController {
                         }
                         // Continuous mixer pan lives in our own render engine (not the SDK),
                         // so push it here too — otherwise the strip shows the saved pan while
-                        // the user plays centered until the slider is touched. muted:false is
-                        // the engine default; an active SOLO is re-applied right after via the
-                        // coordinator's reapplySolo() on the next session update.
-                        if let storedPan = userVolumeStore.pan(forUsername: joinedUsername) {
-                            let panSettings = OutputUserMixSettings(volume: 1, pan: storedPan, muted: false)
-                            outputRenderEngine.setUserSettings(panSettings, for: message.user.nUserID)
-                            outputRenderEngine.setUserSettings(panSettings, for: outputMediaSourceKey(message.user.nUserID))
+                        // the user plays centered until the slider is touched. Voice and media
+                        // pan independently (mirroring split volume). muted:false is the engine
+                        // default; an active SOLO is re-applied right after via the coordinator's
+                        // reapplySolo() on the next session update.
+                        if let storedVoicePan = userVolumeStore.voicePan(forUsername: joinedUsername) {
+                            outputRenderEngine.setUserSettings(
+                                OutputUserMixSettings(volume: 1, pan: storedVoicePan, muted: false),
+                                for: message.user.nUserID)
+                        }
+                        if let storedMediaPan = userVolumeStore.mediaPan(forUsername: joinedUsername) {
+                            outputRenderEngine.setUserSettings(
+                                OutputUserMixSettings(volume: 1, pan: storedMediaPan, muted: false),
+                                for: outputMediaSourceKey(message.user.nUserID))
                         }
                         applyJitterControlLocked(instance: instance, userID: message.user.nUserID)
                     case CLIENTEVENT_CMD_USER_UPDATE:

@@ -766,20 +766,43 @@ extension TeamTalkConnectionController {
     }
 
     /// Continuous pan for the Channel Mixer (-1 left .. 0 center .. +1 right) plus the
-    /// engine-level mute used for SOLO (mute everyone NOT soloed). Drives our own per-user
-    /// mix (OutputAudioRenderEngine) for BOTH the user's voice and media-file sources,
-    /// independent of the SDK's discrete left/right stereo and the SDK per-user mute.
-    /// Volume stays at the SDK layer, so the engine gain is left at 1. Pan persisted.
-    func setUserPan(userID: Int32, username: String, pan: Float, engineMuted: Bool = false) {
+    /// engine-level mute used for SOLO (mute everyone NOT soloed). Voice and media are
+    /// independent sources in our own per-user mix (OutputAudioRenderEngine), each with
+    /// its own pan — mirroring the split voice/media volume controls — so the two are set
+    /// separately. This is independent of the SDK's discrete left/right stereo and the
+    /// SDK per-user mute. Volume stays at the SDK layer, so the engine gain is left at 1.
+    /// Pan persisted. `engineMuted` (SOLO) applies to whichever source is being set.
+    func setUserVoicePan(userID: Int32, username: String, pan: Float, engineMuted: Bool = false) {
         let clamped = max(-1, min(1, pan))
-        userVolumeStore.setPan(clamped, forUsername: username)
-        let mediaKey = outputMediaSourceKey(userID)
+        userVolumeStore.setVoicePan(clamped, forUsername: username)
         queue.async { [weak self] in
             guard let self else { return }
             let settings = OutputUserMixSettings(volume: 1, pan: clamped, muted: engineMuted)
             self.outputRenderEngine.setUserSettings(settings, for: userID)
+        }
+    }
+
+    func setUserMediaPan(userID: Int32, username: String, pan: Float, engineMuted: Bool = false) {
+        let clamped = max(-1, min(1, pan))
+        userVolumeStore.setMediaPan(clamped, forUsername: username)
+        let mediaKey = outputMediaSourceKey(userID)
+        queue.async { [weak self] in
+            guard let self else { return }
+            let settings = OutputUserMixSettings(volume: 1, pan: clamped, muted: engineMuted)
             self.outputRenderEngine.setUserSettings(settings, for: mediaKey)
         }
+    }
+
+    /// Content-derived effective channels for the user's voice / media source (1 mono,
+    /// 2 stereo, nil if not judged yet) — drives the mixer's "Center" vs "Stereo".
+    /// This reflects whether L actually differs from R, not the SDK's codec-driven
+    /// nChannels (a stereo-codec channel decodes even a mono phone mic to 2 channels).
+    func deliveredVoiceChannels(userID: Int32) -> Int? {
+        outputRenderEngine.announcedChannels(for: userID)
+    }
+
+    func deliveredMediaChannels(userID: Int32) -> Int? {
+        outputRenderEngine.announcedChannels(for: outputMediaSourceKey(userID))
     }
 
     func getUserStereo(userID: Int32, completion: @escaping @MainActor (Bool, Bool) -> Void) {
