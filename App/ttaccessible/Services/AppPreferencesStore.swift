@@ -166,6 +166,10 @@ final class AppPreferencesStore: ObservableObject {
         mutate { $0.languagePreference = languagePreference }
     }
 
+    func markInitialLanguageChosen() {
+        mutate { $0.hasChosenInitialLanguage = true }
+    }
+
     func updateLastRecordingWasActive(_ active: Bool) {
         mutate { $0.lastRecordingWasActive = active }
     }
