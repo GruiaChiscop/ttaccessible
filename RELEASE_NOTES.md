@@ -1,3 +1,40 @@
+## v1.8.0 (build 43) — 2026-07-22
+
+This release adds live audio-device streaming into a channel, brings back support for macOS 12 (Monterey), and fixes audio going silent in "no recording" channels — plus mixer and recording refinements.
+
+### Highlights
+- **Stream a live audio device into your channel.** Pick any input device — an audio interface, a virtual device, loopback — and broadcast it into the channel as a media stream alongside your voice. Press **⌘⌥A**.
+- **macOS 12 Monterey is supported again.** The app now runs on macOS 12 and later.
+- **Audio no longer goes silent in "no recording" channels.**
+
+### Live device streaming
+- **⌘⌥A** streams the selected input device into the current channel as a media stream, alongside your voice.
+- It starts fast without freezing the channel, and stays low-latency — the stream uses Opus with very small frames so the server's analysis is near-instant.
+- If the device goes quiet, silence is filled in automatically so the stream never drops out.
+
+### Audio
+- **"No recording" channels now play sound again.** In a channel flagged as no-recording, other people's voices were silent for you — even though they worked fine for people on the Qt or iPhone clients. That's fixed: you hear everyone again. Recording itself stays blocked in those channels, exactly as the server intends.
+
+### Channel Mixer
+- **Independent stereo placement (pan) for each person's voice and their media.** You can position someone's voice and their media stream separately in the stereo field.
+
+### Recording
+- **⌘R records a single mixed file; ⌘⇧R records per-person stems (or both).** The two shortcuts now pick the recording layout directly.
+- Note if you used recording before: if you were on "single file", the toolbar button now records **both** a single file and per-person stems. Use **⌘R** for single-file only.
+
+### Administration
+- **Per-channel disk quota**, editable with a KB / MB / GB unit picker.
+- **Full server properties** — TCP/UDP ports and version info — in the server properties window.
+- **Online-nickname column** in the user accounts list.
+
+### Accessibility & polish
+- Clearer VoiceOver in the Channel Mixer: spoken region announcements and mute-state labels in the toolbar.
+- **Escape closes auxiliary windows.**
+- Smaller fixes: no false intercept sound during login sync, live disk-quota unit conversion, and file uploads are no longer wrongly rejected by a client-side quota check.
+
+### Download
+[ttaccessible-1.8.0-43.zip](https://github.com/math65/ttaccessible/releases/download/v1.8.0/ttaccessible-1.8.0-43.zip)
+
 ## v1.7.0 (build 42) — 2026-07-08
 
 This is the stable release that brings everything from the 1.7.0 beta line to everyone. If you were on 1.6.0, here is what has changed.

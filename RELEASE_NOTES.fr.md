@@ -1,3 +1,40 @@
+## v1.8.0 (build 43) — 22 juillet 2026
+
+Cette version permet de diffuser un périphérique audio en direct dans un canal, rétablit la prise en charge de macOS 12 (Monterey) et corrige le son qui disparaissait dans les canaux « enregistrement interdit » — avec, en prime, des améliorations de la table de mixage et de l'enregistrement.
+
+### En bref
+- **Diffusez un périphérique audio en direct dans votre canal.** Choisissez n'importe quelle entrée — une interface audio, un périphérique virtuel, du loopback — et diffusez-la dans le canal comme un flux média, en parallèle de votre voix. Avec **⌘⌥A**.
+- **macOS 12 Monterey est de nouveau pris en charge.** L'application fonctionne à partir de macOS 12.
+- **Le son ne disparaît plus dans les canaux « enregistrement interdit ».**
+
+### Diffusion d'un périphérique en direct
+- **⌘⌥A** diffuse le périphérique d'entrée choisi dans le canal courant, sous forme de flux média, en parallèle de votre voix.
+- Le démarrage est rapide et ne fige plus le canal, avec une faible latence — le flux utilise Opus avec de très petites trames, ce qui rend l'analyse côté serveur quasi instantanée.
+- Si le périphérique devient silencieux, du silence est injecté automatiquement pour que le flux ne se coupe jamais.
+
+### Audio
+- **Les canaux « enregistrement interdit » rediffusent le son.** Dans un canal marqué « enregistrement interdit », vous n'entendiez plus les autres — alors que tout fonctionnait pour les personnes sur les clients Qt ou iPhone. C'est corrigé : vous entendez de nouveau tout le monde. L'enregistrement, lui, reste bloqué dans ces canaux, exactement comme le serveur le prévoit.
+
+### Table de mixage
+- **Position stéréo indépendante pour la voix et les médias de chaque personne.** Vous pouvez placer séparément, dans l'espace stéréo, la voix d'une personne et son flux média.
+
+### Enregistrement
+- **⌘R enregistre un fichier unique ; ⌘⇧R enregistre un fichier par personne (ou les deux).** Les deux raccourcis choisissent désormais directement le format d'enregistrement.
+- À noter si vous utilisiez déjà l'enregistrement : si vous étiez en « fichier unique », le bouton de la barre d'outils enregistre maintenant **à la fois** un fichier unique et un fichier par personne. Utilisez **⌘R** pour n'obtenir qu'un seul fichier.
+
+### Administration
+- **Quota disque par canal**, modifiable avec un sélecteur d'unité (Ko / Mo / Go).
+- **Propriétés complètes du serveur** — ports TCP/UDP et informations de version — dans la fenêtre des propriétés du serveur.
+- **Colonne du pseudo en ligne** dans la liste des comptes utilisateurs.
+
+### Accessibilité et finitions
+- VoiceOver plus clair dans la table de mixage : annonces de zone vocalisées et libellés d'état de coupure dans la barre d'outils.
+- **Échap ferme les fenêtres auxiliaires.**
+- Correctifs plus discrets : plus de son d'interception injustifié pendant la synchronisation de connexion, conversion d'unité du quota disque en direct, et les envois de fichiers ne sont plus refusés à tort par une vérification de quota côté client.
+
+### Téléchargement
+[ttaccessible-1.8.0-43.zip](https://github.com/math65/ttaccessible/releases/download/v1.8.0/ttaccessible-1.8.0-43.zip)
+
 ## v1.7.0 (build 42) — 8 juillet 2026
 
 Voici la version stable qui met entre toutes les mains ce qui a été mis au point tout au long des bêtas 1.7.0. Si vous veniez de la 1.6.0, voici ce qui a changé.
