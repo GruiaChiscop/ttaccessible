@@ -758,6 +758,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popUp.lastItem?.representedObject = languagePreference
         }
         popUp.selectItem(withTitle: L10n.text(AppLanguagePreference.system.localizationKey))
+        popUp.setAccessibilityLabel(L10n.text("preferences.general.language.label"))
         alert.accessoryView = popUp
         alert.window.initialFirstResponder = popUp
 
